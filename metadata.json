@@ -1,0 +1,6 @@
+{
+  "name": "Stickman Studio & Blender Generator",
+  "description": "Interactive stickman animation studio for educational and technical videos with procedural sound effects, instant video export, and automated Blender/Python code generator.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
