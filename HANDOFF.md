@@ -4,6 +4,8 @@
 > `diorama-studio-project.zip`. Treat this as a continuation of a previous conversation. Everything below is the
 > state of that conversation. Restore the project first (section 1), then continue with the user's request.
 
+**New fast workflow (latest):** read `CLAUDE.md` first. Each video is: script → `stories/<name>.json` (shot templates) → one `run.mjs` command.
+
 ## 0. Where the code lives
 GitHub: `opughsg-boop/stickman-studio-matrix`, branch **`diorama-studio`** (separate history; `main` is an unrelated app).
 `git clone -b diorama-studio https://github.com/opughsg-boop/stickman-studio-matrix diorama-studio` replaces unzipping.

@@ -2,6 +2,7 @@
 // node pipeline/render.mjs PLAN.json AUDIO OUT_DIR [--fps 15] [--w 540] [--workers 2] [--preview]
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
 import { spawn, spawnSync, execFileSync } from 'child_process';
 import express from 'express';
 import { chromium } from 'playwright';
@@ -49,18 +50,21 @@ async function renderChunk(browser, url, plan, opt, ci, f0, f1, file) {
 }
 
 export async function render(planFile, audio, outDir, o = {}) {
-  const opt = { fps: 15, w: 540, h: 960, workers: 2, chunkSec: 12, outFps: 30, ...o };
+  const gpu = !!(o.gpu || process.env.RENDER_GPU);
+  const opt = { fps: 30, w: gpu ? 1080 : 540, h: gpu ? 1920 : 960, workers: Math.max(2, os.cpus().length - 1), chunkSec: 12, outFps: 30, ...o };
+  for (const k of ['fps', 'w', 'h', 'workers']) opt[k] = +opt[k];
   const plan = JSON.parse(fs.readFileSync(planFile, 'utf8'));
   fs.mkdirSync(path.join(outDir, 'chunks'), { recursive: true });
   const { server, url } = await startStatic();
-  const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
+  // GPU mode (a machine with a graphics card): real WebGL hardware + full 1080x1920 resolution.
+  const browser = await chromium.launch(gpu ? { headless: true, args: ['--ignore-gpu-blocklist', '--enable-gpu', '--use-angle=default'] } : { args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
   const log = o.onProgress || (() => {});
   try {
     if (opt.preview) { // stills from the middle of every beat
       const page = await openPage(browser, url, plan, opt.w, opt.h); const files = [];
       for (const [i, b] of (plan.beats || plan.shots).entries()) { const f = path.join(outDir, `preview_${String(i).padStart(2, '0')}.jpg`);
         fs.writeFileSync(f, Buffer.from(await page.evaluate(t => window.renderAt(t), (b.start + b.end) / 2), 'base64')); files.push(f); }
-      execFileSync('ffmpeg', ['-v', 'error', '-y', '-pattern_type', 'glob', '-i', path.join(outDir, 'preview_*.jpg'), '-vf', `scale=270:-1,tile=${Math.min(6, files.length)}x${Math.ceil(files.length / 6)}`, '-frames:v', '1', path.join(outDir, 'sheet_preview.jpg')]);
+      execFileSync('ffmpeg', ['-v', 'error', '-y', '-pattern_type', 'glob', '-i', path.join(outDir, 'preview_*.jpg'), '-vf', `scale=180:-1,tile=${Math.min(6, files.length)}x${Math.ceil(files.length / 6)}`, '-frames:v', '1', path.join(outDir, 'sheet_preview.jpg')]);
       return { preview: path.join(outDir, 'sheet_preview.jpg'), files };
     }
     const total = Math.ceil(plan.duration * opt.fps), per = Math.round(opt.chunkSec * opt.fps), chunks = [];
