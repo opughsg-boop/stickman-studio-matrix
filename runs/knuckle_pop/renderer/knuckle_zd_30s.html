@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<title>Knuckle Pop 30s</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0b0e14;font-family:'Cairo','DejaVu Sans',sans-serif;overflow:hidden}
+#wrap{position:relative;width:1080px;height:1920px;overflow:hidden;background:#1a2230}
+canvas{display:block;width:1080px;height:1920px}
+#flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none}
+#badge{position:absolute;top:5%;left:5%;background:rgba(255,60,60,.92);color:#fff;padding:10px 24px;border-radius:14px;font-size:28px;font-weight:900;letter-spacing:1.5px;direction:ltr;opacity:0}
+#capbox{position:absolute;bottom:12%;left:5%;right:5%;text-align:center}
+#cap{display:inline-block;background:rgba(10,14,22,.88);color:#fff;font-size:52px;font-weight:900;padding:24px 38px;border-radius:26px;line-height:1.5;border:3px solid rgba(255,255,255,.18)}
+#cap .hl{color:#ffcc00}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="flash"></div>
+  <div id="badge">X-RAY // JOINT</div>
+  <div id="capbox"><div id="cap"></div></div>
+</div>
+<script type="importmap">{"imports":{"three":"./node_modules/three/build/three.module.js"}}</script>
+<script type="module">
+import * as THREE from 'three';
+const W=1080,H=1920;
+const $=id=>document.getElementById(id);
+const renderer=new THREE.WebGLRenderer({antialias:true,preserveDrawingBuffer:true});
+renderer.setSize(W,H,false);renderer.setPixelRatio(1);
+$('wrap').prepend(renderer.domElement);
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0xdbe4ee);
+scene.fog=new THREE.Fog(0xdbe4ee,9,24);
+const camera=new THREE.PerspectiveCamera(38,W/H,.1,100);
+
+scene.add(new THREE.HemisphereLight(0xffffff,0x8899aa,1.6));
+const dl=new THREE.DirectionalLight(0xffffff,2);dl.position.set(4,8,6);scene.add(dl);
+const rim=new THREE.PointLight(0x3399ff,60,14);rim.position.set(-3,2,-3);scene.add(rim);
+
+// cyclorama floor
+const floor=new THREE.Mesh(new THREE.PlaneGeometry(60,60),new THREE.MeshStandardMaterial({color:0xe9eff6,roughness:.9}));
+floor.rotation.x=-Math.PI/2;floor.position.y=-1.6;scene.add(floor);
+
+const skinMat=new THREE.MeshStandardMaterial({color:0xe8a88a,roughness:.5,transparent:true,opacity:.95,depthWrite:false});
+const boneMat=new THREE.MeshStandardMaterial({color:0xf4f1ea,roughness:.35,metalness:.1});
+const fluidMat=new THREE.MeshStandardMaterial({color:0x00aaff,roughness:.15,transparent:true,opacity:0,depthWrite:false});
+
+// two halves, each pivoting at the joint (origin)
+function half(sign){
+  const g=new THREE.Group();
+  const skin=new THREE.Mesh(new THREE.CapsuleGeometry(.95,1.9,12,24),skinMat);
+  skin.rotation.z=Math.PI/2;skin.position.x=sign*1.15;skin.renderOrder=5;g.add(skin);
+  const shaft=new THREE.Mesh(new THREE.CylinderGeometry(.34,.4,1.7,20),boneMat);
+  shaft.rotation.z=Math.PI/2;shaft.position.x=sign*1.2;g.add(shaft);
+  const head=new THREE.Mesh(new THREE.SphereGeometry(.5,24,24),boneMat);
+  head.position.x=sign*.1;head.scale.set(.8,1,1);g.add(head);
+  return g;
+}
+const L=half(-1),R=half(1);
+const finger=new THREE.Group();finger.add(L,R);scene.add(finger);
+const cap=new THREE.Mesh(new THREE.SphereGeometry(.85,28,28),fluidMat);
+cap.scale.set(1.2,.95,.95);cap.renderOrder=3;finger.add(cap);
+
+// gas particles
+let seed=7;const rnd=()=>(seed=(seed*16807)%2147483647)/2147483647;
+const N=70,parts=[];
+const pMat=new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0});
+for(let i=0;i<N;i++){
+  const m=new THREE.Mesh(new THREE.SphereGeometry(1,10,10),pMat.clone());
+  const r=.55*Math.cbrt(rnd()),a=rnd()*6.283,b=Math.acos(2*rnd()-1);
+  const base=new THREE.Vector3(r*Math.sin(b)*Math.cos(a)*1.3,r*Math.sin(b)*Math.sin(a)*.9,r*Math.cos(b)*.8);
+  parts.push({m,base,s:.03+rnd()*.04,ph:rnd()*6.283,out:new THREE.Vector3().copy(base).normalize().multiplyScalar(1.4+rnd())});
+  m.renderOrder=6;finger.add(m);
+}
+// bubble
+const bubble=new THREE.Mesh(new THREE.SphereGeometry(1,32,32),new THREE.MeshStandardMaterial({color:0xcff4ff,emissive:0x66ccff,emissiveIntensity:.6,transparent:true,opacity:.75,roughness:.05}));
+bubble.renderOrder=7;bubble.visible=false;finger.add(bubble);
+// rings
+const ringMat=new THREE.MeshBasicMaterial({color:0xffcc00,transparent:true,opacity:0,side:THREE.DoubleSide,depthTest:false});
+const ring=new THREE.Mesh(new THREE.RingGeometry(.92,1,64),ringMat);ring.renderOrder=20;scene.add(ring);
+
+const clamp=(x,a=0,b=1)=>Math.min(b,Math.max(a,x));
+const ss=(a,b,x)=>{x=clamp((x-a)/(b-a));return x*x*(3-2*x)};
+const lerp=(a,b,x)=>a+(b-a)*x;
+const noise=(t,k)=>Math.sin(t*k*1.7+k)*.5+Math.sin(t*k*2.9+k*3.1)*.3+Math.sin(t*k*5.3+k*7)*.2;
+
+const CAPS=[
+ [0,4,'عمرك سألت إيه سر <span class="hl">صوت طقطقة</span> صوابعك؟'],
+ [4,8.5,'ناس كتير فاكرة إن <span class="hl">العضم بيحك</span> في بعضه.. غلط!'],
+ [8.5,14,'ده بسبب <span class="hl">سائل لزج</span> بين المفاصل مليان غازات دايبة'],
+ [14,19.5,'أول ما تشد صباعك.. المسافة بتوسع و<span class="hl">الضغط بيقل</span>!'],
+ [19.5,25,'فتتكون <span class="hl">فقاعة غاز</span> وتنفجر في جزء من الثانية!'],
+ [25,30.01,'فـ استنى <span class="hl">20 دقيقة</span>.. صباعك بس بيشحن تاني!']
+];
+const POP1=3.0,POP2=22.5;
+
+function seekTo(t){
+  // ---- joint motion
+  let bend=0;
+  if(t<3.0) bend=ss(1.4,1.75,t)*0.55;            // sudden bend before pop
+  else bend=0.55*(1-ss(3.0,3.4,t));
+  if(t>=4){bend=0;}
+  if(t>=19.5&&t<25) bend=0.25*ss(19.5,22.5,t)*(1-ss(22.5,23,t));
+  let gap=0;
+  gap=0.9*ss(14.3,19.5,t);
+  if(t>=19.5)gap=0.9-0.4*ss(22.5,22.7,t);
+  if(t>=25)gap=0.5*(1-ss(25,28,t));
+  if(t>=4&&t<8.5) gap=0.04*Math.sin(t*14)*ss(4.5,5,t); // rubbing
+  L.position.x=-gap/2; R.position.x=gap/2;
+  L.rotation.z=0; R.rotation.z=bend;
+  finger.rotation.z=Math.PI/2;
+
+  // ---- opacity (x-ray)
+  let skin=.95;
+  if(t>=3.9) skin=lerp(.95,.1,ss(3.9,4.5,t));
+  if(t>=25) skin=lerp(.1,.95,ss(25,27,t));
+  skinMat.opacity=skin;
+  let fl=ss(8.5,9.5,t)*.38*(1-ss(25,27,t));
+  fluidMat.opacity=fl;
+  const gasVis=ss(8.7,9.6,t)*(1-ss(25,27,t));
+
+  // ---- particles
+  const conv=ss(14.3,19,t);
+  const diss=ss(22.5,23.5,t)*(1-ss(25,27,t));
+  parts.forEach((p,i)=>{
+    const wob=new THREE.Vector3(Math.sin(t*1.3+p.ph),Math.cos(t*1.1+p.ph*2),Math.sin(t*.9+p.ph*3)).multiplyScalar(.07);
+    const pos=p.base.clone().add(wob);
+    pos.multiplyScalar(1-conv*.9);
+    pos.addScaledVector(p.out,diss*.6);
+    p.m.position.copy(pos);
+    p.m.scale.setScalar(p.s*(1+conv*.3));
+    const hide=(t>=19&&t<22.5)?0:1;                // absorbed into the bubble
+    const fadeIn=(t>=22.5)?ss(22.5,23.5,t):1;
+    p.m.material.opacity=gasVis*hide*(t>=22.5?fadeIn:1)*.9;
+    p.m.visible=p.m.material.opacity>.01;
+  });
+
+  // ---- bubble
+  let br=0;
+  if(t>=15) br=.5*ss(15,19.5,t);
+  if(t>=19.5&&t<POP2) br=.5+.06*Math.sin(t*60)*ss(19.5,21.5,t)+.08*ss(19.5,22.5,t);
+  if(t>=POP2) br=Math.max(0,.58*(1-ss(POP2,POP2+.12,t)));
+  bubble.visible=br>.01;
+  bubble.scale.setScalar(Math.max(br,.001));
+
+  // ---- shockwaves + flash
+  let flash=0;
+  ringMat.opacity=0;
+  for(const [pt,sc,pos] of [[POP1,3.2,new THREE.Vector3(0,0,0)],[POP2,2.6,new THREE.Vector3(0,0,0)]]){
+    const d=t-pt;
+    if(d>=0&&d<.9){
+      flash=Math.max(flash,Math.pow(1-clamp(d/.28),2)*.9);
+      const k=ss(0,.9,d);
+      ring.position.copy(pos);ring.scale.setScalar(.3+k*sc);
+      ring.lookAt(camera.position);
+      ringMat.opacity=(1-k)*.95;
+    }
+  }
+  $('flash').style.opacity=flash;
+  // beat transition flashes
+  for(const bt of [4,8.5,14,19.5,25]){const d=t-bt;if(d>=0&&d<.12)$('flash').style.opacity=Math.max(flash,.55*(1-d/.12));}
+
+  // ---- camera
+  let pos=new THREE.Vector3(),look=new THREE.Vector3(0,0,0);
+  if(t<4){const k=ss(0,4,t);pos.set(lerp(-.6,.3,k),lerp(.6,.4,k),lerp(10,7.2,k));look.set(.2,0,0);}
+  else if(t<8.5){const k=(t-4)/4.5;const a=lerp(-.5,.7,k);const r=lerp(8,6.5,k);pos.set(Math.sin(a)*r,.8-.3*k,Math.cos(a)*r);}
+  else if(t<14){const k=ss(8.5,10.5,t);const a=lerp(.7,.1,k)+.05*Math.sin(t);pos.set(Math.sin(a)*lerp(6.5,3.6,k),lerp(.5,.1,k),Math.cos(a)*lerp(6.5,3.6,k));}
+  else if(t<19.5){const k=ss(14,19.5,t);pos.set(lerp(.3,-.2,k),lerp(.1,.05,k),lerp(3.6,3.0,k));}
+  else if(t<25){const k=ss(19.5,22.5,t);pos.set(lerp(-.2,0,k),.05,lerp(3.0,2.5,k)); if(t>=POP2)pos.z=lerp(2.3,3.6,ss(POP2,25,t));}
+  else {const k=ss(25,30,t);pos.set(lerp(0,-.4,k),lerp(.1,.7,k),lerp(3.6,11,k));look.set(0,0,0);}
+  // handheld
+  const amp=t<25?1:.6;
+  pos.x+=noise(t,1.3)*.05*amp;pos.y+=noise(t,2.1)*.04*amp;pos.z+=noise(t,.7)*.05*amp;
+  // shake on pops
+  for(const pt of [POP1,POP2]){const d=t-pt;if(d>=0&&d<.6){const e=Math.pow(1-d/.6,2)*(pt===POP2?.22:.14);pos.x+=Math.sin(d*90)*e;pos.y+=Math.cos(d*110)*e*.8;}}
+  camera.position.copy(pos);camera.lookAt(look);camera.rotation.z+=noise(t,1.9)*.012;
+  // zoom punch on pop
+  camera.fov=38-(t>=POP1&&t<POP1+.3?4*(1-(t-POP1)/.3):0)-(t>=POP2&&t<POP2+.3?6*(1-(t-POP2)/.3):0);
+  camera.updateProjectionMatrix();
+
+  // ---- UI
+  const c=CAPS.find(c=>t>=c[0]&&t<c[1])||CAPS[5];
+  if($('cap').dataset.i!==String(CAPS.indexOf(c))){$('cap').innerHTML=c[2];$('cap').dataset.i=CAPS.indexOf(c);}
+  const since=t-c[0];$('cap').style.transform='scale('+(1+.12*Math.pow(1-clamp(since/.25),2))+')';
+  $('badge').style.opacity=(t>=4&&t<25)?1:0;
+  $('badge').textContent=t<8.5?'X-RAY // JOINT':t<14?'INSIDE // SYNOVIAL FLUID':t<19.5?'PRESSURE ↓':'CAVITATION!';
+  renderer.render(scene,camera);
+}
+window.seekTo=seekTo;window.ready=true;seekTo(0);
+</script>
+</body>
+</html>
