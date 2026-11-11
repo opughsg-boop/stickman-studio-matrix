@@ -103,6 +103,21 @@ const PROP = {
     for (let i = 0; i < (p.count || 80); i++) { const o = new THREE.Mesh(geo, m); const b = [(r() - .5) * p.area[0], r() * p.area[1], (r() - .5) * p.area[2]]; list.push({ o, b, ph: r() * 6.3, rx: r() * 3 }); g.add(o); }
     g.userData.tick = t => list.forEach(q => { q.o.position.set(q.b[0] + Math.sin(t * (p.drift || .8) + q.ph) * .15, q.b[1] + Math.sin(t * .9 + q.ph) * .08, q.b[2] + Math.cos(t * (p.drift || .8) + q.ph) * .15); q.o.rotation.set(t + q.rx, q.ph, t * .7); });
     return g; },
+  spear: p => { const g = new THREE.Group(), L = p.len || 1;
+    const shaft = new THREE.Mesh(new THREE.CylinderGeometry(.012 * L, .014 * L, L, 12), new THREE.MeshStandardMaterial({ color: '#7a5230', roughness: .8 })); g.add(shaft);
+    const tip = new THREE.Mesh(new THREE.ConeGeometry(.03 * L, .16 * L, 4), new THREE.MeshStandardMaterial({ color: '#8f8f8f', metalness: .8, roughness: .35 })); tip.position.y = L / 2 + .08 * L; g.add(tip);
+    for (let i = 0; i < 3; i++) { const b = new THREE.Mesh(new THREE.TorusGeometry(.016 * L, .004 * L, 6, 12), new THREE.MeshStandardMaterial({ color: '#c9a061' })); b.rotation.x = Math.PI / 2; b.position.y = -L * .3 + i * .03 * L; g.add(b); }
+    return g; },
+  arc: p => { // glowing route between two points that draws itself over p.dur seconds
+    const a = V(p.from), b = V(p.to), mid = a.clone().add(b).multiplyScalar(.5); mid.y += p.lift ?? a.distanceTo(b) * .35;
+    const curve = new THREE.QuadraticBezierCurve3(a, mid, b), geo = new THREE.TubeGeometry(curve, 120, p.r || .03, 8, false);
+    const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: p.color || '#ffd31a', emissive: p.color || '#ffd31a', emissiveIntensity: 1.2 }));
+    const head = new THREE.Mesh(new THREE.SphereGeometry((p.r || .03) * 2.4, 16, 12), m.material); const g = new THREE.Group(); g.add(m, head);
+    const total = geo.index.count;
+    g.userData.tick = lt => { const k = easeIO(lt / (p.dur || 1.2)); geo.setDrawRange(0, Math.max(3, Math.floor(total * k / 3) * 3)); head.position.copy(curve.getPoint(k)); };
+    return g; },
+  pedestal: p => { const g = new THREE.Group(); const c = new THREE.Mesh(new THREE.CylinderGeometry(p.r || .5, (p.r || .5) * 1.1, p.h || 1, 48), new THREE.MeshStandardMaterial({ color: p.color || '#f1ece4', roughness: .35 }));
+    c.position.y = (p.h || 1) / 2; g.add(c); const top = new THREE.Mesh(new THREE.CylinderGeometry((p.r || .5) * 1.15, (p.r || .5) * 1.15, .06, 48), c.material); top.position.y = p.h || 1; g.add(top); return g; },
   model: async p => { const g = await loadModel(p.model); const o = g.scene.clone(true); o.updateMatrixWorld(true);
     if (p.height) { const b = new THREE.Box3().setFromObject(o), s = p.height / (b.max.y - b.min.y); o.scale.multiplyScalar(s); const c = b.getCenter(new THREE.Vector3()).multiplyScalar(s); o.position.sub(c); }
     const w = new THREE.Group(); w.add(o); return w; },
@@ -136,8 +151,10 @@ async function buildShot(s) {
     if (p.holo) glowMats(o, p.holo); scene.add(holder); things.push({ kind: 'prop', a: p, holder, o }); }
   return { s, scene, things };
 }
-function poseThing(th, lt, dur) {
+function poseThing(th, lt, dur, sh) {
   const a = th.a, k = clamp(lt / dur), ek = a.ease === 'linear' ? k : easeIO(k);
+  if (a.follow && sh) { const tgt = sh.things.find(x => x.a.id === a.follow); if (tgt) { const off = V(a.offset || [0, 0, 0]).applyAxisAngle(new THREE.Vector3(0, 1, 0), tgt.holder.rotation.y);
+      th.holder.position.copy(tgt.holder.position).add(off); th.holder.rotation.set(0, tgt.holder.rotation.y, 0); th.holder.scale.copy(tgt.holder.scale); th.o.traverse(m => m.userData.tick && m.userData.tick(lt)); return; } }
   const from = a.pos || [0, 0, 0], to = a.to || from; const p = lerpV(from, to, ek);
   th.holder.position.set(...p);
   let ry = a.rotY ?? 0; if (a.spin) ry += lt * a.spin; if (a.faceMove && a.to) ry = Math.atan2(to[0] - from[0], to[2] - from[2]);
@@ -184,6 +201,10 @@ function drawUI(sh, lt) {
     else if (u.type === 'arrow') { const [x, y] = u.at ? [u.at[0] * W, u.at[1] * H] : project(sh, u.world); const bob = Math.sin(lt * 8) * W * .012; cctx.translate(x, y - W * .08 + bob); cctx.scale(pop, pop);
       cctx.fillStyle = u.color || '#ffd31a'; cctx.strokeStyle = '#000'; cctx.lineWidth = W * .006; cctx.beginPath(); const a = W * .05;
       cctx.moveTo(-a * .35, -a * 1.6); cctx.lineTo(a * .35, -a * 1.6); cctx.lineTo(a * .35, -a * .5); cctx.lineTo(a * .8, -a * .5); cctx.lineTo(0, a * .4); cctx.lineTo(-a * .8, -a * .5); cctx.lineTo(-a * .35, -a * .5); cctx.closePath(); cctx.fill(); cctx.stroke(); }
+    else if (u.type === 'button') { const [x, y] = u.at || [.5, .3]; cctx.translate(x * W, y * H); cctx.scale(pop, pop); const bw = W * .62, bh = W * .15;
+      cctx.shadowColor = 'rgba(0,0,0,.45)'; cctx.shadowBlur = 18; cctx.fillStyle = u.color || '#e8262b'; cctx.beginPath(); cctx.roundRect(-bw / 2, -bh / 2, bw, bh, bh / 2); cctx.fill(); cctx.shadowColor = 'transparent';
+      txt(u.text || 'تابعني +', 0, 0, bh * .48, '#fff', { stroke: false });
+      if (u.tap != null && ul > u.tap) { const tk = clamp((ul - u.tap) / .4); cctx.strokeStyle = `rgba(255,255,255,${1 - tk})`; cctx.lineWidth = 6; cctx.beginPath(); cctx.arc(bw * .3, bh * .2, 20 + tk * 50, 0, 7); cctx.stroke(); } }
     else if (u.type === 'meter') { const [x, y] = u.at || [.2, .4], v = lerp(u.from ?? 0, u.to ?? 1, easeIO(ul / (u.dur || 1))), bw = W * .1, bh = H * .22;
       cctx.translate(x * W, y * H); cctx.fillStyle = 'rgba(30,40,50,.85)'; cctx.beginPath(); cctx.roundRect(-bw / 2, -bh / 2, bw, bh, W * .015); cctx.fill();
       cctx.fillStyle = u.color || '#3ce06b'; const n = 8; for (let i = 0; i < n; i++) if (i / n < v) cctx.fillRect(-bw * .35, bh / 2 - (i + 1) * bh / (n + 1), bw * .7, bh / (n + 1) * .7);
@@ -217,7 +238,8 @@ window.setup = async (p, o = {}) => {
 };
 window.renderAt = (t, q = .9) => {
   let i = shots.findIndex(s => t < s.end); if (i < 0) i = shots.length - 1; const sh = shots[i], lt = t - sh.start, dur = sh.end - sh.start;
-  for (const th of sh.things) poseThing(th, lt, dur);
+  for (const th of sh.things) if (!th.a.follow) poseThing(th, lt, dur, sh);
+  for (const th of sh.things) if (th.a.follow) poseThing(th, lt, dur, sh);
   poseCamera(sh, lt, dur);
   renderPass.scene = sh.scene; bokeh.scene = sh.scene; bloom.strength = sh.s.fx?.bloom ?? .3;
   composer.render();

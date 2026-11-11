@@ -3,8 +3,9 @@
   "exposure": 1.16
  },
  "maxBeat": 5.5,
- "minBeat": 1.8,
+ "minBeat": 2.0,
  "cine": {
-  "bright": 1.0
+  "bright": 0.94,
+  "handheld": 0.65
  }
 }
