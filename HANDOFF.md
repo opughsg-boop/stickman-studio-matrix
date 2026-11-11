@@ -4,6 +4,11 @@
 > `diorama-studio-project.zip`. Treat this as a continuation of a previous conversation. Everything below is the
 > state of that conversation. Restore the project first (section 1), then continue with the user's request.
 
+## 0. Where the code lives
+GitHub: `opughsg-boop/stickman-studio-matrix`, branch **`diorama-studio`** (separate history; `main` is an unrelated app).
+`git clone -b diorama-studio https://github.com/opughsg-boop/stickman-studio-matrix diorama-studio` replaces unzipping.
+The repo is PUBLIC — the user may later move it to a private `diorama-studio` repo.
+
 ## 1. Restore the project (do this first)
 ```bash
 mkdir -p /home/user && cd /home/user && unzip -oq <path-to>/diorama-studio-project.zip && cd diorama-studio
@@ -109,4 +114,4 @@ Steps, in order:
   - in the bees video, the queen is too small, the propolis glue is hidden, and the sunrise is off-frame in the tip shot
   - the cine engine needs more realistic human assets
 - **Paused task:** installing Claude-usage tools (ccusage was run once; installing rtk was blocked by the GitHub proxy and needs the `rtk-ai/rtk` repo added).
-- **Back-up:** the user has not yet chosen a GitHub repo to back up the project. Suggest it.
+- **Back-up:** done. The project is pushed to the `diorama-studio` branch (see section 0).
