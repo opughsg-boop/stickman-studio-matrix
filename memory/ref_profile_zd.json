@@ -1,0 +1,112 @@
+{
+ "videos": [
+  {
+   "file": "v1.mp4",
+   "duration": 28.0,
+   "cuts": 32,
+   "avg_shot": 0.85,
+   "median_shot": 0.4,
+   "min_shot": 0.1,
+   "luma": 85.3,
+   "saturation": 0.302,
+   "motion": 21.04,
+   "dof_ratio": 1.85,
+   "palette": [
+    "#303030",
+    "#101010",
+    "#505050",
+    "#707070",
+    "#503030",
+    "#909090"
+   ]
+  },
+  {
+   "file": "v2.mp4",
+   "duration": 31.3,
+   "cuts": 23,
+   "avg_shot": 1.3,
+   "median_shot": 0.8,
+   "min_shot": 0.1,
+   "luma": 118.0,
+   "saturation": 0.311,
+   "motion": 19.31,
+   "dof_ratio": 2.03,
+   "palette": [
+    "#909090",
+    "#30b0d0",
+    "#101010",
+    "#707070",
+    "#303030",
+    "#3090b0"
+   ]
+  },
+  {
+   "file": "v3.mp4",
+   "duration": 30.5,
+   "cuts": 24,
+   "avg_shot": 1.22,
+   "median_shot": 0.6,
+   "min_shot": 0.1,
+   "luma": 108.7,
+   "saturation": 0.457,
+   "motion": 19.62,
+   "dof_ratio": 2.75,
+   "palette": [
+    "#907050",
+    "#705030",
+    "#505030",
+    "#101010",
+    "#503030",
+    "#303010"
+   ]
+  },
+  {
+   "file": "v4.mp4",
+   "duration": 26.8,
+   "cuts": 24,
+   "avg_shot": 1.07,
+   "median_shot": 0.4,
+   "min_shot": 0.1,
+   "luma": 88.2,
+   "saturation": 0.441,
+   "motion": 28.98,
+   "dof_ratio": 1.62,
+   "palette": [
+    "#101010",
+    "#303030",
+    "#303010",
+    "#1050b0",
+    "#103010",
+    "#505030"
+   ]
+  },
+  {
+   "file": "v5.mp4",
+   "duration": 38.3,
+   "cuts": 36,
+   "avg_shot": 1.04,
+   "median_shot": 0.5,
+   "min_shot": 0.1,
+   "luma": 122.6,
+   "saturation": 0.404,
+   "motion": 21.72,
+   "dof_ratio": 2.01,
+   "palette": [
+    "#70b0d0",
+    "#907050",
+    "#101010",
+    "#705050",
+    "#705030",
+    "#90b0b0"
+   ]
+  }
+ ],
+ "target": {
+  "avg_shot": 1.096,
+  "median_shot": 0.54,
+  "luma": 104.56,
+  "saturation": 0.383,
+  "motion": 22.134,
+  "dof_ratio": 2.052
+ }
+}

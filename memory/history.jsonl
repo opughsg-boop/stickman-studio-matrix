@@ -1,0 +1,4 @@
+{"run": "test", "time": "2026-11-11 00:16", "score": 86, "issues": 4, "codes": ["beat_too_long", "caption_flash", "loudness", "too_dark"]}
+{"run": "test2", "time": "2026-11-11 00:23", "score": 95, "issues": 1, "codes": ["beat_too_long"]}
+{"run": "bees", "time": "2026-11-11 01:00", "score": 78, "issues": 5, "codes": ["beat_too_short", "too_dark"]}
+{"run": "cine_test", "time": "2026-11-11 03:04", "score": 84, "issues": 5, "codes": ["caption_too_long", "no_context", "ref_too_bright", "too_bright"]}

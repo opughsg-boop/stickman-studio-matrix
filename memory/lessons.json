@@ -1,0 +1,58 @@
+[
+ {
+  "code": "loudness",
+  "rule": "Normalize audio to -14 LUFS.",
+  "count": 1,
+  "last_seen": "2026-11-11",
+  "example": "integrated loudness -15.9 LUFS (target -14)"
+ },
+ {
+  "code": "too_dark",
+  "rule": "Keep night scenes readable: dim the light but keep the subject clearly visible.",
+  "count": 5,
+  "last_seen": "2026-11-11",
+  "example": "beat 16 too dark (luma 59)"
+ },
+ {
+  "code": "beat_too_long",
+  "rule": "Split long sentences into two beats with a camera change.",
+  "count": 2,
+  "last_seen": "2026-11-11",
+  "example": "beat 9 lasts 8.2s without a new idea"
+ },
+ {
+  "code": "caption_flash",
+  "rule": "Hold each caption until the next word starts.",
+  "count": 1,
+  "last_seen": "2026-11-11",
+  "example": "caption \"hay\" shown only 0.08s"
+ },
+ {
+  "code": "beat_too_short",
+  "rule": "Merge very short sentences; a beat should last at least ~1.5 s.",
+  "count": 1,
+  "last_seen": "2026-11-11",
+  "example": "beat 13 lasts 1.1s"
+ },
+ {
+  "code": "too_bright",
+  "rule": "Avoid white objects filling the frame; lower exposure or change angle.",
+  "count": 1,
+  "last_seen": "2026-11-11",
+  "example": "beat 5 washed out (luma 216)"
+ },
+ {
+  "code": "caption_too_long",
+  "rule": "Captions: 1 to 3 words only.",
+  "count": 1,
+  "last_seen": "2026-11-11",
+  "example": "some captions exceed 3 words"
+ },
+ {
+  "code": "ref_too_bright",
+  "rule": "Match the reference exposure: avoid white sets and large bright surfaces filling the frame.",
+  "count": 1,
+  "last_seen": "2026-11-11",
+  "example": "brighter than reference (luma 150 vs 105)"
+ }
+]

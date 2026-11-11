@@ -1,0 +1,10 @@
+import { startStatic } from './pipeline/render.mjs';
+import { chromium } from 'playwright'; import fs from 'fs';
+const { server, url } = await startStatic();
+const b = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
+const p = await b.newPage({ viewport: { width: 540, height: 960 } }); p.on('pageerror', e => console.log('[e]', e.message)); p.on('console', m => m.type() === 'error' && console.log('[c]', m.text()));
+await p.goto(url + 'cine.html'); await p.waitForFunction(() => window.__ready);
+await p.evaluate(pl => window.setup(pl), JSON.parse(fs.readFileSync('runs/cine_test/plan_nodof.json')));
+await p.evaluate(() => window.renderAt(.7));
+console.log(JSON.stringify(await p.evaluate(() => window.__dbg()[0])));
+await b.close(); server.close();

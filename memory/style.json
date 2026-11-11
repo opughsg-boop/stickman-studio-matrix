@@ -1,0 +1,10 @@
+{
+ "render": {
+  "exposure": 1.16
+ },
+ "maxBeat": 5.5,
+ "minBeat": 1.8,
+ "cine": {
+  "bright": 1.0
+ }
+}

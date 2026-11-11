@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>استوديو الديوراما</title>
+<style>
+:root{--bg:#0f1a2e;--panel:#16243f;--line:#2a3d63;--txt:#e8eefc;--mut:#9fb0d0;--acc:#f2c230;--blue:#3d7fd0;--ok:#4cc38a;--bad:#ff6b5a}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.6 system-ui,"Segoe UI",Tahoma,sans-serif}
+header{padding:20px 16px;border-bottom:1px solid var(--line);background:linear-gradient(135deg,#1d4f95,#0f1a2e)}
+h1{margin:0;font-size:24px}header p{margin:4px 0 0;color:var(--mut)}
+main{max-width:1100px;margin:auto;padding:16px;display:grid;gap:16px;grid-template-columns:minmax(0,380px) minmax(0,1fr)}
+@media(max-width:820px){main{grid-template-columns:1fr}}
+section{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px}
+h2{margin:0 0 12px;font-size:17px}label{display:block;margin:10px 0 4px;color:var(--mut);font-size:13px}
+input[type=text],textarea,select{width:100%;background:#0d1628;color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:9px}
+textarea{min-height:90px;resize:vertical}input[type=file]{width:100%;color:var(--mut)}
+button{margin-top:14px;width:100%;padding:12px;border:0;border-radius:8px;background:var(--acc);color:#1a1300;font-weight:700;font-size:15px;cursor:pointer}
+button.sec{background:transparent;border:1px solid var(--line);color:var(--txt)}
+.job{border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:12px}
+.row{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.bar{height:6px;background:#0d1628;border-radius:4px;overflow:hidden;margin:8px 0}.bar i{display:block;height:100%;background:var(--blue)}
+.score{font-weight:800;padding:2px 10px;border-radius:20px;background:#0d1628}
+video{width:100%;max-width:300px;border-radius:8px;background:#000;display:block;margin-top:8px}
+img.sheet{width:100%;border-radius:8px;margin-top:8px}
+.mut{color:var(--mut);font-size:13px}ul{padding-inline-start:18px;margin:6px 0}li{margin:2px 0}
+.chk{display:flex;gap:6px;align-items:center;margin-top:10px;color:var(--mut)}
+</style></head><body>
+<header><h1>استوديو الديوراما</h1><p>ارفع تعليق صوتي أو اكتب فكرة، وخد فيديو 3D بأسلوب المخطط الأزرق. الأداة بتراجع كل فيديو وتتعلم من أخطائها.</p></header>
+<main>
+<div>
+<section><h2>فيديو جديد</h2>
+<form id="f">
+<label>التعليق الصوتي (mp3 / wav / m4a)</label><input type="file" name="audio" accept="audio/*,video/*" required>
+<label>الموضوع / البرومت</label><input type="text" name="prompt" placeholder="مثال: إزاي تبني عشة فراخ صح">
+<label>النص الأصلي (اختياري، الكابشن هيطلع مطابق له)</label><textarea name="scriptText" placeholder="الصق نص التعليق هنا"></textarea>
+<label>اللغة</label><select name="lang"><option value="auto">تلقائي</option><option value="ar">عربي</option><option value="es">إسباني</option><option value="en">إنجليزي</option></select>
+<label class="chk"><input type="checkbox" id="pv"> معاينة لقطات ثابتة فقط (سريع)</label>
+<button>ابدأ</button>
+</form></section>
+<section style="margin-top:16px"><h2>ذاكرة الأداة</h2><div id="mem" class="mut">…</div></section>
+</div>
+<section><h2>الفيديوهات</h2><div id="jobs" class="mut">لا يوجد بعد</div></section>
+</main>
+<script>
+const STEP={queued:'في الانتظار',transcribe:'تفريغ الصوت',plan:'تخطيط المشاهد',sfx:'المؤثرات الصوتية',preview:'لقطات المعاينة','preview-ready':'المعاينة جاهزة',render:'الرندر',review:'المراجعة الذاتية',done:'تم',error:'خطأ'};
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+document.getElementById('f').onsubmit=async e=>{e.preventDefault();const fd=new FormData(e.target);fd.set('previewOnly',document.getElementById('pv').checked?'1':'0');
+  e.target.querySelector('button').disabled=true;await fetch('/api/jobs',{method:'POST',body:fd});e.target.reset();e.target.querySelector('button').disabled=false;load();};
+const open={};
+async function report(id){const el=document.getElementById('r-'+id);if(open[id]){open[id]=0;el.innerHTML='';return}open[id]=1;
+  const r=await (await fetch('/api/jobs/'+id+'/report')).json();
+  el.innerHTML=`<p class="mut">الصوت: ${r.lufs} LUFS · المخطِّط: ${esc(r.planner)} · تعديلات تلقائية: ${esc((r.style_updates||[]).join('، ')||'لا يوجد')}</p><ul>${r.issues.map(i=>`<li>[${i.severity}] ${esc(i.message)}</li>`).join('')||'<li>لا توجد مشاكل</li>'}</ul>`;}
+async function load(){
+  const jobs=await (await fetch('/api/jobs')).json();
+  document.getElementById('jobs').innerHTML=jobs.map(j=>{const s=j.status||{};const p=Math.round((s.progress||0)*100);
+    return `<div class="job"><div class="row"><b>${esc(j.meta?.prompt||j.id)}</b>${j.score!=null?`<span class="score" style="color:${j.score>=80?'var(--ok)':j.score>=60?'var(--acc)':'var(--bad)'}">${j.score}/100</span>`:''}</div>
+    <div class="mut">${STEP[s.step]||s.step} ${s.step!=='done'?p+'%':''} ${s.error?'— '+esc(s.error):''}</div>
+    ${s.step!=='done'&&s.step!=='error'&&s.step!=='preview-ready'?`<div class="bar"><i style="width:${p}%"></i></div>`:''}
+    ${j.hasVideo?`<video controls preload="metadata" src="/runs/${j.id}/final.mp4"></video><p><a href="/runs/${j.id}/final.mp4" download style="color:var(--acc)">تحميل MP4</a></p>`:j.hasPreview?`<img class="sheet" src="/runs/${j.id}/sheet_preview.jpg?${s.time||''}">`:''}
+    ${j.score!=null?`<button class="sec" onclick="report('${j.id}')">تقرير المراجعة (${j.issues} ملاحظة)</button><div id="r-${j.id}"></div>`:''}</div>`}).join('')||'لا يوجد بعد';
+  for(const id in open)if(open[id]){open[id]=0;report(id)}
+  const m=await (await fetch('/api/memory')).json();
+  const h=m.history||[];
+  document.getElementById('mem').innerHTML=`<p>عدد الفيديوهات اللي راجعها: ${h.length} · آخر تقييمات: ${h.slice(-6).map(x=>x.score).join(' ← ')||'—'}</p>
+   <p>أصول اتعلمها: ${esc(m.learned.join('، ')||'—')}</p><p>ضبط الأسلوب الحالي: <code dir="ltr" style="display:block;word-break:break-all">${esc(JSON.stringify(m.style))}</code></p>
+   <b>دروس محفوظة:</b><ul>${(m.lessons||[]).sort((a,b)=>b.count-a.count).map(l=>`<li>${esc(l.rule)} <span class="mut">(×${l.count})</span></li>`).join('')||'<li>—</li>'}</ul>`;
+}
+load();setInterval(load,4000);
+</script></body></html>
