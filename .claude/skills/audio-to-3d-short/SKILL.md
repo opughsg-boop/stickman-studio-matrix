@@ -5,6 +5,10 @@ description: Turn a narration audio file into a vertical (9:16) 3D-animated "exp
 
 # audio-to-3d-short
 
+Two styles. **Prefer B (diorama)** — it is the one that can be produced end-to-end here with real 3D rendering.
+- **A. Fast-cut CGI shorts** (below): needs external shot media (Blender/AI video/stock). Pipeline: `transcribe → plan_shots → assemble`.
+- **B. 3D diorama explainer** (reference clip: Spanish chicken-coop video): ONE continuous 3D scene, no cuts.
+
 Input: narration audio (`.mp3/.wav/.m4a/.mp4`). Output: `out/final.mp4`, 1080x1920, 30 fps, original audio.
 
 ## The style (measured from 4 reference clips)
@@ -39,3 +43,27 @@ The scripts only glue these together; they contain no model of their own.
 ## Honest limits
 Photoreal 3D footage is **not** produced by the scripts themselves — they need a shot source (Blender scenes, AI video model, or supplied clips). Without one you get a timing-accurate animatic: correct cuts, camera moves, captions and audio, ready to receive media.
 Arabic: pass `--lang ar`; captions use right-to-left shaping via libass automatically (font: Noto Sans Arabic/Cairo if installed, set `--font`).
+
+
+---
+# Style B — 3D diorama explainer (rendered for real with three.js)
+
+**Look (measured):** 9:16, 30 fps, one continuous shot. A floating terrain block over a blue grid-floor studio with soft light beams;
+miniature animals/structures **pop in with overshoot exactly on the word that names them**; smooth keyframed camera (orbit, rise, push-in);
+captions **one word at a time**, UPPERCASE, bold italic condensed (Bebas Neue), white with thick black outline, ~80 % height; no other UI.
+
+**Reuse, don't rewrite:** three.js (rendering), Playwright + Chromium (headless software GL), ffmpeg/libass (captions, mux), faster-whisper (word times), Bebas Neue (OFL, in `assets/fonts`).
+
+**Setup once:** `cd .claude/skills/audio-to-3d-short && npm install && pip install -r requirements.txt` (Chromium: uses `/opt/pw-browsers/chromium` if present, else `CHROMIUM_PATH` or `npx playwright install chromium`).
+
+**Workflow**
+1. `python scripts/transcribe.py AUDIO -o work/words.json --model small [--lang xx]`
+2. **Write `work/spec.json`** (see `examples/penguin_spec.py`): `duration, fps, fov, block{w,h,d}, snow{from}, camera[{t,pos,look}]`, and `objects[]` with
+   `kind` = `penguin | chicken | egg | box | plant | label`, `pos:[x,z]`, `y`, `scale`, `t0` (pop-in time = start of the word that names it), optional `t1`, `tint`,
+   `orbit{center,speed,from}`, `path[{t,pos}]`, `idle`, `face`; `box` takes `size, color, opacity` (build structures from boxes); `label` takes `text, w, color`.
+   Put every object's `t0` and every camera keyframe on word boundaries from `words.json`; change the camera at each new idea. Add a new `kind` in `diorama/scene.js` (`mkObject`) when the topic needs one.
+3. `python scripts/make_diorama.py AUDIO work/spec.json --words work/words.json --out out/final.mp4`
+   Renders ~0.3 s/frame at 720x1280 on CPU (a 10 s clip ≈ 3–6 min; run it in the background); set `width/height` in the spec for other sizes.
+4. Check a contact sheet (`ffmpeg -vf fps=0.8,scale=200:-1,tile=8x1`) against the look list.
+
+Limits: primitive-built models (ellipsoid animals, box structures), not photoreal; quality scales with the spec you write. Arabic captions: pass an Arabic-capable font to `word_captions.py --font`.
