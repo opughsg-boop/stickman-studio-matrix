@@ -9,3 +9,4 @@
 {"run": "pyramid", "time": "2026-11-12 02:01", "score": 69, "issues": 11, "codes": ["beat_too_long", "beat_too_short", "caption_flash", "caption_too_long", "ref_slow_cuts", "ref_static"]}
 {"run": "ants", "time": "2026-11-12 02:13", "score": 93, "issues": 2, "codes": ["no_context", "subject_lost"]}
 {"run": "polebarn", "time": "2026-11-12 03:26", "score": 100, "issues": 0, "codes": []}
+{"run": "drip", "time": "2026-11-12 12:20", "score": 95, "issues": 1, "codes": ["dead_beat"]}

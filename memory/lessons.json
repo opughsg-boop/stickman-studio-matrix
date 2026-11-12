@@ -96,5 +96,12 @@
   "count": 1,
   "last_seen": "2026-11-12",
   "example": "beat 9: blueprint room not visible, framing too tight"
+ },
+ {
+  "code": "dead_beat",
+  "rule": "Each beat must add an object, change a character mode, add an effect or change the camera.",
+  "count": 1,
+  "last_seen": "2026-11-12",
+  "example": "beat 3 adds nothing new visually"
  }
 ]
