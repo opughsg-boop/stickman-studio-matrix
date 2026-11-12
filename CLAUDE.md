@@ -1,7 +1,7 @@
 # Diorama Studio: instructions for Claude
 
 The user speaks Egyptian Arabic and is not technical. Reply in short, simple Egyptian Arabic. Never ask them to run commands.
-Full history and context: `HANDOFF.md`. Style guides: `STYLE_ZD.md` (cine, the current main style) and `STYLE.md` (diorama).
+Read `SCRIPTS_AND_STYLE.md` first (compact summary). Full history and context: `HANDOFF.md`. Style guides: `STYLE_ZD.md` (cine, the current main style) and `STYLE.md` (diorama).
 
 ## Setup (fresh container, ~1 min, run once)
 ```bash
