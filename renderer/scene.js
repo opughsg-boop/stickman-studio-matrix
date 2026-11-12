@@ -245,7 +245,7 @@ function arrow(p = {}) { // yellow (double) arrow from a to b
   g.position.copy(a.clone().add(b).multiplyScalar(.5)); g.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize());
   g.userData.tick = t => g.scale.setScalar(1 + Math.sin(t * 6) * .04);
   const wrap = new THREE.Group(); wrap.add(g);
-  if (p.label) { const s = sign({ text: p.label, scale: .7, y: 0 }); s.position.copy(g.position).add(new THREE.Vector3(0, (p.labelUp ?? .3), .6)); wrap.add(s); }
+  if (p.label) { const s = sign({ text: p.label, scale: p.labelScale || .7, y: 0 }); s.position.copy(g.position).add(new THREE.Vector3(0, (p.labelUp ?? .3), .6)); wrap.add(s); }
   return wrap; }
 function heat(p = {}) { const g = new THREE.Group(); // shimmering red-orange haze volume
   const m = new THREE.Mesh(new THREE.BoxGeometry(p.w || 8, p.h || 3, p.d || 7), new THREE.MeshBasicMaterial({ color: '#ff4a1a', transparent: true, opacity: .22, depthWrite: false, blending: THREE.AdditiveBlending }));
@@ -576,3 +576,92 @@ function eggs(p = {}) { const g = new THREE.Group(), r = rng(31), m = std('#fffa
   g.userData.tick = (t, age) => g.children.forEach((c, i) => c.visible = age > i * .05);
   return g; }
 Object.assign(ASSETS, { hive_box: hiveBox, frames, comb_frame: combFrame, wax_mess: waxMess, glue, bees, queen, excluder, lid, stand, sun, drips, eggs });
+
+// ================= goat-farm pack =================
+function goatMesh(seed) {
+  const r = rng(seed), coat = ['#f2efe8', '#8a5a34', '#2b2622', '#d9c3a0'][seed % 4], g = new THREE.Group(), m = std(coat, { r: .95 });
+  const body = sph(.5, m); body.scale.set(.75, .7, 1.25); body.position.y = 1; g.add(body);
+  const neck = cyl(.16, .2, .6, m); neck.position.set(0, 1.35, .5); neck.rotation.x = -.5; g.add(neck);
+  const head = new THREE.Group(); head.position.set(0, 1.65, .72); g.add(head);
+  const skull = sph(.2, m); skull.scale.set(.85, .9, 1.4); head.add(skull);
+  const snout = sph(.12, std(coat === '#2b2622' ? '#3a3330' : '#d8c8b8')); snout.position.set(0, -.08, .25); head.add(snout);
+  const beard = new THREE.Mesh(new THREE.ConeGeometry(.06, .25, 8), std('#e8e2d6')); beard.rotation.x = Math.PI; beard.position.set(0, -.25, .2); head.add(beard);
+  for (const s of [-1, 1]) {
+    const horn = new THREE.Mesh(new THREE.ConeGeometry(.05, .35, 8), std('#6b5a48', { r: .6 })); horn.position.set(s * .09, .2, -.08); horn.rotation.set(-.7, 0, s * .2); head.add(horn);
+    const ear = sph(.08, m); ear.scale.set(1.6, .5, .8); ear.position.set(s * .22, .05, -.05); ear.rotation.z = s * -.4; head.add(ear);
+    const eye = sph(.03, std('#111', { r: .3 })); eye.position.set(s * .13, .06, .12); head.add(eye);
+  }
+  const legs = [];
+  for (const [x, z] of [[-.22, -.45], [.22, -.45], [-.22, .45], [.22, .45]]) { const l = new THREE.Group(); l.position.set(x, .75, z); const leg = cyl(.06, .05, .75, std(coat)); leg.position.y = -.37; l.add(leg);
+    const hoof = cyl(.06, .06, .08, std('#2a2420')); hoof.position.y = -.74; l.add(hoof); g.add(l); legs.push(l); }
+  const tail = new THREE.Mesh(new THREE.ConeGeometry(.06, .22, 8), m); tail.position.set(0, 1.25, -.62); tail.rotation.x = -2.4; g.add(tail);
+  g.scale.setScalar(.55); g.userData = { head, legs, tail };
+  return shadowed(g);
+}
+function herd(p = {}) { // modes: {mode, at:[x,z], area:[w,d], ...}
+  const g = new THREE.Group(), n = p.count || 3, list = [], rr = rng(p.seed || 5);
+  for (let i = 0; i < n; i++) { const o = goatMesh(i); g.add(o); list.push({ o, ph: rr() * 6.3, ox: (rr() - .5), oz: (rr() - .5) }); }
+  const rope = cyl(.025, .025, 1, std('#c9a36a')); rope.visible = false; g.add(rope);
+  const P = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0);
+  g.userData.tick = (t) => {
+    const mo = g.userData.mode || p.init || { mode: 'pen', at: [0, 0], area: [4, 4] }, age = g.userData.modeAge ?? t;
+    if (g.parent) P.copy(g.parent.position);
+    const at = mo.at || [0, 0], area = mo.area || [3, 3]; rope.visible = false;
+    list.forEach((b, i) => {
+      const u = b.o.userData, tt = t * .45 + b.ph; let x = at[0] + b.ox * area[0] * .8 + Math.sin(tt) * .5, z = at[1] + b.oz * area[1] * .8 + Math.cos(tt * .8) * .5, y = 0, face = Math.atan2(Math.cos(tt), -Math.sin(tt * .8) * .8);
+      let headX = Math.max(0, Math.sin(t * 3 + b.ph)) * .7, walk = 1;
+      if (mo.mode === 'tied' || mo.mode === 'eat') { const tr = mo.tree; const d = mo.mode === 'eat' ? .9 : .9 + .5 * Math.abs(Math.sin(tt));
+        x = tr[0] + Math.cos(i * 2.1 + tt * .3) * d; z = tr[1] + Math.sin(i * 2.1 + tt * .3) * d; face = Math.atan2(tr[0] - x, tr[1] - z); headX = mo.mode === 'eat' ? -.7 + Math.sin(t * 6 + i) * .15 : headX;
+        if (i === 0) { rope.visible = true; const a = new THREE.Vector3(x - P.x, .75, z - P.z), c = new THREE.Vector3(tr[0] - P.x, .5, tr[1] - P.z); rope.position.copy(a).add(c).multiplyScalar(.5);
+          rope.scale.set(1, a.distanceTo(c), 1); rope.quaternion.setFromUnitVectors(up, c.clone().sub(a).normalize()); } }
+      if (mo.mode === 'jump' && i === 0) { const k = (age * .55) % 1, fx = mo.fence; x = lerp(fx[0] - 1.4, fx[0] + 1.4, k); z = fx[1]; y = Math.max(0, Math.sin(k * Math.PI)) * (mo.h || 1.6); face = Math.PI / 2; headX = -.3; }
+      if (mo.mode === 'bump' && i === 0) { const k = (age * .7) % 1, fx = mo.fence; x = fx[0] - .9 + Math.sin(k * Math.PI) * .45; z = fx[1]; y = Math.sin(k * Math.PI) * .9; face = Math.PI / 2; headX = -.3; }
+      if (mo.mode === 'shiver') { x = at[0] + (i - 1) * .55; z = at[1] + (i % 2) * .4; face = .4; headX = .5; walk = 0; b.o.position.x += 0; b.o.rotation.z = Math.sin(t * 40 + i) * .03; }
+      if (mo.mode === 'still') { x = at[0] + (i - 1) * .7; z = at[1] + (i % 2) * .35; y = mo.y ?? 0; face = mo.face ?? .3; headX = .2; walk = 0; }
+      if (mo.mode === 'trample') { x = at[0] + Math.sin(tt * 2.2) * .5 + (i - 1) * .4; z = at[1] + Math.cos(tt * 1.7) * .4; headX = .6; walk = 2.2; }
+      if (mo.mode === 'feeder') { x = at[0] + (i - 1) * .55; z = at[1]; y = mo.y ?? 0; face = mo.face ?? Math.PI; headX = -.35 + Math.sin(t * 5 + i) * .08; walk = 0; }
+      if (mo.mode === 'climb') { if (i === 0) { x = at[0]; z = at[1]; y = mo.h || .9; face = .6 + Math.sin(t * .6) * .3; headX = -.25; walk = 0; } else { x = at[0] + (i === 1 ? -1 : 1.1); z = at[1] + .8; } }
+      b.o.position.set(x - P.x, y - P.y, z - P.z); b.o.rotation.y = face; u.head.rotation.x = headX;
+      u.legs.forEach((l, k) => l.rotation.x = walk ? Math.sin(t * 7 * walk + k * Math.PI / (k > 1 ? 1 : 2)) * .35 : 0);
+      u.tail.rotation.z = Math.sin(t * 9 + i) * .4;
+    });
+  };
+  return g;
+}
+function fenceRing(p = {}) { // style 'rail' (low horizontal boards) or 'plank' (tall vertical boards)
+  const g = new THREE.Group(), w = p.w || 8, d = p.d || 7, h = p.h || 1, wm = woodMat(), gap = p.gap ?? 1.2;
+  const sides = [[0, -d / 2, w, 0], [0, d / 2, w, 0], [-w / 2, 0, d, Math.PI / 2], [w / 2, 0, d, Math.PI / 2]];
+  for (const [cx, cz, len, ry] of sides) {
+    const side = new THREE.Group(); side.position.set(cx, 0, cz); side.rotation.y = ry; g.add(side);
+    const posts = Math.round(len / 1.6);
+    for (let i = 0; i <= posts; i++) { const pst = box(.14, h + .15, .14, wm); pst.position.set(-len / 2 + i * len / posts, (h + .15) / 2, 0); side.add(pst); }
+    if (p.style === 'plank') { for (let x = -len / 2; x < len / 2 - .05; x += .2) { if (p.door && ry === 0 && cz > 0 && Math.abs(x) < gap / 2) continue; const ph = (ry === 0 && cz > 0) ? h * .42 : h; const pl = box(.16, ph, .05, wm); pl.position.set(x + .1, ph / 2, .06); side.add(pl); } }
+    else for (const y of [h * .35, h * .85]) { const rail = box(len, .12, .05, wm); rail.position.set(0, y, .06); side.add(rail); }
+  }
+  return shadowed(g);
+}
+function treeEat(p = {}) { // crown shrinks while the tree is being eaten (mode {eaten:true})
+  const g = tree({ scale: p.scale || 1.3 }); const crowns = g.children.filter((c, i) => i > 0);
+  g.userData.tick = () => { const mo = g.userData.mode; const k = mo?.eaten ? clamp((g.userData.modeAge || 0) / 1.3) : 0;
+    crowns.forEach((c, i) => { const s = Math.max(.001, 1 - k); c.scale.setScalar(s); c.visible = s > .02; }); };
+  return g;
+}
+function rain(p = {}) { const g = new THREE.Group(), r = rng(8), m = new THREE.MeshBasicMaterial({ color: '#cfe6ff', transparent: true, opacity: .55 }), list = [];
+  for (let i = 0; i < (p.count || 260); i++) { const d = box(.02, .45, .02, m); const o = { d, x: (r() - .5) * (p.w || 12), z: (r() - .5) * (p.d || 12), ph: r() }; g.add(d); list.push(o); }
+  g.userData.tick = t => list.forEach(o => { const k = (t * 1.6 + o.ph) % 1; o.d.position.set(o.x, (p.h || 9) * (1 - k), o.z); }); return g; }
+function shelter(p = {}) { const g = new THREE.Group(), w = p.w || 3.6, d = p.d || 2.6, h = p.h || 2.2, fl = p.floor ?? 0, wm = woodMat();
+  if (fl) { const f = box(w, .12, d, wm); f.position.y = fl; g.add(f); for (const [x, z] of [[-w / 2 + .15, -d / 2 + .15], [w / 2 - .15, -d / 2 + .15], [-w / 2 + .15, d / 2 - .15], [w / 2 - .15, d / 2 - .15]]) { const l = box(.14, fl, .14, wm); l.position.set(x, fl / 2, z); g.add(l); } }
+  for (const [x, z] of [[-w / 2, -d / 2], [w / 2, -d / 2], [-w / 2, d / 2], [w / 2, d / 2]]) { const pst = box(.16, h + (z < 0 ? .4 : 0), .16, wm); pst.position.set(x, (h + (z < 0 ? .4 : 0)) / 2, z); g.add(pst); }
+  const back = box(w, h, .1, wm); back.position.set(0, h / 2 + .1, -d / 2); g.add(back);
+  const rf = roof({ w: w - .5, d: d - .3, h: h + .1, slope: .17, color: '#9a9ea3' }); g.add(rf);
+  return shadowed(g); }
+function hay(p = {}) { const g = new THREE.Group(), r = rng(p.seed || 4), m = std(p.dirty ? '#8a6a3a' : '#e3c35a', { r: .9 });
+  for (let i = 0; i < (p.count || 60); i++) { const s = cyl(.012, .012, .35, m, 5); s.position.set((r() - .5) * (p.w || 1.2), .04 + r() * (p.hgt || .15), (r() - .5) * (p.d || .8)); s.rotation.set(Math.PI / 2 + (r() - .5), r() * 3, r()); g.add(s); }
+  if (p.dirty) for (let i = 0; i < 6; i++) { const mud = sph(.12, std('#4a3420')); mud.scale.y = .2; mud.position.set((r() - .5) * (p.w || 1.2), .02, (r() - .5) * (p.d || .8)); g.add(mud); }
+  return g; }
+function feederRack(p = {}) { const g = new THREE.Group(), w = p.w || 1.6, y = p.y ?? .75, wm = woodMat();
+  const trough = box(w, .3, .45, wm); trough.position.y = y; g.add(trough);
+  const h2 = hay({ w: w * .9, d: .35, count: 50, hgt: .2 }); h2.position.y = y + .12; g.add(h2);
+  for (const x of [-w / 2 + .1, w / 2 - .1]) { const br = box(.08, .08, .5, wm); br.position.set(x, y - .1, -.2); g.add(br); }
+  return shadowed(g); }
+Object.assign(ASSETS, { herd, fence_ring: fenceRing, tree_eat: treeEat, rain, shelter, hay, feeder_rack: feederRack });

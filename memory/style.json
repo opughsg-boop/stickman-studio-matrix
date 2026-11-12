@@ -1,9 +1,10 @@
 {
  "render": {
-  "exposure": 1.16
+  "exposure": 1.24,
+  "camScale": 0.92
  },
  "maxBeat": 5.5,
- "minBeat": 2.0,
+ "minBeat": 2.2,
  "cine": {
   "bright": 0.94,
   "handheld": 0.65

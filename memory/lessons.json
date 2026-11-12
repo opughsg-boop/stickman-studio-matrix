@@ -9,9 +9,9 @@
  {
   "code": "too_dark",
   "rule": "Keep night scenes readable: dim the light but keep the subject clearly visible.",
-  "count": 5,
-  "last_seen": "2026-11-11",
-  "example": "beat 16 too dark (luma 59)"
+  "count": 9,
+  "last_seen": "2026-11-12",
+  "example": "beat 13 too dark (luma 45)"
  },
  {
   "code": "beat_too_long",
@@ -30,9 +30,9 @@
  {
   "code": "beat_too_short",
   "rule": "Merge very short sentences; a beat should last at least ~1.5 s.",
-  "count": 2,
-  "last_seen": "2026-11-11",
-  "example": "beat 9 lasts 1.1s"
+  "count": 3,
+  "last_seen": "2026-11-12",
+  "example": "beat 12 lasts 1.0s"
  },
  {
   "code": "too_bright",
@@ -61,5 +61,12 @@
   "count": 1,
   "last_seen": "2026-11-11",
   "example": "less motion than reference (10.2 vs 22.1)"
+ },
+ {
+  "code": "subject_lost",
+  "rule": "Keep the main subject filling at least a third of the frame; move the camera closer.",
+  "count": 1,
+  "last_seen": "2026-11-12",
+  "example": "beat 2: subject too small / off-frame (79% background)"
  }
 ]
