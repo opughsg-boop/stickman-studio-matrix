@@ -19,12 +19,12 @@ const POSTS = [[-W / 2, -Dp / 2], [0, -Dp / 2], [W / 2, -Dp / 2], [-W / 2, Dp / 
 const beats = [
   // 0 hook: a finished barn, camera drops to the bare soil at its base
   { t: 0, kind: 'intro', add: [{ id: 'fr0', type: 'frame', params: { w: W, d: Dp, h: H }, anim: 'grow' }, { id: 'rf0', type: 'roof', params: { w: W, d: Dp, h: H, color: '#c9ccd0' }, anim: 'drop', delay: .5 }, ...walls('b0', 'grow', .3)],
-    camera: { preset: 'hero', target: [0, 1.6, 0], dist: 21, elev: .3, az: .3, zoom: 'in' } },
+    camera: { preset: 'hero', target: [0, 1.6, 0], dist: 29, elev: .3, az: .3, zoom: 'in' } },
   // 1 problem: normal barn = concrete all around
-  { t: at(1), kind: 'problem', add: concrete, camera: { preset: 'low', target: [0, .3, Dp / 2], dist: 12, elev: .2, az: .5, zoom: 'in' } },
+  { t: at(1), kind: 'problem', add: concrete, camera: { preset: 'low', target: [0, .3, Dp / 2], dist: 19, elev: .25, az: .5, zoom: 'in' } },
   // 2 problem: digging, pouring, waiting
   { t: at(2), kind: 'problem', add: [{ id: 'bar1', type: 'barrel', pos: [5.8, 0, 3.5], params: { color: '#8a8f95' } }, { id: 'bar2', type: 'barrel', pos: [6.8, 0, 2.8], params: { color: '#8a8f95' }, delay: .2 }, { id: 'pile', type: 'droppings', pos: [-6, 0, 3.6], params: { count: 40 }, anim: 'grow', delay: .3 }, { id: 'rk1', type: 'rock', pos: [-6.8, 0, 2.2], params: { r: .6 }, delay: .4 }],
-    camera: { preset: 'close', target: [4, .6, 3], dist: 12, elev: .35, az: .6, zoom: 'in' } },
+    camera: { preset: 'close', target: [4, .6, 3], dist: 18, elev: .35, az: .6, zoom: 'in' } },
   // 3 solution: pole barn - clear the island
   { t: at(3), kind: 'solution', remove: ['fr0', 'rf0', 'b0N', 'b0S', 'b0E', 'b0W', 'cN', 'cS', 'cE', 'cW', 'bar1', 'bar2', 'pile', 'rk1'],
     camera: { preset: 'hero', target: [0, 1.4, 0], dist: 22, elev: .28, az: .2, zoom: 'out' } },
@@ -33,16 +33,16 @@ const beats = [
     camera: { preset: 'low', target: [0, 1.5, 0], dist: 14, elev: .2, az: .45, zoom: 'in' } },
   // 5 posts hold the roof, walls hang on them
   { t: at(5), kind: 'solution', add: [{ id: 'rf1', type: 'roof', params: { w: W, d: Dp, h: H + .2, color: '#c9ccd0' }, anim: 'drop' }, ...walls('b1', 'grow', 1.0)],
-    camera: { preset: 'hero', target: [0, 1.8, 0], dist: 20, elev: .3, az: .35, zoom: 'out' } },
+    camera: { preset: 'hero', target: [0, 1.8, 0], dist: 27, elev: .3, az: .35, zoom: 'out' } },
   // 6 no foundation / no wait / lower cost: busy farm inside
   { t: at(6), kind: 'solution', add: [{ id: 'cr1', type: 'crate', pos: [-W / 2 - 1.6, 0, 1], params: { s: .9 } }, { id: 'cr2', type: 'crate', pos: [-W / 2 - 1.6, 0, -.2], params: { s: .9 }, delay: .2 }, { id: 'an1', type: 'animal', pos: [W / 2 + 2, 0, 1.5], delay: .3 }],
-    camera: { preset: 'orbit', target: [0, 1.4, 0], dist: 22, elev: .35, az: .1, zoom: 'out' } },
+    camera: { preset: 'orbit', target: [0, 1.4, 0], dist: 27, elev: .35, az: .1, zoom: 'out' } },
   // 7 twist: strip the roof and walls, only the posts remain + arrows down into the ground
   { t: at(7), kind: 'solution', remove: ['rf1', 'b1N', 'b1S', 'b1E', 'b1W'], add: POSTS.map(([x, z], i) => ({ id: 'ar' + i, type: 'arrow', params: { from: [x, H + 1.4, z], to: [x, H + .5, z], head: .3, color: '#ffd23f' }, anim: 'grow', delay: .5 + i * .1, dust: false })),
     camera: { preset: 'detail', target: [0, 1.7, 0], dist: 14, elev: .2, az: .5, zoom: 'in' } },
   // 8 CTA: full barn back, slow pull-out
   { t: at(8), kind: 'info', remove: ['ar0', 'ar1', 'ar2', 'ar3', 'ar4', 'ar5'], add: [{ id: 'rf2', type: 'roof', params: { w: W, d: Dp, h: H + .2, color: '#c9ccd0' }, anim: 'drop' }, ...walls('b2', 'grow', .5)],
-    camera: { preset: 'orbit', target: [0, 1.6, 0], dist: 24, elev: .35, az: .2, zoom: 'out' } },
+    camera: { preset: 'orbit', target: [0, 1.6, 0], dist: 29, elev: .35, az: .2, zoom: 'out' } },
 ];
 const plan = {
   version: 2, planner: 'directed', duration: D, language: 'en', prompt: 'Pole barn',
