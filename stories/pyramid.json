@@ -1,0 +1,14 @@
+{ "title": "حجارة الهرم",
+  "hero": { "model": "Xbot", "height": 1.8 },
+  "lines": [
+    { "shot": "sky" },
+    { "shot": "close" },
+    { "shot": "walk" },
+    { "shot": "route" },
+    { "shot": "object", "question": true },
+    { "shot": "dive", "model": "Horse" },
+    { "shot": "route", "follow": true },
+    { "shot": "people" },
+    { "shot": "twist" },
+    { "shot": "cta" }
+  ] }
