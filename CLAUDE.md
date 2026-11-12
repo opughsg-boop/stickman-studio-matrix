@@ -26,6 +26,10 @@ Chromium, Playwright and ffmpeg are preinstalled in the cloud container. Do not 
 4. Send `runs/<name>/final.mp4` with SendUserFile. Summarise the score in 3 or 4 lines.
 5. Commit the story and the memory changes, then push to branch `diorama-studio` of `opughsg-boop/stickman-studio-matrix`.
 
+## Subagent for routine chores
+Delegate mechanical work to the **`routine-runner`** subagent (`.claude/agents/routine-runner.md`, model Haiku = cheap). That covers setup installs, running or waiting for a render, git commit/push, making the zip and checking logs.
+Keep creative work in the main conversation: scripts, plans and shot choices, visual review.
+
 ## Saving the user's daily usage (important)
 - Look at at most ONE preview sheet per video (`sheet_preview.jpg`, 180 px tiles), and only when changing templates or assets. A story built only from existing templates can go straight to the full render.
 - Do not Read big files or images you do not need. Use `tail`/`grep` on logs. Avoid long tool outputs.
