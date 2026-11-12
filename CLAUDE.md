@@ -51,3 +51,19 @@ Keep creative work in the main conversation: scripts, plans and shot choices, vi
 - **Whisper**: we use `faster-whisper`, which runs the same OpenAI Whisper models faster. The original `openai/whisper` package was NOT installed on purpose: it would add about 2 GB of PyTorch for the same job.
 - **animation-principles** (dylantarre, MIT): Disney's 12 animation principles. 17 skills are active in `.claude/skills/anim-*`: the 12 principle masters, 3d-spatial, video-motion-graphics, timing-calibration, attention-management and excitement-energy. Apply them when building props and motion: anticipation before drops, squash & stretch on landings, follow-through, arcs, slow-in/out. The other 127 skills are reference only, in `tools/animation-principles/skills`. Activate one by copying it into `.claude/skills` only when needed: each active skill costs context in every session.
 - Respect the STYLE LOCK in every tool: no on-screen words except the spoken captions.
+
+## Ready-made 3D library (semi-realistic animals, people, trees, crops)
+- Run `bash assets/fetch_library.sh` once per fresh container (~46 MB, CC0 Quaternius packs). The models are not stored in git.
+- Model names and animation clips are listed in `assets/lib/catalog.json`.
+- **animals_pack:** Cow, Bull, Horse, Horse_White, Donkey, Alpaca, Deer, Stag, Fox, Wolf, Husky, ShibaInu. Clips: Idle, Walk, Gallop, Eating, Idle_Headlow, Attack_Kick, Death, and more.
+- **modular_men / modular_women:** Farmer, Worker, Casual, Suit and others. These are static; the engine lowers the arms from the T-pose automatically, and `wave:true` adds a gesture.
+- **nature_pack (150) / simple_nature_pack:** trees, bushes, rocks, grass.
+- **crops_pack (102):** crops by growth stage.
+- **fish_pack:** swimming fish, shark, dolphin, whale.
+- **medieval_village_pack:** barrels, carts, wells, bags, fences.
+- Use it in a diorama plan:
+  ```
+  { id:'cow', type:'glb', pos:[x,0,z], params:{ model:'animals_pack/Cow', height:1.4, clip:'Eating', path:[[x1,z1],[x2,z2]], pathSpeed:.25 } }
+  ```
+  Change the clip or path per beat with `modes: { cow: { clip:'Walk', path:[...] } }`.
+- Prefer these models over hand-built primitive animals and trees for a more realistic look. `runs/libtest/plan.json` is a working example.

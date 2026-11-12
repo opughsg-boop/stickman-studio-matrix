@@ -1,6 +1,8 @@
 // Blueprint-diorama renderer. Everything is a pure function of time t (seconds) so any
 // frame can be rendered independently -> chunked / resumable rendering.
 import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { clone as skClone } from 'three/addons/utils/SkeletonUtils.js';
 
 const R = { W: 540, H: 960 };
 let renderer, scene, camera, comp, cctx, plan, objects = [], lights = {}, fx = {};
@@ -387,7 +389,7 @@ window.setup = async (p, opts = {}) => {
   document.body.appendChild(renderer.domElement);
   comp = document.createElement('canvas'); comp.width = R.W; comp.height = R.H; cctx = comp.getContext('2d');
   scene = new THREE.Scene(); camera = new THREE.PerspectiveCamera(p.fov || 42, R.W / R.H, .1, 400);
-  makeTextures(); buildEnvironment(p.env || {}); instantiate();
+  makeTextures(); buildEnvironment(p.env || {}); await preloadGLB(p); instantiate();
   await document.fonts.load('italic 800 40px Cap'); await document.fonts.load('40px CapAr');
   return { objects: objects.length, beats: p.beats.length };
 };
@@ -750,3 +752,42 @@ function sleeper(p = {}) { const g = new THREE.Group(); const bed = box(2.2, .4,
   const head = sph(.2, std('#e2b48c')); head.position.set(-.8, .78, 0); g.add(head);
   g.userData.tick = t => { blanket.scale.y = 1 + Math.sin(t * 1.5) * .12; }; return shadowed(g); }
 Object.assign(ASSETS, { ant_farm: antFarm, clock24, film_cam: filmCam, sleeper });
+
+// ================= ready-made 3D library (assets/lib, CC0 Quaternius packs; see assets/lib/catalog.json) =================
+// usage in a plan: { id, type: 'glb', pos, params: { model: 'animals_pack/Cow', height: 1.2, clip: 'Eating', speed: 1, path: [[x,z],[x,z]], pathSpeed: .3 } }
+// modes on the object may switch the clip: modes: { cow: { clip: 'Walk' } }
+const GLB = {};
+async function preloadGLB(p) {
+  const names = new Set(); for (const b of p.beats || []) for (const a of b.add || []) if (a.type === 'glb') names.add(a.params.model);
+  const l = new GLTFLoader();
+  await Promise.all([...names].map(async n => { GLB[n] = await l.loadAsync(`/assets/lib/${n}.glb`); }));
+}
+ASSETS.glb = (p = {}) => {
+  const g = GLB[p.model]; if (!g) return box(.5, .5, .5, std('#f0f'));
+  const o = skClone(g.scene); o.updateMatrixWorld(true);
+  const bb = new THREE.Box3().setFromObject(o, true), s = (p.height || 1) / Math.max(.001, bb.max.y - bb.min.y);
+  o.scale.setScalar(s); o.position.y = -bb.min.y * s; o.position.x = -(bb.min.x + bb.max.x) / 2 * s; o.position.z = -(bb.min.z + bb.max.z) / 2 * s;
+  const w = new THREE.Group(); w.add(o); shadowed(o); o.traverse(m => { if (m.isMesh) m.frustumCulled = false; });
+  if (!g.animations.length) { // un-animated people come in T-pose: drop the arms to a natural A-pose
+    o.traverse(b => { if (!b.isBone) return; const n = b.name;
+      if (/^UpperArm\.?L$/i.test(n)) b.rotateX(-(p.arms ?? 1.25)); if (/^UpperArm\.?R$/i.test(n)) b.rotateX(-(p.arms ?? 1.25));
+      if (/^LowerArm\.?[LR]$/i.test(n)) b.rotateZ(n.endsWith('L') ? -.15 : .15); });
+    if (p.wave) { const arm = o.getObjectByName('UpperArmR') || o.getObjectByName('UpperArm.R'); w.userData.wave = arm; } }
+  const mixer = new THREE.AnimationMixer(o), acts = {};
+  for (const c of g.animations) acts[c.name.replace(/^.*\|/, '')] = mixer.clipAction(c);
+  let cur = null; const play = n => { if (!n || cur === n || !acts[n]) return; Object.values(acts).forEach(a => a.stop()); acts[n].play(); cur = n; };
+  play(p.clip || (acts.Idle ? 'Idle' : Object.keys(acts)[0]));
+  const P = p.path;
+  w.userData.tick = (t) => {
+    const mo = w.userData.mode || {}; play(mo.clip || p.clip || (acts.Idle ? 'Idle' : Object.keys(acts)[0]));
+    mixer.setTime((t + (p.offset || 0)) * (mo.speed ?? p.speed ?? 1));
+    const path = mo.path || P;
+    if (path) { const u = ((t * (mo.pathSpeed ?? p.pathSpeed ?? .25)) % 2), k = u < 1 ? u : 2 - u, d = u < 1 ? 1 : -1;
+      const [a, b] = path; const x = lerp(a[0], b[0], easeIO(k)), z = lerp(a[1], b[1], easeIO(k));
+      const par = w.parent ? w.parent.position : new THREE.Vector3(); o.parent.position.x = x - par.x; o.parent.position.z = z - par.z;
+      w.rotation.y = 0; o.parent.rotation.y = Math.atan2((b[0] - a[0]) * d, (b[1] - a[1]) * d); }
+    if (mo.face != null) o.parent.rotation.y = mo.face;
+    if (w.userData.wave) w.userData.wave.rotation.x = Math.sin(t * 6) * .4; // simple gesture for static people
+  };
+  return w;
+};

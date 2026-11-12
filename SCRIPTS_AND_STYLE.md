@@ -40,3 +40,19 @@ Read this first for any new video. It is a compact summary of everything decided
 - **Title:** a hook question or shocking line, plus an emoji. Example: "المعزة دي نطت من فوق السور! 😳".
 - **Description:** 2 lines, then "تابعني لفيديوهات أكتر 👆".
 - **Hashtags:** 4-5 topical ones, plus #وسع_مخك.
+
+## Ready-made 3D library (semi-realistic animals, people, trees, crops)
+- Run `bash assets/fetch_library.sh` once per fresh container (~46 MB, CC0 Quaternius packs). The models are not stored in git.
+- Model names and animation clips are listed in `assets/lib/catalog.json`.
+- **animals_pack:** Cow, Bull, Horse, Horse_White, Donkey, Alpaca, Deer, Stag, Fox, Wolf, Husky, ShibaInu. Clips: Idle, Walk, Gallop, Eating, Idle_Headlow, Attack_Kick, Death, and more.
+- **modular_men / modular_women:** Farmer, Worker, Casual, Suit and others. These are static; the engine lowers the arms from the T-pose automatically, and `wave:true` adds a gesture.
+- **nature_pack (150) / simple_nature_pack:** trees, bushes, rocks, grass.
+- **crops_pack (102):** crops by growth stage.
+- **fish_pack:** swimming fish, shark, dolphin, whale.
+- **medieval_village_pack:** barrels, carts, wells, bags, fences.
+- Use it in a diorama plan:
+  ```
+  { id:'cow', type:'glb', pos:[x,0,z], params:{ model:'animals_pack/Cow', height:1.4, clip:'Eating', path:[[x1,z1],[x2,z2]], pathSpeed:.25 } }
+  ```
+  Change the clip or path per beat with `modes: { cow: { clip:'Walk', path:[...] } }`.
+- Prefer these models over hand-built primitive animals and trees for a more realistic look. `runs/libtest/plan.json` is a working example.

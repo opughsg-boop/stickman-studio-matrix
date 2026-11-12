@@ -2,3 +2,4 @@ node_modules/
 runs/
 uploads/
 *.zip
+assets/lib/**/*.glb
