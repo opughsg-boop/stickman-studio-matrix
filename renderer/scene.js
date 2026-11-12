@@ -228,7 +228,8 @@ function quadruped(p = {}) { const g = new THREE.Group(), c = p.color || '#ece6d
   g.scale.setScalar(p.scale || 1); g.userData.tick = t => { h.rotation.x = Math.max(0, Math.sin(t * .9)) * .5; }; return shadowed(g); }
 function crate(p = {}) { const m = box(p.s || .8, p.s || .8, p.s || .8, woodMat()); m.position.y = (p.s || .8) / 2; return shadowed(m); }
 function barrel(p = {}) { const m = cyl(.4, .4, 1, std(p.color || '#2f6f9a', { m: .4, r: .5 })); m.position.y = .5; return shadowed(m); }
-function sign(p = {}) { // flat billboard text
+function sign(p = {}) { // flat billboard text - disabled by the style lock (only spoken captions may appear as words)
+  if (style.allowText !== true) return new THREE.Group();
   const txt = String(p.text || '').toUpperCase();
   const tex = canvasTex(1024, 200, (g, w, h) => { g.fillStyle = p.bg || 'rgba(0,0,0,0)'; g.fillRect(0, 0, w, h);
     let fsz = 140; g.font = `800 italic ${fsz}px Cap, CapAr, sans-serif`; while (g.measureText(txt).width > w * .92 && fsz > 20) { fsz -= 6; g.font = `800 italic ${fsz}px Cap, CapAr, sans-serif`; } g.textAlign = 'center'; g.textBaseline = 'middle';
@@ -245,7 +246,7 @@ function arrow(p = {}) { // yellow (double) arrow from a to b
   g.position.copy(a.clone().add(b).multiplyScalar(.5)); g.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize());
   g.userData.tick = t => g.scale.setScalar(1 + Math.sin(t * 6) * .04);
   const wrap = new THREE.Group(); wrap.add(g);
-  if (p.label) { const s = sign({ text: p.label, scale: p.labelScale || .7, y: 0 }); s.position.copy(g.position).add(new THREE.Vector3(0, (p.labelUp ?? .3), .6)); wrap.add(s); }
+  if (p.label && style.allowText === true) { const s = sign({ text: p.label, scale: p.labelScale || .7, y: 0 }); s.position.copy(g.position).add(new THREE.Vector3(0, (p.labelUp ?? .3), .6)); wrap.add(s); }
   return wrap; }
 function heat(p = {}) { const g = new THREE.Group(); // shimmering red-orange haze volume
   const m = new THREE.Mesh(new THREE.BoxGeometry(p.w || 8, p.h || 3, p.d || 7), new THREE.MeshBasicMaterial({ color: '#ff4a1a', transparent: true, opacity: .22, depthWrite: false, blending: THREE.AdditiveBlending }));

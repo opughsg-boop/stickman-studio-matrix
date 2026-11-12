@@ -18,6 +18,13 @@ def lp(x, k):  # one-pole low-pass, k in (0,1)
     y = np.empty_like(x); acc = 0.0
     for i, v in enumerate(x): acc += k * (v - acc); y[i] = acc
     return y
+def soft_transition(d=.5):
+    """Soft low 'whoom' (user rejected the hissy 'tsh tsh' noise whoosh): pitch-glide sine + heavily filtered air."""
+    n = int(SR * d); t = np.arange(n) / SR; k = t / d
+    f = 220 - 120 * k                                   # gentle downward glide
+    tone = np.sin(2 * np.pi * np.cumsum(f) / SR) * .8 + np.sin(4 * np.pi * np.cumsum(f) / SR) * .15
+    air = lp(lp(noise(n), .02), .05) * 3                # very dark, no hiss
+    return (tone + air) * np.sin(np.pi * k) ** 2
 def whoosh(d=.45):
     n = int(SR * d); t = np.arange(n) / n; x = noise(n)
     cut = .02 + .25 * np.sin(np.pi * t) ** 2; y = np.empty(n); acc = 0.0
@@ -58,7 +65,7 @@ def put(sig, at, gain):
 
 beats = plan.get('beats') or [{'start': x['start'], 'end': x['end'], 'kind': 'solution' if x.get('flash') else '', 'add': [], 'effects': []} for x in plan['shots']]
 for i, b in enumerate(beats):
-    if i: put(whoosh(), b['start'] - .18, .32)
+    if i: put(soft_transition(), b['start'] - .22, .16)
     if b.get('kind') == 'solution': put(ding(), b['start'] + .05, .30)
     if b.get('kind') == 'problem': put(buzz(), b['start'] + .05, .22)
     if 'heat' in (b.get('effects') or []): put(sizzle(b['end'] - b['start']), b['start'], .25)

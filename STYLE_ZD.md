@@ -56,3 +56,8 @@ Fast single narrator. Whoosh on whips, subtle impacts, and light SFX ducked unde
 - **Shot fields:** `transition` (whip or cut), `whipDir`, `flash`, `fx.bloom`, `fx.grade`.
 
 The self-review compares every cine video with the reference profile. It auto-tunes `memory/style.json → cine` (brightness, saturation, handheld).
+
+## STYLE LOCK (user decisions, never change without the user asking)
+- No words on screen except the spoken captions: no signs, labels, counters, pins or button text. The engines enforce this unless a plan sets `style.allowText: true`. Only wordless icons are allowed (✓ ✗ arrows).
+- Transition sound: the soft low "whoom" (`soft_transition` in `pipeline/sfx.py`). The hissy noise whoosh ("تش تش") was rejected.
+- Diorama: continuous camera (`camEase` 0.6, no punch cuts), 2-word Arabic captions per spoken line, ✓/✗ icons on fix/problem beats.

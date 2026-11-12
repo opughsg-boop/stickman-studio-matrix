@@ -182,7 +182,8 @@ function poseCamera(sh, lt, dur) {
 
 // ---------- 2D overlays ----------
 function project(sh, p) { const v = V(p).project(camera); return [(v.x * .5 + .5) * W, (-v.y * .5 + .5) * H, v.z < 1]; }
-function txt(s, x, y, size, color, o = {}) { const ar = /[؀-ۿ]/.test(s); cctx.font = `${o.weight || 800} ${size}px ${ar ? 'CapAr2' : 'CapEn'}`; cctx.textAlign = 'center'; cctx.textBaseline = 'middle';
+function txt(s, x, y, size, color, o = {}) { if (style.allowText !== true && !/^[✓✗+?؟↑↓]$/.test(s)) return; // style lock: no words on screen except captions
+  const ar = /[؀-ۿ]/.test(s); cctx.font = `${o.weight || 800} ${size}px ${ar ? 'CapAr2' : 'CapEn'}`; cctx.textAlign = 'center'; cctx.textBaseline = 'middle';
   cctx.direction = ar ? 'rtl' : 'ltr'; if (o.stroke !== false) { cctx.lineJoin = 'round'; cctx.lineWidth = size * .14; cctx.strokeStyle = o.strokeColor || 'rgba(255,255,255,.95)'; cctx.strokeText(s, x, y); }
   cctx.fillStyle = color; cctx.fillText(s, x, y); }
 function drawUI(sh, lt) {
@@ -203,7 +204,7 @@ function drawUI(sh, lt) {
       cctx.moveTo(-a * .35, -a * 1.6); cctx.lineTo(a * .35, -a * 1.6); cctx.lineTo(a * .35, -a * .5); cctx.lineTo(a * .8, -a * .5); cctx.lineTo(0, a * .4); cctx.lineTo(-a * .8, -a * .5); cctx.lineTo(-a * .35, -a * .5); cctx.closePath(); cctx.fill(); cctx.stroke(); }
     else if (u.type === 'button') { const [x, y] = u.at || [.5, .3]; cctx.translate(x * W, y * H); cctx.scale(pop, pop); const bw = W * .62, bh = W * .15;
       cctx.shadowColor = 'rgba(0,0,0,.45)'; cctx.shadowBlur = 18; cctx.fillStyle = u.color || '#e8262b'; cctx.beginPath(); cctx.roundRect(-bw / 2, -bh / 2, bw, bh, bh / 2); cctx.fill(); cctx.shadowColor = 'transparent';
-      txt(u.text || 'تابعني +', 0, 0, bh * .48, '#fff', { stroke: false });
+      txt(style.allowText === true ? (u.text || 'تابعني +') : '+', 0, 0, bh * .48, '#fff', { stroke: false });
       if (u.tap != null && ul > u.tap) { const tk = clamp((ul - u.tap) / .4); cctx.strokeStyle = `rgba(255,255,255,${1 - tk})`; cctx.lineWidth = 6; cctx.beginPath(); cctx.arc(bw * .3, bh * .2, 20 + tk * 50, 0, 7); cctx.stroke(); } }
     else if (u.type === 'meter') { const [x, y] = u.at || [.2, .4], v = lerp(u.from ?? 0, u.to ?? 1, easeIO(ul / (u.dur || 1))), bw = W * .1, bh = H * .22;
       cctx.translate(x * W, y * H); cctx.fillStyle = 'rgba(30,40,50,.85)'; cctx.beginPath(); cctx.roundRect(-bw / 2, -bh / 2, bw, bh, W * .015); cctx.fill();

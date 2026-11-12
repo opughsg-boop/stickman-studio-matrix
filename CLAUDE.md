@@ -34,3 +34,8 @@ Chromium, Playwright and ffmpeg are preinstalled in the cloud container. Do not 
 
 ## Faster rendering
 `--gpu` renders at full 1080x1920 on a machine with a graphics card (the user's PC, via Remote Control). Workers default to CPU cores minus 1.
+
+## STYLE LOCK (user decisions, never change without the user asking)
+- No words on screen except the spoken captions: no signs, labels, counters, pins or button text. The engines enforce this unless a plan sets `style.allowText: true`. Only wordless icons are allowed (✓ ✗ arrows).
+- Transition sound: the soft low "whoom" (`soft_transition` in `pipeline/sfx.py`). The hissy noise whoosh ("تش تش") was rejected.
+- Diorama: continuous camera (`camEase` 0.6, no punch cuts), 2-word Arabic captions per spoken line, ✓/✗ icons on fix/problem beats.

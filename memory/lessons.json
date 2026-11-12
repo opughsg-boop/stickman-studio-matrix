@@ -9,7 +9,7 @@
  {
   "code": "too_dark",
   "rule": "Keep night scenes readable: dim the light but keep the subject clearly visible.",
-  "count": 9,
+  "count": 13,
   "last_seen": "2026-11-12",
   "example": "beat 13 too dark (luma 45)"
  },
@@ -30,7 +30,7 @@
  {
   "code": "beat_too_short",
   "rule": "Merge very short sentences; a beat should last at least ~1.5 s.",
-  "count": 3,
+  "count": 4,
   "last_seen": "2026-11-12",
   "example": "beat 12 lasts 1.0s"
  },
@@ -65,8 +65,22 @@
  {
   "code": "subject_lost",
   "rule": "Keep the main subject filling at least a third of the frame; move the camera closer.",
-  "count": 1,
+  "count": 2,
   "last_seen": "2026-11-12",
   "example": "beat 2: subject too small / off-frame (79% background)"
+ },
+ {
+  "code": "user:no_text",
+  "rule": "User: no on-screen words except spoken captions (signs/labels/counters removed; engine-enforced).",
+  "count": 1,
+  "last_seen": "2026-11-12",
+  "source": "user"
+ },
+ {
+  "code": "user:soft_transition",
+  "rule": "User: replace the hissy \"tsh tsh\" transition whoosh with a soft low whoom.",
+  "count": 1,
+  "last_seen": "2026-11-12",
+  "source": "user"
  }
 ]

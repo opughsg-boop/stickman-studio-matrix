@@ -4,3 +4,4 @@
 {"run": "cine_test", "time": "2026-11-11 03:04", "score": 84, "issues": 5, "codes": ["caption_too_long", "no_context", "ref_too_bright", "too_bright"]}
 {"run": "spear", "time": "2026-11-11 13:10", "score": 83, "issues": 4, "codes": ["beat_too_short", "ref_static", "ref_too_bright", "too_bright"]}
 {"run": "goats", "time": "2026-11-12 00:30", "score": 73, "issues": 6, "codes": ["beat_too_short", "subject_lost", "too_dark"]}
+{"run": "goats", "time": "2026-11-12 00:36", "score": 73, "issues": 6, "codes": ["beat_too_short", "subject_lost", "too_dark"]}

@@ -33,3 +33,8 @@ Ten beats in ~47 s → 3–6 s per beat.
 Original was most likely Blender/Unreal with stock assets. This tool reproduces it fully in code:
 Three.js (procedural assets) rendered headless in Chromium via Playwright, faster-whisper for word timing,
 Claude (optional) or a rule-based planner for the beat → scene mapping, FFmpeg for encode/loudness.
+
+## STYLE LOCK (user decisions, never change without the user asking)
+- No words on screen except the spoken captions: no signs, labels, counters, pins or button text. The engines enforce this unless a plan sets `style.allowText: true`. Only wordless icons are allowed (✓ ✗ arrows).
+- Transition sound: the soft low "whoom" (`soft_transition` in `pipeline/sfx.py`). The hissy noise whoosh ("تش تش") was rejected.
+- Diorama: continuous camera (`camEase` 0.6, no punch cuts), 2-word Arabic captions per spoken line, ✓/✗ icons on fix/problem beats.
