@@ -667,3 +667,86 @@ function feederRack(p = {}) { const g = new THREE.Group(), w = p.w || 1.6, y = p
   for (const x of [-w / 2 + .1, w / 2 - .1]) { const br = box(.08, .08, .5, wm); br.position.set(x, y - .1, -.2); g.add(br); }
   return shadowed(g); }
 Object.assign(ASSETS, { herd, fence_ring: fenceRing, tree_eat: treeEat, rain, shelter, hay, feeder_rack: feederRack });
+
+// ================= ant-colony pack (wordless) =================
+const ANT_PATHS = [ // farm-local (x, y); farm spans x -3..3, y 0..4, sand top at y 3.8
+  [[-2.4, 3.8], [-1.9, 3.1], [-1.8, 2.2], [-1.1, 1.6], [-.2, .9]],
+  [[2.3, 3.8], [1.6, 2.9], [2, 2], [1.2, 1.4], [.2, .9]],
+  [[-1.9, 3.1], [-.4, 2.7], [.6, 2.9], [1.6, 2.9]],
+  [[-2.9, 3.85], [2.9, 3.85]],
+];
+const CHAMBERS = [[0, .8, .75, .38], [-1.8, 2.2, .45, .3], [2, 2, .45, .3]];
+function polyPoint(pts, u) { // u in 0..1 ping-pong along polyline
+  const L = []; let tot = 0; for (let i = 1; i < pts.length; i++) { const d = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); L.push(d); tot += d; }
+  let s = (u % 2 < 1 ? u % 1 : 1 - u % 1) * tot, dir = u % 2 < 1 ? 1 : -1;
+  for (let i = 0; i < L.length; i++) { if (s <= L[i] || i === L.length - 1) { const k = Math.min(1, s / L[i]), a = pts[i], b = pts[i + 1]; return [lerp(a[0], b[0], k), lerp(a[1], b[1], k), Math.atan2((b[1] - a[1]) * dir, (b[0] - a[0]) * dir)]; } s -= L[i]; }
+}
+function antMesh(queen) {
+  const g = new THREE.Group(), m = std(queen ? '#5a2a14' : '#2a1a10', { r: .45 }), s = queen ? 2.2 : 1;
+  const parts = [[.09, -.16, 1.25], [.06, 0, 1], [.07, .13, 1]]; // abdomen, thorax, head (along x)
+  parts.forEach(([r, x, sy]) => { const b = sph(r * s, m); b.position.x = x * s; b.scale.set(1.2, sy * .85, .85); g.add(b); });
+  if (queen) { const ab = sph(.1 * s, m); ab.position.x = -.3 * s; ab.scale.set(1.6, .9, .9); g.add(ab); }
+  const legs = [];
+  for (let i = 0; i < 3; i++) for (const sd of [-1, 1]) { const l = cyl(.008 * s, .008 * s, .16 * s, std('#1a0f08')); l.position.set((i - 1) * .06 * s, -.04 * s, sd * .07 * s); l.rotation.x = sd * 1.1; g.add(l); legs.push([l, i, sd]); }
+  for (const sd of [-1, 1]) { const a = cyl(.005 * s, .005 * s, .14 * s, std('#1a0f08')); a.position.set(.2 * s, .06 * s, sd * .04 * s); a.rotation.set(sd * .6, 0, -.9); g.add(a); }
+  const glow = new THREE.Mesh(new THREE.RingGeometry(.12 * s, .16 * s, 32), new THREE.MeshBasicMaterial({ color: '#7fc8ff', transparent: true, opacity: 0, depthWrite: false })); glow.position.z = .12; g.add(glow);
+  g.userData = { legs, glow, mats: [m] }; return g;
+}
+function antFarm(p = {}) { // glass formicarium with sand, tunnels and ants. modes: {mode:'work'|'naps'|'one'|'queen'|'around', rate}
+  const g = new THREE.Group(), W = 6, Hh = 4, T = .5;
+  const tex = canvasTex(768, 512, (c, w, h) => {
+    const X = x => (x + 3) / 6 * w, Y = y => h - y / 4 * h;
+    const gr = c.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#d9b278'); gr.addColorStop(1, '#a8794a'); c.fillStyle = gr; c.fillRect(0, 0, w, h);
+    noiseFill(c, w, h, 'rgba(0,0,0,0)', .3, 9000, 2); c.fillStyle = '#9fd0ff'; c.fillRect(0, 0, w, Y(3.95));
+    c.strokeStyle = '#4a2f1a'; c.lineCap = 'round'; c.lineJoin = 'round'; c.lineWidth = 26;
+    for (const pth of ANT_PATHS.slice(0, 3)) { c.beginPath(); pth.forEach(([x, y], i) => i ? c.lineTo(X(x), Y(y)) : c.moveTo(X(x), Y(y))); c.stroke(); }
+    c.fillStyle = '#4a2f1a'; for (const [x, y, rx, ry] of CHAMBERS) { c.beginPath(); c.ellipse(X(x), Y(y), rx / 6 * w, ry / 4 * h, 0, 0, 7); c.fill(); }
+  }); tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping; tex.repeat.set(1, 1);
+  const sand = new THREE.Mesh(new THREE.PlaneGeometry(W, Hh), new THREE.MeshStandardMaterial({ map: tex, roughness: 1 })); sand.position.set(0, Hh / 2, -.05); g.add(sand);
+  const glass = new THREE.Mesh(new THREE.BoxGeometry(W + .1, Hh + .1, T), new THREE.MeshPhysicalMaterial({ color: '#ffffff', roughness: .05, transparent: true, opacity: .12, depthWrite: false })); glass.position.y = Hh / 2; g.add(glass);
+  const frameM = woodMat(); for (const [w, h, x, y] of [[W + .4, .2, 0, 0], [W + .4, .15, 0, Hh + .05], [.2, Hh, -W / 2 - .1, Hh / 2], [.2, Hh, W / 2 + .1, Hh / 2]]) { const b = box(w, h, T + .1, frameM); b.position.set(x, y, 0); g.add(b); }
+  const ants = [], n = p.count || 26, r = rng(13);
+  for (let i = 0; i < n; i++) { const a = antMesh(false); g.add(a); ants.push({ a, path: i % 4, off: r() * 2, sp: .05 + r() * .05, napPh: r() * 50 }); }
+  const queen = antMesh(true); queen.position.set(0, .82, .14); g.add(queen);
+  g.userData.tick = (t) => {
+    const mo = g.userData.mode || { mode: 'work' }, age = g.userData.modeAge ?? t;
+    const qSleep = mo.mode === 'queen' || mo.mode === 'around'; queen.userData.glow.material.opacity = qSleep ? .55 + Math.sin(t * 2) * .2 : 0;
+    queen.rotation.z = qSleep ? 0 : Math.sin(t * .8) * .2; queen.userData.legs.forEach(([l, i, sd]) => l.rotation.z = qSleep ? 0 : Math.sin(t * 9 + i) * .2);
+    ants.forEach((o, i) => {
+      let u = t * o.sp + o.off, x, y, ang, napping = false;
+      if (mo.mode === 'naps' || mo.mode === 'one' || mo.mode === 'all') { const cyc = (t * (mo.rate || .35) + o.napPh) % 4; napping = mo.mode === 'one' ? i === 0 && (age % 3) > .6 : cyc < (mo.mode === 'all' ? 1.2 : .7); }
+      if (mo.mode === 'one' && i === 0) { x = -1.8; y = 2.12; ang = 0; }
+      else if (mo.mode === 'around' && i < 10) { const a = t * .7 + i * .63; x = Math.cos(a) * .95; y = .8 + Math.sin(a) * .45; ang = a + Math.PI / 2; }
+      else { if (napping) u = Math.floor(t * 4) / 4 * o.sp + o.off - (age % 3) * o.sp; [x, y, ang] = polyPoint(ANT_PATHS[o.path], (napping ? (o.frozen ??= u) : (o.frozen = undefined, u)) * (o.path === 3 ? .5 : 1)); }
+      o.a.position.set(x, y + .06, .14); o.a.rotation.z = ang; o.a.userData.glow.material.opacity = napping ? .7 + Math.sin(t * 4) * .2 : 0;
+      o.a.userData.legs.forEach(([l, k]) => l.rotation.z = napping ? 0 : Math.sin(t * 22 + k * 2 + i) * .35);
+    });
+  };
+  return shadowed(g);
+}
+function clock24(p = {}) { // wordless clock; hands spin fast; optional sector [fraction, color], dashed = split into chunks
+  const g = new THREE.Group(), R = p.r || .9;
+  const face = new THREE.Mesh(new THREE.CircleGeometry(R, 64), std('#f6f3ea', { r: .5 })); g.add(face);
+  const rim = new THREE.Mesh(new THREE.TorusGeometry(R, .06, 12, 64), std('#d24a3c', { m: .3, r: .4 })); g.add(rim);
+  for (let i = 0; i < 24; i++) { const tk = box(.03, i % 6 ? .08 : .16, .02, std('#333')); const a = i / 24 * Math.PI * 2; tk.position.set(Math.sin(a) * R * .85, Math.cos(a) * R * .85, .02); tk.rotation.z = -a; g.add(tk); }
+  const hand = box(.05, R * .7, .03, std('#222')); hand.geometry.translate(0, R * .35, 0); hand.position.z = .05; g.add(hand);
+  const sector = new THREE.Mesh(new THREE.RingGeometry(R * .2, R * .78, 64, 1, 0, .001), new THREE.MeshBasicMaterial({ color: p.color || '#5aa9ff', transparent: true, opacity: .75, side: THREE.DoubleSide })); sector.position.z = .03; g.add(sector);
+  const legs = box(.08, 1.2, .08, woodMat()); legs.position.set(0, -R - .6, -.05); g.add(legs);
+  g.position.y = R + 1.2;
+  g.userData.tick = (t, age) => { const mo = g.userData.mode || {}; hand.rotation.z = -t * (mo.speed ?? 2.5);
+    const f = mo.frac ? mo.frac * easeIO((g.userData.modeAge || 0) / 1.4) : 0; sector.visible = f > .001; sector.material.color.set(mo.color || p.color || '#5aa9ff');
+    if (f > .001) { sector.geometry.dispose(); sector.geometry = new THREE.RingGeometry(R * .2, R * .78, 64, 1, Math.PI / 2 - f * Math.PI * 2, f * Math.PI * 2); } };
+  return shadowed(g);
+}
+function filmCam(p = {}) { const g = new THREE.Group(), m = std('#2b2f36', { m: .4, r: .4 });
+  const body = box(.7, .5, .5, m); body.position.y = 1.6; g.add(body);
+  const lens = cyl(.16, .2, .4, std('#111', { m: .6, r: .2 })); lens.rotation.x = Math.PI / 2; lens.position.set(0, 1.6, .42); g.add(lens);
+  const rec = sph(.05, std('#ff2a2a', { extra: { emissive: col('#ff2a2a') } })); rec.position.set(.25, 1.82, .2); g.add(rec);
+  for (const a of [0, 2.1, 4.2]) { const l = cyl(.03, .03, 1.5, std('#444')); l.position.set(Math.sin(a) * .3, .7, Math.cos(a) * .3); l.rotation.set(Math.cos(a) * .2, 0, -Math.sin(a) * .2); g.add(l); }
+  g.userData.tick = t => { rec.visible = Math.floor(t * 2) % 2 === 0; }; return shadowed(g); }
+function sleeper(p = {}) { const g = new THREE.Group(); const bed = box(2.2, .4, 1.1, std('#7a8fb5')); bed.position.y = .3; g.add(bed);
+  const pillow = box(.5, .15, .8, std('#f2f2f2')); pillow.position.set(-.8, .57, 0); g.add(pillow);
+  const blanket = box(1.5, .14, 1.12, std('#3d5a99')); blanket.position.set(.25, .56, 0); g.add(blanket);
+  const head = sph(.2, std('#e2b48c')); head.position.set(-.8, .78, 0); g.add(head);
+  g.userData.tick = t => { blanket.scale.y = 1 + Math.sin(t * 1.5) * .12; }; return shadowed(g); }
+Object.assign(ASSETS, { ant_farm: antFarm, clock24, film_cam: filmCam, sleeper });

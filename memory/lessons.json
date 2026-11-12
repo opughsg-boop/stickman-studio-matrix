@@ -17,22 +17,22 @@
   "code": "beat_too_long",
   "rule": "Split long sentences into two beats with a camera change.",
   "count": 3,
-  "last_seen": "2026-11-12",
-  "example": "beat 1 lasts 25.5s without a new idea"
+  "last_seen": "2026-11-11",
+  "example": "beat 9 lasts 8.2s without a new idea"
  },
  {
   "code": "caption_flash",
   "rule": "Hold each caption until the next word starts.",
   "count": 2,
-  "last_seen": "2026-11-12",
-  "example": "caption \"ورمل\" shown only 0.00s"
+  "last_seen": "2026-11-11",
+  "example": "caption \"hay\" shown only 0.08s"
  },
  {
   "code": "beat_too_short",
   "rule": "Merge very short sentences; a beat should last at least ~1.5 s.",
   "count": 10,
   "last_seen": "2026-11-12",
-  "example": "beat 7 lasts 0.5s"
+  "example": "beat 12 lasts 1.0s"
  },
  {
   "code": "too_bright",
@@ -45,7 +45,7 @@
   "code": "caption_too_long",
   "rule": "Captions: 1 to 3 words only.",
   "count": 2,
-  "last_seen": "2026-11-12",
+  "last_seen": "2026-11-11",
   "example": "some captions exceed 3 words"
  },
  {
@@ -59,15 +59,15 @@
   "code": "ref_static",
   "rule": "Keep the camera always moving (push/orbit/handheld) like the reference.",
   "count": 2,
-  "last_seen": "2026-11-12",
-  "example": "less motion than reference (4.4 vs 22.1)"
+  "last_seen": "2026-11-11",
+  "example": "less motion than reference (10.2 vs 22.1)"
  },
  {
   "code": "subject_lost",
   "rule": "Keep the main subject filling at least a third of the frame; move the camera closer.",
-  "count": 2,
+  "count": 3,
   "last_seen": "2026-11-12",
-  "example": "beat 2: subject too small / off-frame (79% background)"
+  "example": "beat 2: subject too small / off-frame (87% background)"
  },
  {
   "code": "user:no_text",
@@ -89,5 +89,12 @@
   "count": 1,
   "last_seen": "2026-11-12",
   "example": "cuts slower than reference (2.09s vs 1.10s)"
+ },
+ {
+  "code": "no_context",
+  "rule": "Show some of the blueprint room in most shots so the diorama look is preserved.",
+  "count": 1,
+  "last_seen": "2026-11-12",
+  "example": "beat 9: blueprint room not visible, framing too tight"
  }
 ]
