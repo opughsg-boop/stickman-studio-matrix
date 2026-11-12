@@ -3,10 +3,10 @@
   "exposure": 1.4,
   "camScale": 0.846
  },
- "maxBeat": 5.5,
- "minBeat": 2.4,
+ "maxBeat": 5.0,
+ "minBeat": 2.6,
  "cine": {
   "bright": 0.94,
-  "handheld": 0.65
+  "handheld": 0.8
  }
 }

@@ -16,23 +16,23 @@
  {
   "code": "beat_too_long",
   "rule": "Split long sentences into two beats with a camera change.",
-  "count": 2,
-  "last_seen": "2026-11-11",
-  "example": "beat 9 lasts 8.2s without a new idea"
+  "count": 3,
+  "last_seen": "2026-11-12",
+  "example": "beat 1 lasts 25.5s without a new idea"
  },
  {
   "code": "caption_flash",
   "rule": "Hold each caption until the next word starts.",
-  "count": 1,
-  "last_seen": "2026-11-11",
-  "example": "caption \"hay\" shown only 0.08s"
+  "count": 2,
+  "last_seen": "2026-11-12",
+  "example": "caption \"ورمل\" shown only 0.00s"
  },
  {
   "code": "beat_too_short",
   "rule": "Merge very short sentences; a beat should last at least ~1.5 s.",
-  "count": 4,
+  "count": 10,
   "last_seen": "2026-11-12",
-  "example": "beat 12 lasts 1.0s"
+  "example": "beat 7 lasts 0.5s"
  },
  {
   "code": "too_bright",
@@ -44,8 +44,8 @@
  {
   "code": "caption_too_long",
   "rule": "Captions: 1 to 3 words only.",
-  "count": 1,
-  "last_seen": "2026-11-11",
+  "count": 2,
+  "last_seen": "2026-11-12",
   "example": "some captions exceed 3 words"
  },
  {
@@ -58,9 +58,9 @@
  {
   "code": "ref_static",
   "rule": "Keep the camera always moving (push/orbit/handheld) like the reference.",
-  "count": 1,
-  "last_seen": "2026-11-11",
-  "example": "less motion than reference (10.2 vs 22.1)"
+  "count": 2,
+  "last_seen": "2026-11-12",
+  "example": "less motion than reference (4.4 vs 22.1)"
  },
  {
   "code": "subject_lost",
@@ -82,5 +82,12 @@
   "count": 1,
   "last_seen": "2026-11-12",
   "source": "user"
+ },
+ {
+  "code": "ref_slow_cuts",
+  "rule": "Cut every 1-2 seconds; one visual per phrase.",
+  "count": 1,
+  "last_seen": "2026-11-12",
+  "example": "cuts slower than reference (2.09s vs 1.10s)"
  }
 ]
