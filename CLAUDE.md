@@ -67,3 +67,9 @@ Keep creative work in the main conversation: scripts, plans and shot choices, vi
   ```
   Change the clip or path per beat with `modes: { cow: { clip:'Walk', path:[...] } }`.
 - Prefer these models over hand-built primitive animals and trees for a more realistic look. `runs/libtest/plan.json` is a working example.
+- **Realistic layer (Poly Haven, CC0):** run `python3 assets/fetch_polyhaven.py` once per container (~130 MB, not stored in git).
+  - Models: realistic grass, shrubs, flowers, ferns, moss, rocks, boulders, stumps, fruit and vegetables, a barrel, tools, a chain-link fence, a wooden pier, a fire pit. Use them as `model:'ph/<id>'`; the ids are in `MODELS` inside the script.
+  - Realistic island soil: set `env: { soil:'brown_mud_leaves_01' }` (others: `forrest_ground_01`, `aerial_grass_rock`, `coast_sand_rocks_02`) with `soilRepeat: 2`.
+  - Best look: Quaternius animals and trees + Poly Haven ground cover, rocks and props + real soil. Example: `runs/realtest/plan.json`.
+  - Huge scanned trees (64-914 MB) are excluded: they are too heavy for CPU rendering.
+

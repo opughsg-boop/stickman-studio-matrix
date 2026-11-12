@@ -89,6 +89,7 @@ function buildEnvironment(env = {}) {
   for (let i = 0; i < p.count; i++) if (p.getY(i) > 0) p.setY(i, p.getY(i) + Math.sin(p.getX(i) * 1.3) * .05 + Math.cos(p.getZ(i) * 1.7) * .05);
   geo.computeVertexNormals();
   const side = new THREE.MeshStandardMaterial({ map: TEX.soilSide, roughness: 1 }), top = new THREE.MeshStandardMaterial({ map: TEX.soilTop, roughness: 1 });
+  if (TEX.realSoil) { top.map = TEX.realSoil.diff; if (TEX.realSoil.nor) top.normalMap = TEX.realSoil.nor; if (TEX.realSoil.rough) top.roughnessMap = TEX.realSoil.rough; }
   const island = new THREE.Mesh(geo, [side, side, top, side, side, side]);
   island.position.y = -I.depth / 2; island.receiveShadow = true; island.castShadow = true; scene.add(island);
   // lights
@@ -389,7 +390,10 @@ window.setup = async (p, opts = {}) => {
   document.body.appendChild(renderer.domElement);
   comp = document.createElement('canvas'); comp.width = R.W; comp.height = R.H; cctx = comp.getContext('2d');
   scene = new THREE.Scene(); camera = new THREE.PerspectiveCamera(p.fov || 42, R.W / R.H, .1, 400);
-  makeTextures(); buildEnvironment(p.env || {}); await preloadGLB(p); instantiate();
+  makeTextures();
+  if (p.env?.soil) { const L = new THREE.TextureLoader(), rs = {}; for (const k of ['diff', 'nor', 'rough']) { try { const t = await L.loadAsync(`/assets/ph_tex/${p.env.soil}/${k}.jpg`);
+      t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(p.env.soilRepeat || 3, p.env.soilRepeat || 3); if (k === 'diff') t.colorSpace = THREE.SRGBColorSpace; rs[k] = t; } catch {} } if (rs.diff) TEX.realSoil = rs; }
+  buildEnvironment(p.env || {}); await preloadGLB(p); instantiate();
   await document.fonts.load('italic 800 40px Cap'); await document.fonts.load('40px CapAr');
   return { objects: objects.length, beats: p.beats.length };
 };
@@ -760,7 +764,7 @@ const GLB = {};
 async function preloadGLB(p) {
   const names = new Set(); for (const b of p.beats || []) for (const a of b.add || []) if (a.type === 'glb') names.add(a.params.model);
   const l = new GLTFLoader();
-  await Promise.all([...names].map(async n => { GLB[n] = await l.loadAsync(`/assets/lib/${n}.glb`); }));
+  await Promise.all([...names].map(async n => { GLB[n] = await l.loadAsync(n.startsWith('ph/') ? `/assets/${n}/${n.slice(3)}.gltf` : `/assets/lib/${n}.glb`); }));
 }
 ASSETS.glb = (p = {}) => {
   const g = GLB[p.model]; if (!g) return box(.5, .5, .5, std('#f0f'));

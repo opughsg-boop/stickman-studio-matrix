@@ -3,3 +3,5 @@ runs/
 uploads/
 *.zip
 assets/lib/**/*.glb
+assets/ph/
+assets/ph_tex/
