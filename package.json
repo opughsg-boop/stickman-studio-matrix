@@ -18,5 +18,14 @@
     "express": "^4.21.2",
     "multer": "^1.4.5-lts.1",
     "three": "^0.170.0"
+  },
+  "devDependencies": {
+    "@remotion/bundler": "^4.0.543",
+    "@remotion/cli": "^4.0.543",
+    "@remotion/renderer": "^4.0.543",
+    "hyperframes": "^0.9.36",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "remotion": "^4.0.543"
   }
 }

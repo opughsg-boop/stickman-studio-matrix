@@ -6,7 +6,7 @@ Full history and context: `HANDOFF.md`. Style guides: `STYLE_ZD.md` (cine, the c
 ## Setup (fresh container, ~1 min, run once)
 ```bash
 npm install
-pip install faster-whisper
+pip install faster-whisper yt-dlp
 ln -sfn "$(npm root -g)/playwright" node_modules/playwright
 ```
 Chromium, Playwright and ffmpeg are preinstalled in the cloud container. Do not reinstall them.
@@ -39,3 +39,10 @@ Chromium, Playwright and ffmpeg are preinstalled in the cloud container. Do not 
 - No words on screen except the spoken captions: no signs, labels, counters, pins or button text. The engines enforce this unless a plan sets `style.allowText: true`. Only wordless icons are allowed (✓ ✗ arrows).
 - Transition sound: the soft low "whoom" (`soft_transition` in `pipeline/sfx.py`). The hissy noise whoosh ("تش تش") was rejected.
 - Diorama: continuous camera (`camEase` 0.6, no punch cuts), 2-word Arabic captions per spoken line, ✓/✗ icons on fix/problem beats.
+
+## Extra tools (installed once, already in package.json and the skills folder; do not reinstall)
+- **HyperFrames** (`hyperframes`, HeyGen): HTML-to-video. Use it for titles, overlays, transitions and 2D motion graphics. Its skills are in `.claude/skills/hyperframes*`. Run it with `npx hyperframes ...`.
+- **Remotion** (`remotion`, `@remotion/cli`, `@remotion/renderer`, `@remotion/bundler`): React-to-video. Its headless browser is fetched with `npx remotion browser ensure`.
+- **yt-dlp**: downloads reference videos and audio. Use `yt-dlp --js-runtimes node URL` (YouTube needs a JS runtime).
+- **Whisper**: we use `faster-whisper`, which runs the same OpenAI Whisper models faster. The original `openai/whisper` package was NOT installed on purpose: it would add about 2 GB of PyTorch for the same job.
+- Respect the STYLE LOCK in every tool: no on-screen words except the spoken captions.
