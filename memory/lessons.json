@@ -9,9 +9,9 @@
  {
   "code": "too_dark",
   "rule": "Keep night scenes readable: dim the light but keep the subject clearly visible.",
-  "count": 13,
+  "count": 15,
   "last_seen": "2026-11-12",
-  "example": "beat 13 too dark (luma 45)"
+  "example": "beat 9 too dark (luma 58)"
  },
  {
   "code": "beat_too_long",

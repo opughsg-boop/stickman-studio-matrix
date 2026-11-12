@@ -5,3 +5,4 @@
 {"run": "spear", "time": "2026-11-11 13:10", "score": 83, "issues": 4, "codes": ["beat_too_short", "ref_static", "ref_too_bright", "too_bright"]}
 {"run": "goats", "time": "2026-11-12 00:30", "score": 73, "issues": 6, "codes": ["beat_too_short", "subject_lost", "too_dark"]}
 {"run": "goats", "time": "2026-11-12 00:36", "score": 73, "issues": 6, "codes": ["beat_too_short", "subject_lost", "too_dark"]}
+{"run": "coop", "time": "2026-11-12 00:57", "score": 90, "issues": 2, "codes": ["too_dark"]}

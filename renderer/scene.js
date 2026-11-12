@@ -177,8 +177,9 @@ function meshWall(p = {}) {
 function wallSolid(p = {}) { const m = box(p.len || 6, p.h || 3, .15, std(p.color || '#d9c7a3')); m.position.y = (p.h || 3) / 2; return shadowed(m); }
 function perch(p = {}) {
   const g = new THREE.Group(), len = p.len || 4, h = p.h || 1.1, rows = p.rows || 2;
-  for (const x of [-len / 2, len / 2]) for (const z of [-.5, .5]) { const l = post({ h, t: .12 }); l.position.set(x, 0, z); g.add(l); }
-  for (let i = 0; i < rows; i++) { const b = cyl(.07, .07, len + .2, woodMat()); b.rotation.z = Math.PI / 2; b.position.set(0, h, (i - (rows - 1) / 2) * .7); g.add(b); }
+  const mt = p.color ? std(p.color, { m: .85, r: .3 }) : null;
+  for (const x of [-len / 2, len / 2]) for (const z of [-.5, .5]) { const l = post({ h, t: .12 }); if (mt) l.material = mt; l.position.set(x, 0, z); g.add(l); }
+  for (let i = 0; i < rows; i++) { const b = cyl(.07, .07, len + .2, mt || woodMat()); b.rotation.z = Math.PI / 2; b.position.set(0, h, (i - (rows - 1) / 2) * .7); g.add(b); }
   return shadowed(g);
 }
 function board(p = {}) { const m = box(p.len || 4, .08, p.d || 1.6, woodMat()); m.position.y = p.y ?? .35; return shadowed(m); }
