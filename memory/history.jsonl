@@ -10,3 +10,4 @@
 {"run": "ants", "time": "2026-11-12 02:13", "score": 93, "issues": 2, "codes": ["no_context", "subject_lost"]}
 {"run": "polebarn", "time": "2026-11-12 03:26", "score": 100, "issues": 0, "codes": []}
 {"run": "drip", "time": "2026-11-12 12:20", "score": 95, "issues": 1, "codes": ["dead_beat"]}
+{"run": "stable", "time": "2026-11-12 13:19", "score": 93, "issues": 2, "codes": ["no_context", "too_dark"]}

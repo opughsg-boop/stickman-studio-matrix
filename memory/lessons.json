@@ -9,9 +9,9 @@
  {
   "code": "too_dark",
   "rule": "Keep night scenes readable: dim the light but keep the subject clearly visible.",
-  "count": 15,
+  "count": 16,
   "last_seen": "2026-11-12",
-  "example": "beat 9 too dark (luma 58)"
+  "example": "beat 1 too dark (luma 57)"
  },
  {
   "code": "beat_too_long",
@@ -93,9 +93,9 @@
  {
   "code": "no_context",
   "rule": "Show some of the blueprint room in most shots so the diorama look is preserved.",
-  "count": 1,
+  "count": 2,
   "last_seen": "2026-11-12",
-  "example": "beat 9: blueprint room not visible, framing too tight"
+  "example": "beat 3: blueprint room not visible, framing too tight"
  },
  {
   "code": "dead_beat",

@@ -253,7 +253,7 @@ function arrow(p = {}) { // yellow (double) arrow from a to b
   if (p.label && style.allowText === true) { const s = sign({ text: p.label, scale: p.labelScale || .7, y: 0 }); s.position.copy(g.position).add(new THREE.Vector3(0, (p.labelUp ?? .3), .6)); wrap.add(s); }
   return wrap; }
 function heat(p = {}) { const g = new THREE.Group(); // shimmering red-orange haze volume
-  const m = new THREE.Mesh(new THREE.BoxGeometry(p.w || 8, p.h || 3, p.d || 7), new THREE.MeshBasicMaterial({ color: '#ff4a1a', transparent: true, opacity: .22, depthWrite: false, blending: THREE.AdditiveBlending }));
+  const m = new THREE.Mesh(new THREE.BoxGeometry(p.w || 8, p.h || 3, p.d || 7), new THREE.MeshBasicMaterial({ color: p.color || '#ff4a1a', transparent: true, opacity: .22, depthWrite: false, blending: THREE.AdditiveBlending }));
   m.position.y = (p.h || 3) / 2; g.add(m);
   g.userData.tick = t => { m.material.opacity = .16 + Math.sin(t * 4) * .06; }; return g; }
 function dirt(p = {}) { const g = new THREE.Group(), r = rng(p.seed || 2), n = p.count || 30;
@@ -663,7 +663,7 @@ function shelter(p = {}) { const g = new THREE.Group(), w = p.w || 3.6, d = p.d 
   const back = box(w, h, .1, wm); back.position.set(0, h / 2 + .1, -d / 2); g.add(back);
   const rf = roof({ w: w - .5, d: d - .3, h: h + .1, slope: .17, color: '#9a9ea3' }); g.add(rf);
   return shadowed(g); }
-function hay(p = {}) { const g = new THREE.Group(), r = rng(p.seed || 4), m = std(p.dirty ? '#8a6a3a' : '#e3c35a', { r: .9 });
+function hay(p = {}) { const g = new THREE.Group(), r = rng(p.seed || 4), m = std(p.color || (p.dirty ? '#8a6a3a' : '#e3c35a'), { r: .9 });
   for (let i = 0; i < (p.count || 60); i++) { const s = cyl(.012, .012, .35, m, 5); s.position.set((r() - .5) * (p.w || 1.2), .04 + r() * (p.hgt || .15), (r() - .5) * (p.d || .8)); s.rotation.set(Math.PI / 2 + (r() - .5), r() * 3, r()); g.add(s); }
   if (p.dirty) for (let i = 0; i < 6; i++) { const mud = sph(.12, std('#4a3420')); mud.scale.y = .2; mud.position.set((r() - .5) * (p.w || 1.2), .02, (r() - .5) * (p.d || .8)); g.add(mud); }
   return g; }
