@@ -821,7 +821,7 @@ function fire(p = {}) { const g = new THREE.Group(), r = rng(p.seed || 5), w = p
   g.userData.tick = (t, age) => { const front = -w / 2 + (w + 2) * Math.min(1, age / dur); let on = 0;
     const kOf = x => { const a = front - x; return a < 0 ? 0 : a < 1.5 ? 1 : Math.max(0, 1 - (a - 1.5) / (p.trail || 3)); };
     fl.forEach(f => { const k = kOf(f.x), fl2 = 1 + Math.sin(t * 11 + f.ph) * .22 + Math.sin(t * 23 + f.ph * 3) * .1, h = Math.max(.001, k * f.hh * fl2);
-      f.m.scale.set(Math.max(.001, k * f.ww), h, 1); f.m.position.y = h * .42; f.m.material.opacity = Math.min(.8, k); on += k; });
+      f.m.scale.set(Math.max(.001, k * f.ww), h, 1); f.m.position.y = h * .42; f.m.material.opacity = Math.min(p.opacity ?? .8, k); on += k; });
     em.forEach(e => { const k = kOf(e.x), u = (t * .5 * e.sp + e.ph) % 1; e.m.position.set(e.x + Math.sin(t * 3 + e.ph * 9) * .2, .3 + u * 3, e.z); e.m.scale.setScalar(.05 + .05 * (1 - u)); e.m.material.opacity = k * (1 - u); });
     glow.intensity = Math.min(14, on * .2); glow.position.x = Math.min(front, w / 2) - .8; };
   return g; }
@@ -866,6 +866,54 @@ function truck(p = {}) { const g = new THREE.Group(), body = new THREE.Group(); 
   const P = p.path; g.userData.tick = (t, age) => { if (!P) return; const k = easeIO(Math.min(1, age / (p.travel || 3))); body.position.set(lerp(P[0][0], P[1][0], k), Math.abs(Math.sin(t * 9)) * .02, lerp(P[0][1], P[1][1], k)); body.rotation.y = Math.atan2(P[1][0] - P[0][0], P[1][1] - P[0][1]); };
   return shadowed(g); }
 Object.assign(ASSETS, { cane_field: caneField, fire, smoke, cane_cut: caneCut, critters, truck });
+// ---------- charcoal pack: kiln mound (logs + straw/mud cover with cutaway, vents, inner glow, charring), log pile, ash ----------
+function canvasT(w, h, draw, rep) { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; if (rep) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(...rep); } return t; }
+function barkTex() { return SPR.bark ||= canvasT(64, 256, (g, w, h) => { const r = rng(31); g.fillStyle = '#6b4a2e'; g.fillRect(0, 0, w, h);
+  for (let i = 0; i < 90; i++) { g.fillStyle = `rgba(${30 + r() * 40},${20 + r() * 25},${10 + r() * 15},${.35 + r() * .4})`; g.fillRect(r() * w, r() * h, 1 + r() * 3, 20 + r() * 80); }
+  for (let i = 0; i < 40; i++) { g.fillStyle = `rgba(170,140,100,${.15 + r() * .2})`; g.fillRect(r() * w, r() * h, 1, 10 + r() * 40); } }); }
+function ringTex() { return SPR.ring ||= canvasT(128, 128, (g) => { g.fillStyle = '#d9b483'; g.fillRect(0, 0, 128, 128);
+  for (let k = 6; k < 64; k += 4 + (k % 3)) { g.strokeStyle = `rgba(140,95,50,${.35 + (k % 5) * .06})`; g.lineWidth = 1.5; g.beginPath(); g.arc(64 + Math.sin(k) * 2, 64, k, 0, 7); g.stroke(); }
+  g.strokeStyle = '#5a3d22'; g.lineWidth = 7; g.beginPath(); g.arc(64, 64, 61, 0, 7); g.stroke(); }); }
+function crackTex() { return SPR.crack ||= canvasT(64, 256, (g, w, h) => { const r = rng(17); g.fillStyle = '#000'; g.fillRect(0, 0, w, h); g.strokeStyle = '#ff7a20'; g.lineWidth = 1.6;
+  for (let i = 0; i < 26; i++) { let x = r() * w, y = r() * h; g.beginPath(); g.moveTo(x, y); for (let k = 0; k < 4; k++) { x += (r() - .5) * 14; y += r() * 18; g.lineTo(x, y); } g.stroke(); } }); }
+function mudTex() { return SPR.mud ||= canvasT(256, 256, (g, w, h) => { const r = rng(41); g.fillStyle = '#7d5b3c'; g.fillRect(0, 0, w, h);
+  for (let i = 0; i < 900; i++) { const v = r(); g.fillStyle = v < .5 ? `rgba(60,40,25,${.15 + r() * .25})` : `rgba(160,125,85,${.12 + r() * .2})`; g.beginPath(); g.arc(r() * w, r() * h, 1 + r() * 5, 0, 7); g.fill(); }
+  for (let i = 0; i < 160; i++) { g.strokeStyle = `rgba(${200 + r() * 40},${170 + r() * 40},${90 + r() * 40},${.35 + r() * .35})`; g.lineWidth = 1 + r(); const x = r() * w, y = r() * h, a = r() * 6.3, L = 8 + r() * 22; g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(a) * L, y + Math.sin(a) * L); g.stroke(); } }, [3, 2]); }
+function logMats() { const side = new THREE.MeshStandardMaterial({ map: barkTex(), roughness: .95, emissiveMap: crackTex(), emissive: col('#ff6a1a'), emissiveIntensity: 0 });
+  const end = new THREE.MeshStandardMaterial({ map: ringTex(), roughness: .9, emissive: col('#ff5a10'), emissiveIntensity: 0 }); return [side, end, end]; }
+function charMats(mats, char, glow) { const k = clamp(char); mats[0].color.setRGB(1 - k * .9, 1 - k * .91, 1 - k * .92); mats[1].color.setRGB(1 - k * .88, 1 - k * .9, 1 - k * .9);
+  mats[0].emissiveIntensity = glow * (.3 + k * 1.6); mats[1].emissiveIntensity = glow * k * .6; }
+function kiln(p = {}) { const g = new THREE.Group(), r = rng(p.seed || 13), R = p.r || 1.8, H = p.h || 1.6, mats = logMats(), logs = [];
+  for (let rr = .18; rr < R - .05; rr += .19) { const n = Math.max(3, Math.round(6.283 * rr / .19)); for (let i = 0; i < n; i++) { const a = i / n * 6.283 + r() * .2, hh = Math.max(.25, H * Math.sqrt(Math.max(0, 1 - (rr / R) ** 2)) * (.92 + r() * .1)), rad = .065 + r() * .035;
+    const L = new THREE.Mesh(new THREE.CylinderGeometry(rad, rad * 1.05, hh, 9), mats); L.position.set(Math.cos(a) * rr, hh / 2, Math.sin(a) * rr); L.rotation.set(Math.sin(a) * -.12 * rr / R, r() * 6, Math.cos(a) * .12 * rr / R);
+    g.add(L); logs.push(L); } }
+  logs.sort((a, b) => Math.hypot(a.position.x, a.position.z) - Math.hypot(b.position.x, b.position.z));
+  const cut = p.cut ?? 1.15; // cutaway wedge (radians) facing +z so the inside stays visible
+  const shellM = new THREE.MeshStandardMaterial({ map: mudTex(), roughness: 1, side: THREE.DoubleSide });
+  const shell = new THREE.Mesh(new THREE.SphereGeometry(R + .18, 48, 20, Math.PI / 2 + cut / 2, Math.PI * 2 - cut, 0, Math.PI / 2), shellM); shell.scale.y = (H + .2) / (R + .18); g.add(shell);
+  const rimM = std('#5c412a'); const rim = new THREE.Mesh(new THREE.TorusGeometry(R + .18, .09, 8, 48, Math.PI * 2 - cut), rimM); rim.rotation.set(Math.PI / 2, 0, Math.PI / 2 + cut / 2); rim.position.y = .05; g.add(rim);
+  const vents = [], ventG = new THREE.CircleGeometry(.17, 18); for (let i = 0; i < (p.ventCount || 7); i++) { const a = Math.PI / 2 + cut / 2 + .35 + i / (p.ventCount || 7) * (Math.PI * 2 - cut - .7);
+    const v = new THREE.Mesh(ventG, new THREE.MeshBasicMaterial({ color: col('#ff8a2a') })); v.position.set(-Math.cos(a) * (R + .21), .22, Math.sin(a) * (R + .21)); v.lookAt(-Math.cos(a) * 9, .22, Math.sin(a) * 9); g.add(v); vents.push(v); }
+  const light = new THREE.PointLight('#ff7a2a', 0, 7, 1.5); light.position.set(0, .7, 0); g.add(light);
+  const base = { build: 0, cover: 0, vents: 0, glow: 0, char: 0 }; const val = (k, mo, pm, a) => { const to = mo?.[k] ?? p[k] ?? base[k], from = pm?.[k] ?? p[k] ?? base[k]; return lerp(from, to, easeIO(clamp(a / (mo?.dur ?? 1.4)))); };
+  g.userData.tick = (t, age) => { const mo = g.userData.mode, pm = g.userData.prevMode, a = g.userData.modeAge ?? age;
+    const build = p.buildTime ? clamp(age / p.buildTime) : 1, cover = val('cover', mo, pm, a), vt = val('vents', mo, pm, a), glow = val('glow', mo, pm, a), ch = val('char', mo, pm, a);
+    logs.forEach((L, i) => { const k = clamp(build * logs.length * 1.15 - i * 1.0); L.scale.set(1, Math.max(.001, easeIO(k)), 1); L.visible = k > 0; });
+    shell.visible = rim.visible = cover > .01; shell.scale.set(Math.max(.001, cover), Math.max(.001, cover) * (H + .2) / (R + .18), Math.max(.001, cover)); rim.scale.setScalar(Math.max(.001, Math.min(1, cover * 1.5)));
+    const fl = .85 + Math.sin(t * 7) * .1 + Math.sin(t * 17) * .05; vents.forEach((v, i) => { v.visible = cover > .9 && vt > .02; v.scale.setScalar(Math.max(.001, vt)); v.material.color.setRGB(1 * glow * fl + .05, .5 * glow * fl + .03, .15 * glow + .02); });
+    charMats(mats, ch, glow * fl); light.intensity = glow * 6 * fl; };
+  return shadowed(g); }
+function logPile(p = {}) { const g = new THREE.Group(), r = rng(p.seed || 23), w = p.w || 2, rows = p.rows || 6, len = p.len || 1.2, rad = p.rad || .09, mats = logMats();
+  charMats(mats, p.char || 0, 0); if (p.char) { mats[0].roughness = .55; mats[0].metalness = .15; }
+  const per = Math.floor(w / (rad * 2.05));
+  for (let row = 0; row < rows; row++) { const n = per - row; for (let i = 0; i < n; i++) { const L = new THREE.Mesh(new THREE.CylinderGeometry(rad * (.85 + r() * .3), rad, len * (.9 + r() * .2), 9), mats);
+    L.rotation.x = Math.PI / 2; L.rotation.y = (r() - .5) * .1; L.position.set(-w / 2 + rad + row * rad + i * rad * 2.05, rad + row * rad * 1.75, (r() - .5) * .1); g.add(L); } }
+  return shadowed(g); }
+function ash(p = {}) { const g = new THREE.Group(), r = rng(p.seed || 29); const m = std('#9a9792', { r: 1 }), m2 = std('#6f6b66', { r: 1 });
+  const mound = new THREE.Mesh(new THREE.SphereGeometry(p.r || .7, 24, 12, 0, 6.283, 0, Math.PI / 2), m); mound.scale.y = .35; g.add(mound);
+  for (let i = 0; i < 40; i++) { const c = new THREE.Mesh(new THREE.DodecahedronGeometry(.03 + r() * .05), r() < .5 ? m2 : m); const a = r() * 6.3, d = r() * (p.r || .7); c.position.set(Math.cos(a) * d, .02 + (1 - d / (p.r || .7)) * .2, Math.sin(a) * d); g.add(c); }
+  return shadowed(g); }
+Object.assign(ASSETS, { kiln, log_pile: logPile, ash });
 ASSETS.glb = (p = {}) => {
   const g = GLB[p.model]; if (!g) return box(.5, .5, .5, std('#f0f'));
   const o = skClone(g.scene); o.updateMatrixWorld(true);
