@@ -2,6 +2,7 @@
 // frame can be rendered independently -> chunked / resumable rendering.
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 import { clone as skClone } from 'three/addons/utils/SkeletonUtils.js';
 
 const R = { W: 540, H: 960 };
@@ -66,6 +67,12 @@ function makeTextures() {
 
 // ---------- environment ----------
 function buildEnvironment(env = {}) {
+  if (TEX.sky) { // realistic mode: real HDRI sky + image-based light, island floating over open water
+    scene.background = TEX.sky.tex; scene.backgroundBlurriness = env.skyBlur ?? .02; scene.environment = TEX.sky.env; scene.environmentIntensity = env.envLight ?? .9;
+    scene.fog = new THREE.Fog(col(env.fog || '#c8d8e6'), 45, 170);
+    const wm = new THREE.MeshStandardMaterial({ color: col(env.water || '#3f6f8f'), roughness: .12, metalness: .35 });
+    const water = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), wm); water.rotation.x = -Math.PI / 2; water.position.y = -(env.island?.depth || 3.2) - .6; water.receiveShadow = true; scene.add(water);
+    fx.water = water; fx.rays = new THREE.Group(); buildIsland(env, true); return; }
   scene.background = col(env.bg || '#3d7fd0');
   scene.fog = new THREE.Fog(col(env.bg || '#3d7fd0'), 40, 110);
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(240, 240), new THREE.MeshStandardMaterial({ map: TEX.grid, roughness: .6 }));
@@ -81,6 +88,9 @@ function buildEnvironment(env = {}) {
   for (let i = 0; i < 4; i++) { const m = new THREE.Mesh(new THREE.PlaneGeometry(140, 9 + i * 5), rayMat);
     m.position.set(-30 + i * 9, 30, -20 + i * 6); m.rotation.set(0, .5, -0.95 - i * .03); fx.rays.add(m); }
   scene.add(fx.rays);
+  buildIsland(env, false);
+}
+function buildIsland(env, real) {
   // island
   const I = env.island || { w: 12, d: 12, depth: 3.2 };
   fx.island = I;
@@ -93,8 +103,8 @@ function buildEnvironment(env = {}) {
   const island = new THREE.Mesh(geo, [side, side, top, side, side, side]);
   island.position.y = -I.depth / 2; island.receiveShadow = true; island.castShadow = true; scene.add(island);
   // lights
-  lights.hemi = new THREE.HemisphereLight(0xcfe3ff, 0x5a4636, 1.25); scene.add(lights.hemi);
-  lights.sun = new THREE.DirectionalLight(0xfff4e0, 2.6); lights.sun.position.set(-14, 26, 12);
+  lights.hemi = new THREE.HemisphereLight(0xcfe3ff, 0x5a4636, real ? .55 : 1.25); scene.add(lights.hemi); lights.hemiBase = real ? .55 : 1.25;
+  lights.sun = new THREE.DirectionalLight(real ? 0xffe6c4 : 0xfff4e0, 2.6); lights.sun.position.set(-14, 26, 12);
   lights.sun.castShadow = true; lights.sun.shadow.mapSize.set(style.shadowRes, style.shadowRes);
   Object.assign(lights.sun.shadow.camera, { left: -14, right: 14, top: 14, bottom: -14, near: 1, far: 80 });
   lights.sun.shadow.bias = -0.0005; lights.sun.shadow.radius = 4; scene.add(lights.sun);
@@ -353,9 +363,10 @@ function updateEffects(t, bi) {
   fx.nightK = lerp(fx.nightK ?? 0, night, .15); if (Math.abs(fx.nightK - night) < .02) fx.nightK = night;
   fx.nightK = night; // deterministic (no smoothing state across chunks)
   lights.sun.intensity = 2.6 * (1 - .45 * fx.nightK) * style.exposure;
-  lights.hemi.intensity = 1.25 * (1 + .1 * fx.nightK) * style.exposure;
+  lights.hemi.intensity = (lights.hemiBase ?? 1.25) * (1 + .1 * fx.nightK) * style.exposure;
   lights.hemi.color.set(fx.nightK ? 0x6f86c9 : 0xcfe3ff);
-  scene.background.set(fx.nightK ? '#24427a' : (plan.env?.bg || '#3d7fd0')); scene.fog.color.copy(scene.background);
+  if (!TEX.sky) { scene.background.set(fx.nightK ? '#24427a' : (plan.env?.bg || '#3d7fd0')); scene.fog.color.copy(scene.background); }
+  else scene.backgroundIntensity = scene.environmentIntensity = (plan.env?.envLight ?? .9) * (1 - .6 * fx.nightK);
   lights.heat.intensity = hot ? 40 + Math.sin(t * 5) * 8 : 0;
   fx.rays.visible = !fx.nightK;
 }
@@ -393,6 +404,8 @@ window.setup = async (p, opts = {}) => {
   makeTextures();
   if (p.env?.soil) { const L = new THREE.TextureLoader(), rs = {}; for (const k of ['diff', 'nor', 'rough']) { try { const t = await L.loadAsync(`/assets/ph_tex/${p.env.soil}/${k}.jpg`);
       t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(p.env.soilRepeat || 3, p.env.soilRepeat || 3); if (k === 'diff') t.colorSpace = THREE.SRGBColorSpace; rs[k] = t; } catch {} } if (rs.diff) TEX.realSoil = rs; }
+  if (p.env?.sky) try { const tex = await new RGBELoader().loadAsync(`/assets/hdri/${p.env.sky}.hdr`); tex.mapping = THREE.EquirectangularReflectionMapping;
+    TEX.sky = { tex, env: new THREE.PMREMGenerator(renderer).fromEquirectangular(tex).texture }; } catch (e) { console.warn('sky failed', e); }
   buildEnvironment(p.env || {}); await preloadGLB(p); instantiate();
   await document.fonts.load('italic 800 40px Cap'); await document.fonts.load('40px CapAr');
   return { objects: objects.length, beats: p.beats.length };
@@ -767,33 +780,58 @@ async function preloadGLB(p) {
   await Promise.all([...names].map(async n => { GLB[n] = await l.loadAsync(n.startsWith('ph/') ? `/assets/${n}/${n.slice(3)}.gltf` : `/assets/lib/${n}.glb`); }));
 }
 // ---------- sugar-cane pack: field (green / burnt / cut), fire sweep, smoke column, juicy cut stalk, fleeing critters, truck ----------
+function bladeTex(dry) { const k = dry ? 'bladeD' : 'blade'; if (SPR[k]) return SPR[k]; const c = document.createElement('canvas'); c.width = 32; c.height = 256; const g = c.getContext('2d'), r = rng(dry ? 7 : 4);
+  const gr = g.createLinearGradient(0, 256, 0, 0); if (dry) { gr.addColorStop(0, '#9c7f4a'); gr.addColorStop(.6, '#cdb07a'); gr.addColorStop(1, '#e2cf9e'); } else { gr.addColorStop(0, '#3f6a26'); gr.addColorStop(.5, '#5f9435'); gr.addColorStop(1, '#8fb553'); }
+  g.fillStyle = gr; g.beginPath(); g.moveTo(16, 0); g.quadraticCurveTo(31, 128, 28, 256); g.lineTo(4, 256); g.quadraticCurveTo(1, 128, 16, 0); g.fill();
+  g.strokeStyle = dry ? 'rgba(240,225,190,.7)' : 'rgba(215,235,170,.75)'; g.lineWidth = 2; g.beginPath(); g.moveTo(16, 6); g.lineTo(16, 256); g.stroke();
+  for (let i = 0; i < 40; i++) { g.fillStyle = `rgba(${dry ? '90,60,30' : '30,60,20'},${.08 + r() * .12})`; g.fillRect(5 + r() * 22, r() * 256, 1, 8 + r() * 30); }
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return SPR[k] = t; }
+function bladeGeo(len, wid, bend) { const geo = new THREE.PlaneGeometry(wid, len, 1, 8); geo.translate(0, len / 2, 0); const ps = geo.attributes.position;
+  for (let i = 0; i < ps.count; i++) { const y = ps.getY(i) / len; ps.setZ(i, y * y * bend * len); } geo.computeVertexNormals(); return geo; }
 function caneField(p = {}) { const g = new THREE.Group(), r = rng(p.seed || 11), w = p.w || 7, d = p.d || 5, n = p.count || 140, burnt = !!p.burnt;
-  const stalkM = std(burnt ? '#2b211c' : '#9a8f3c', { r: .7 }), nodeM = std(burnt ? '#14100d' : '#6f5a2a'), leafM = std('#5d8c34', { r: .8, extra: { side: THREE.DoubleSide } }), dryM = std('#c4a76a', { extra: { side: THREE.DoubleSide } });
+  const stalkM = std(burnt ? '#2b211c' : '#9a8f3c', { r: .7 }), nodeM = std(burnt ? '#14100d' : '#6f5a2a'), leafM = std('#ffffff', { r: .7, extra: { map: bladeTex(false), alphaTest: .5, side: THREE.DoubleSide } }), dryM = std('#ffffff', { r: .95, extra: { map: bladeTex(true), alphaTest: .5, side: THREE.DoubleSide } });
+  const leafG = [bladeGeo(1.3, .1, .55), bladeGeo(1.1, .09, .8), bladeGeo(.9, .08, 1)], dryG = [bladeGeo(.9, .09, .9), bladeGeo(.7, .08, 1.2)];
   const sway = [];
   for (let i = 0; i < n; i++) { const s = new THREE.Group(), h = (p.h || 2.6) * (.75 + r() * .4), x = (r() - .5) * w, z = (r() - .5) * d;
     const st = cyl(.035, .045, h, stalkM, 7); st.position.y = h / 2; s.add(st);
     for (let k = .35; k < h; k += .38 + r() * .1) { const nd = cyl(.05, .05, .04, nodeM, 7); nd.position.y = k; s.add(nd); }
-    if (!burnt && p.leaves !== false) for (let k = 0; k < 4; k++) { const lf = box(.05, 1.1, .005, leafM); lf.geometry.translate(0, .55, 0); lf.position.y = h - .1 - k * .18; lf.rotation.set(.5 + r() * .5, r() * 6.3, 0, 'YXZ'); s.add(lf); }
-    if (!burnt && p.dry !== false) for (let k = 0; k < 3; k++) { const lf = box(.06, .8, .005, dryM); lf.geometry.translate(0, -.4, 0); lf.position.y = .4 + r() * h * .5; lf.rotation.set(-.6 - r() * .6, r() * 6.3, 0, 'YXZ'); s.add(lf); }
+    if (!burnt && p.leaves !== false) for (let k = 0; k < 6; k++) { const lf = new THREE.Mesh(leafG[k % 3], leafM); lf.position.y = h - .05 - k * .16; lf.rotation.set(.25 + r() * .45, r() * 6.3, 0, 'YXZ'); s.add(lf); }
+    if (!burnt && p.dry !== false) for (let k = 0; k < 3; k++) { const lf = new THREE.Mesh(dryG[k % 2], dryM); lf.position.y = .3 + r() * h * .55; lf.rotation.set(1.6 + r() * .7, r() * 6.3, 0, 'YXZ'); s.add(lf); }
     if (p.cut) { s.scale.y = .001; }
     s.position.set(x, 0, z); s.rotation.y = r() * 6.3; g.add(s); sway.push([s, r() * 6]); }
   g.userData.tick = (t, age) => sway.forEach(([s, ph]) => { s.rotation.z = Math.sin(t * 1.3 + ph) * (burnt ? .01 : .035); });
   return shadowed(g); }
+const SPR = {};
+function puffTex() { if (SPR.puff) return SPR.puff; const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d'), r = rng(21);
+  for (let i = 0; i < 26; i++) { const x = 64 + (r() - .5) * 60, y = 64 + (r() - .5) * 60, rad = 16 + r() * 30, gr = g.createRadialGradient(x, y, 0, x, y, rad);
+    gr.addColorStop(0, `rgba(255,255,255,${.22 + r() * .2})`); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 128, 128); }
+  const m = g.createRadialGradient(64, 64, 20, 64, 64, 64); m.addColorStop(0, 'rgba(0,0,0,0)'); m.addColorStop(1, 'rgba(0,0,0,1)'); g.globalCompositeOperation = 'destination-out'; g.fillStyle = m; g.fillRect(0, 0, 128, 128);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return SPR.puff = t; }
+function flameTex() { if (SPR.flame) return SPR.flame; const c = document.createElement('canvas'); c.width = 64; c.height = 128; const g = c.getContext('2d');
+  const gr = g.createRadialGradient(32, 100, 2, 32, 84, 60); gr.addColorStop(0, 'rgba(255,214,120,.9)'); gr.addColorStop(.25, 'rgba(255,150,40,.85)'); gr.addColorStop(.6, 'rgba(230,70,10,.6)'); gr.addColorStop(1, 'rgba(150,20,0,0)');
+  g.fillStyle = gr; g.beginPath(); g.moveTo(32, 2); g.bezierCurveTo(60, 50, 64, 110, 32, 126); g.bezierCurveTo(0, 110, 4, 50, 32, 2); g.fill();
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return SPR.flame = t; }
 function fire(p = {}) { const g = new THREE.Group(), r = rng(p.seed || 5), w = p.w || 7, d = p.d || 5, n = p.count || 70, dur = p.sweep || 3;
-  const mats = ['#ff5a14', '#ff8a1e', '#ffc23a'].map(c => new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: .85, depthWrite: false, blending: THREE.AdditiveBlending }));
-  const fl = []; for (let i = 0; i < n; i++) { const m = new THREE.Mesh(new THREE.ConeGeometry(.22 + r() * .2, 1, 7), mats[i % 3]); const x = (r() - .5) * w, z = (r() - .5) * d; m.position.set(x, 0, z); g.add(m); fl.push({ m, x, ph: r() * 6, hh: (p.h || 1.6) * (.5 + r() * .7) }); }
-  const glow = new THREE.PointLight('#ff7a2a', 0, 14); glow.position.y = 1.5; g.add(glow);
+  const fl = []; for (let i = 0; i < n * 2; i++) { const m = new THREE.Sprite(new THREE.SpriteMaterial({ map: flameTex(), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }));
+    const x = (r() - .5) * w, z = (r() - .5) * d; m.position.set(x, 0, z); g.add(m); fl.push({ m, x, ph: r() * 6, hh: (p.h || 1.6) * (.45 + r() * .8), ww: .35 + r() * .35 }); }
+  const em = []; for (let i = 0; i < n; i++) { const m = new THREE.Sprite(new THREE.SpriteMaterial({ color: '#ffb347', map: puffTex(), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }));
+    g.add(m); em.push({ m, x: (r() - .5) * w, z: (r() - .5) * d, ph: r(), sp: .6 + r() * .8 }); }
+  const glow = new THREE.PointLight('#ff7a2a', 0, 16, 1.4); glow.position.y = 1.2; g.add(glow);
   g.userData.tick = (t, age) => { const front = -w / 2 + (w + 2) * Math.min(1, age / dur); let on = 0;
-    fl.forEach(f => { const a = front - f.x; const k = a < 0 ? 0 : a < 1.5 ? 1 : Math.max(0, 1 - (a - 1.5) / (p.trail || 3)); const s = k * (1 + Math.sin(t * 13 + f.ph) * .25);
-      f.m.scale.set(Math.max(.001, k), Math.max(.001, s * f.hh), Math.max(.001, k)); f.m.position.y = s * f.hh / 2; on += k; });
-    glow.intensity = Math.min(8, on * .25); glow.position.x = Math.min(front, w / 2); };
+    const kOf = x => { const a = front - x; return a < 0 ? 0 : a < 1.5 ? 1 : Math.max(0, 1 - (a - 1.5) / (p.trail || 3)); };
+    fl.forEach(f => { const k = kOf(f.x), fl2 = 1 + Math.sin(t * 11 + f.ph) * .22 + Math.sin(t * 23 + f.ph * 3) * .1, h = Math.max(.001, k * f.hh * fl2);
+      f.m.scale.set(Math.max(.001, k * f.ww), h, 1); f.m.position.y = h * .42; f.m.material.opacity = Math.min(.8, k); on += k; });
+    em.forEach(e => { const k = kOf(e.x), u = (t * .5 * e.sp + e.ph) % 1; e.m.position.set(e.x + Math.sin(t * 3 + e.ph * 9) * .2, .3 + u * 3, e.z); e.m.scale.setScalar(.05 + .05 * (1 - u)); e.m.material.opacity = k * (1 - u); });
+    glow.intensity = Math.min(14, on * .2); glow.position.x = Math.min(front, w / 2) - .8; };
   return g; }
-function smoke(p = {}) { const g = new THREE.Group(), r = rng(p.seed || 3), n = p.count || 46, H = p.h || 9;
-  const puffs = []; for (let i = 0; i < n; i++) { const m = new THREE.Mesh(new THREE.SphereGeometry(1, 12, 10), new THREE.MeshStandardMaterial({ color: col(p.color || '#1c1a19'), roughness: 1, transparent: true, opacity: .8, depthWrite: false }));
-    g.add(m); puffs.push({ m, ph: i / n, ox: (r() - .5) * (p.w || 2), oz: (r() - .5) * (p.w || 2), sp: .8 + r() * .4 }); }
+function smoke(p = {}) { const g = new THREE.Group(), r = rng(p.seed || 3), n = p.count || 70, H = p.h || 9, dark = col(p.color || '#1c1a19'), light = col(p.top || '#6d6763');
+  const puffs = []; for (let i = 0; i < n; i++) { const m = new THREE.Sprite(new THREE.SpriteMaterial({ map: puffTex(), color: dark.clone(), transparent: true, depthWrite: false }));
+    m.material.rotation = r() * 6.3; g.add(m); puffs.push({ m, ph: i / n, ox: (r() - .5) * (p.w || 2), oz: (r() - .5) * (p.w || 2), sp: .8 + r() * .4, rs: (r() - .5) * .4 }); }
   g.userData.tick = (t, age) => { const grow = Math.min(1, age / 1.2);
-    puffs.forEach(o => { const k = (t * .12 * o.sp + o.ph) % 1; const s = (.5 + k * 2.4) * (p.scale || 1);
-      o.m.position.set(o.ox * (1 + k) + k * k * (p.drift ?? 2.5), .5 + k * H * grow, o.oz * (1 + k)); o.m.scale.setScalar(Math.max(.001, s * grow)); o.m.material.opacity = (p.opacity ?? .85) * Math.min(1, k * 6) * (1 - k * .6); }); };
+    puffs.forEach(o => { const k = (t * .1 * o.sp + o.ph) % 1; const s = (1.2 + k * 5.5) * (p.scale || 1);
+      o.m.position.set(o.ox * (1 + k * 1.5) + k * k * (p.drift ?? 2.5), .6 + k * H * grow, o.oz * (1 + k));
+      o.m.scale.setScalar(Math.max(.001, s * grow)); o.m.material.rotation += 0; o.m.material.rotation = o.rs * t + o.ph * 6;
+      o.m.material.color.copy(dark).lerp(light, k * .8); o.m.material.opacity = (p.opacity ?? .9) * Math.min(1, k * 5) * (1 - k * k); }); };
   return g; }
 function caneCut(p = {}) { const g = new THREE.Group(), h = p.h || 3, R = p.r || .45, burnt = !!p.burnt;
   const skin = std(burnt ? '#231a15' : '#a39a42', { r: burnt ? 1 : .55 }), node = std(burnt ? '#0f0b09' : '#7a6230');

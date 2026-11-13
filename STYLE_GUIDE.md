@@ -32,7 +32,12 @@ The user loved the cane video but wants future videos as hyper-realistic as thei
 - **Volumetric-looking effects:** soft billowing smoke sprites, real fire sprites and embers, not solid spheres or cones.
 - **Living animals:** real animated models (rabbits, bees, snakes, rats, birds) doing natural things: walking, sniffing, eating, fleeing.
 - **Natural sunlight:** soft shadows, bright exposure, warm daylight grade.
-How: borrow the cine engine's HDRI and lighting (`renderer/cine.js`, `bash assets/fetch_assets.sh`) for the diorama. Add CC0 Poly Haven and Quaternius models and textures for the missing items. Build particle-sprite smoke and fire. Keep the STYLE LOCK (no on-screen words, soft whoom, continuous camera, 2-word captions).
+**Done so far (realism upgrade v1, in `renderer/scene.js`):**
+- `env.sky:'<hdri>'` gives a real HDRI sky with image-based lighting, a warm sun and the island floating over open water, with no blue grid room. HDRIs live in `assets/hdri/` (`bash assets/fetch_assets.sh`): `kloofendal_48d_partly_cloudy_puresky` (default daylight) and `forest_slope`. Options: `skyBlur`, `envLight`, `fog`, `water`.
+- **Use `env.sky` in every new plan from now on.**
+- Smoke and fire are soft sprites: billowing puffs that go from dark to grey, flickering flame sprites, embers and a fire glow light.
+- The cane field has textured, curved leaf blades and dry hanging leaves.
+- **Still to do:** realistic vehicles (the truck is still boxy), real rat, snake and rabbit models, a backdrop option (a house wall), and denser instanced fields.
 
 ## 3. The approved look: realistic blueprint diorama
 **World:**
