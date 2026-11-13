@@ -1007,6 +1007,7 @@ ASSETS.glb = (p = {}) => {
       w.rotation.y = 0; o.parent.rotation.y = Math.atan2((b[0] - a[0]) * d, (b[1] - a[1]) * d); }
     if (mo.face != null) o.parent.rotation.y = mo.face;
     if (w.userData.wave) w.userData.wave.rotation.x = Math.sin(t * 6) * .4; // simple gesture for static people
+    if (p.sway) { w.rotation.z = Math.sin(t * 1.4 + (p.ph || 0)) * p.sway; w.rotation.x = Math.sin(t * 1.1 + (p.ph || 0) * 1.7) * p.sway * .6; } // plants bend in the wind
   };
   return w;
 };
