@@ -96,6 +96,11 @@ modes: { cow: { clip:'Walk', path:[[0,0],[2,-2]] } }
 3. **Tip:** "وخلي بالك: …" with one surprising detail.
 4. **CTA (no page name unless the user asks):** "لو عرفت حاجة جديدة، اعمل لايك وتابع عشان تعرف أكتر!" In English: "If you learned something new, like and follow. Your brain will thank you."
 
+**Voice = a natural Egyptian telling a friend:** conversational fillers ("بُص", "أُمّال", "يعني"), short sentences, not a news-reader tone.
+**Diacritics (user rule):** add tashkeel ONLY to words an AI voice could misread or that Egyptians pronounce differently, e.g. مَيّة (water), الفحّام, بيرُصّ, على القَدّ, بيستوِي, تبرَد, حوالَي, رُبعه, أُمّال. Never add tashkeel to the whole script. Strip it from `runs/<name>/script.txt` only if alignment fails (the aligner normally ignores it).
+TTS style line for this voice: "اقرأ كأنك واحد مصري عادي بيحكي حكاية لصاحبه، بالعامية المصرية، صوت دافي وطبيعي ومش مستعجل، فيه فضول في أول سؤال، وقفة صغيرة قبل «بس» و«وخلي بالك»، وآخر جملة بابتسامة".
+Story in progress: **charcoal (الفحم)**, a build-up of the wood pile, straw and mud cover, small air vents, the smoke colour turning from white to thin blue, sealing and cooling. Use smoke (white `color:'#d9d6d0'`, then bluish), a fire glow inside the mound, and a real-size Worker.
+
 Write one spoken sentence per line. When giving a script to record, add a TTS style line on top: "اقرأ باللهجة المصرية، راوي متحمس وسريع، وقفة قصيرة قبل «بس» و«وخلي بالك»، آخر جملة بنبرة ودودة". The user records with ElevenLabs (Hazem for Egyptian Arabic, Felix for English) or Google AI Studio. Scripts can also be in American English (`--lang en`); the captions then switch to English automatically.
 
 ## 5. One video = one command
