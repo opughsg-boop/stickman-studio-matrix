@@ -24,6 +24,16 @@ python3 assets/fetch_polyhaven.py   # realistic grass, shrubs, rocks, props and 
 4. **Captions:** 2 words at a time, never mixing two spoken lines. White bold Arabic, at 78 % of the frame height, aligned to the user's exact script.
 5. **Format:** 1080x1920, 30 fps, H.264 + AAC, -14 LUFS.
 
+## 2b. NEXT TARGET: hyper-realism (user request, after the sugar-cane video)
+The user loved the cane video but wants future videos as hyper-realistic as their three reference reels (Spanish: rabbit hutch build-up, sugar-cane burning, beehive build-up). What those references do and ours still lacks:
+- **Real sky and surroundings:** a daylight HDRI sky with clouds, distant trees and a horizon, or a real backdrop (a plastered house wall with a window). The island still floats over water, with a real soil cross-section. Not the blue grid room.
+- **Dense, detailed vegetation:** hundreds of real-looking stalks and leaves with natural colour variation, plus walk-through shots *inside* the crop between the stalks.
+- **Real materials everywhere:** wood grain, wire mesh, corrugated metal, PBR textures. Never plain-coloured primitives (no cone flames, sphere animals or box trucks) when a real model or texture exists.
+- **Volumetric-looking effects:** soft billowing smoke sprites, real fire sprites and embers, not solid spheres or cones.
+- **Living animals:** real animated models (rabbits, bees, snakes, rats, birds) doing natural things: walking, sniffing, eating, fleeing.
+- **Natural sunlight:** soft shadows, bright exposure, warm daylight grade.
+How: borrow the cine engine's HDRI and lighting (`renderer/cine.js`, `bash assets/fetch_assets.sh`) for the diorama. Add CC0 Poly Haven and Quaternius models and textures for the missing items. Build particle-sprite smoke and fire. Keep the STYLE LOCK (no on-screen words, soft whoom, continuous camera, 2-word captions).
+
 ## 3. The approved look: realistic blueprint diorama
 **World:**
 - A floating island with a cross-section soil edge, inside a blue blueprint grid room with soft light rays.
