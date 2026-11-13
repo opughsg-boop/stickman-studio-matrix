@@ -981,6 +981,99 @@ function noduleCut(p = {}) { const g = new THREE.Group(), R = p.r || .45, r = rn
   g.userData.tick = (t, age) => { const k = easeIO(clamp((age - .5) / 1.2)); halves.forEach(([h, s]) => { h.position.x = s * k * R * .7; h.rotation.y = s * k * 1.2; }); g.position.y = Math.sin(t * 1.5) * .05; };
   return shadowed(g); }
 Object.assign(ASSETS, { wheat_field: wheatField, bean_field: beanField, roots, n2, soil_glow: soilGlow, nodule_cut: noduleCut });
+// ---------- cranberry pack: bog (dense low vines, reflective tea-brown water that floods, thousands of glossy berries that sit, float, get corralled by a boom), reel harvester, x-ray cut berry, bouncing berry ----------
+const ease01 = x => { x = Math.min(1, Math.max(0, x)); return x < .5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2; };
+function bog(p = {}) { // stages via modes: {stage:'dry'|'flood'|'float'|'corral', frac}
+  const g = new THREE.Group(), r = rng(p.seed || 11), W = p.w || 7, D = p.d || 4.6, L = p.level ?? .3, N = p.count || 3200, V = p.vines || 7000;
+  // sandy dike around the bog
+  const sand = std('#b9a27a', { r: .95 });
+  for (const [x, z, w, d] of [[0, -D / 2 - .25, W + 1, .5], [0, D / 2 + .25, W + 1, .5], [-W / 2 - .25, 0, .5, D], [W / 2 + .25, 0, .5, D]]) { const b = box(w, .2, d, sand); b.position.set(x, .1, z); g.add(b); }
+  // dense low vines: short leafy tufts, green with red-bronze tips
+  const leafGeo = new THREE.ConeGeometry(.035, .16, 5); leafGeo.translate(0, .08, 0);
+  const vineMat = new THREE.MeshStandardMaterial({ roughness: .7 });
+  const chunks = [];
+  for (let c = 0; c < 4; c++) { const im = new THREE.InstancedMesh(leafGeo, vineMat, V / 4), m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), sc = new THREE.Vector3(), ps = new THREE.Vector3(), cc = new THREE.Color();
+    for (let i = 0; i < V / 4; i++) { e.set((r() - .5) * .9, r() * 6.3, (r() - .5) * .9); q.setFromEuler(e); const s = .6 + r() * .9; sc.set(s, s * (.7 + r() * .6), s);
+      ps.set((r() - .5) * W, 0, (c - 1.5) * D / 4 + (r() - .5) * D / 4); m4.compose(ps, q, sc); im.setMatrixAt(i, m4);
+      const k = r(); cc.set(k < .55 ? '#2f5a26' : k < .8 ? '#3e6b2c' : k < .93 ? '#6b4a22' : '#7a2a22'); cc.offsetHSL(0, 0, (r() - .5) * .06); im.setColorAt(i, cc); }
+    im.receiveShadow = true; g.add(im); chunks.push(im); }
+  // berries
+  const bGeo = new THREE.SphereGeometry(.034, 10, 8), bMat = new THREE.MeshStandardMaterial({ roughness: .28, metalness: .05 });
+  const B = new THREE.InstancedMesh(bGeo, bMat, N); B.castShadow = true; g.add(B);
+  const pal = ['#9e0f1e', '#b3162a', '#c41e3a', '#7a0c18', '#a8142a', '#d84a5a', '#e7a1a4'], cc = new THREE.Color();
+  const home = [], ph = [];
+  for (let i = 0; i < N; i++) { home.push([(r() - .5) * (W - .2), .05 + r() * .09, (r() - .5) * (D - .2)]); ph.push(r() * 6.3);
+    const k = r(); cc.set(pal[k < .3 ? 0 : k < .55 ? 1 : k < .75 ? 2 : k < .87 ? 3 : k < .95 ? 4 : k < .985 ? 5 : 6]); B.setColorAt(i, cc); }
+  const cx = (p.corral || [W * .25, D * .2])[0], cz = (p.corral || [W * .25, D * .2])[1], sp = .055, GA = 2.39996;
+  const packed = i => { const rr = Math.sqrt(i + .5) * sp * .56, a = i * GA; return [cx + Math.cos(a) * rr * 1.25, cz + Math.sin(a) * rr * .9]; };
+  const Rb = Math.sqrt(N) * sp * .56;
+  // boom: floating yellow arc around the corralled berries
+  const boom = new THREE.Mesh(new THREE.TorusGeometry(1, .045, 8, 64, Math.PI * 1.35), std('#e6b422', { r: .5 }));
+  boom.rotation.x = -Math.PI / 2; boom.rotation.z = Math.PI * .85; boom.scale.set(Rb * 1.3, Rb * .95, 1); boom.position.set(cx, L, cz); g.add(boom);
+  // water: rippling, reflective tea-brown surface
+  const wg = new THREE.PlaneGeometry(W + .02, D + .02, 48, 32); wg.rotateX(-Math.PI / 2);
+  const wm = new THREE.MeshPhysicalMaterial({ color: col('#5b4a2e'), roughness: .06, metalness: .1, transparent: true, opacity: .6, clearcoat: 1, clearcoatRoughness: .05 });
+  const water = new THREE.Mesh(wg, wm); water.receiveShadow = true; g.add(water); const wp = wg.attributes.position, wy = Float32Array.from({ length: wp.count }, (_, i) => wp.getY(i));
+  const stageLevel = s => (s === 'dry' ? 0 : L);
+  const posFor = (s, frac, i, t) => { const h = home[i];
+    if (s === 'dry' || s === 'flood' || (s === 'float' && i / N >= frac)) return [h[0], h[1], h[2]];
+    const bob = Math.sin(t * 1.4 + ph[i]) * .006;
+    if (s === 'corral') { const [x, z] = packed(i); return [x, L + .012 + bob + ((i * 7) % 3) * .012, z]; }
+    return [h[0] + Math.sin(t * .3 + ph[i]) * .03, L + .012 + bob, h[2] + Math.cos(t * .27 + ph[i]) * .03]; };
+  const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), one = new THREE.Vector3(1, 1, 1), v = new THREE.Vector3();
+  g.userData.tick = t => {
+    const md = g.userData.mode || {}, pm = g.userData.prevMode || {}, cur = md.stage || p.stage || 'dry', prv = pm.stage || (g.userData.mode ? (p.stage || 'dry') : cur);
+    const age = g.userData.modeAge ?? 99, k = ease01(age / (md.dur || 2.4)), cf = md.frac ?? 1, pf = pm.frac ?? 1;
+    const lvl = stageLevel(prv) + (stageLevel(cur) - stageLevel(prv)) * ease01(age / 2.2);
+    water.visible = lvl > .01; water.position.y = Math.max(.01, lvl);
+    for (let i = 0; i < wp.count; i++) { const x = wp.getX(i), z = wp.getZ(i); wp.setY(i, wy[i] + Math.sin(x * 3.1 + t * 1.7) * .006 + Math.sin(z * 4.3 - t * 1.3) * .005); } wp.needsUpdate = true; wg.computeVertexNormals();
+    for (let i = 0; i < N; i++) { const a = posFor(prv, pf, i, t), b = posFor(cur, cf, i, t), ki = ease01(k * 1.6 - (i % 97) / 97 * .6);
+      v.set(a[0] + (b[0] - a[0]) * ki, a[1] + (b[1] - a[1]) * ki, a[2] + (b[2] - a[2]) * ki); m4.compose(v, q, one); B.setMatrixAt(i, m4); }
+    B.instanceMatrix.needsUpdate = true;
+    const bk = cur === 'corral' ? k : prv === 'corral' ? 1 - k : 0; boom.visible = bk > .02; boom.position.y = lvl + .01; boom.scale.set(Rb * 1.3 * (1.6 - .6 * bk), Rb * .95 * (1.6 - .6 * bk), 1);
+    chunks.forEach((c, j) => { c.rotation.z = Math.sin(t * 1.1 + j) * .012; c.rotation.x = Math.cos(t * .9 + j * 2) * .01; });
+  };
+  return g; }
+function reelHarvester(p = {}) { // walk-behind "eggbeater" water-reel harvester: red frame, two wheels, spinning reel of tines that churns the vines
+  const g = new THREE.Group(), body = new THREE.Group(); g.add(body); body.scale.setScalar(p.scale ?? 1);
+  const red = std(p.color || '#b8322a', { r: .45, m: .3 }), dark = std('#262626', { r: .6 }), steel = std('#9aa0a6', { r: .3, m: .8 });
+  const frame = box(1.1, .32, .7, red); frame.position.set(0, .78, 0); body.add(frame);
+  const eng = box(.45, .35, .4, dark); eng.position.set(0, 1.1, -.05); body.add(eng);
+  for (const x of [-.62, .62]) { const w = cyl(.38, .38, .14, dark, 20); w.rotation.z = Math.PI / 2; w.position.set(x, .38, -.1); body.add(w); }
+  for (const x of [-.35, .35]) { const h = cyl(.025, .025, 1.3, steel); h.rotation.x = -1.0; h.position.set(x, 1.15, -.75); body.add(h); }
+  const grip = cyl(.03, .03, .8, dark); grip.rotation.z = Math.PI / 2; grip.position.set(0, 1.7, -1.32); body.add(grip);
+  const reel = new THREE.Group(); reel.position.set(0, .32, .55); body.add(reel);
+  const axle = cyl(.05, .05, 1.1, steel); axle.rotation.z = Math.PI / 2; reel.add(axle);
+  for (let s = 0; s < 6; s++) for (let j = 0; j < 5; j++) { const tine = cyl(.012, .012, .5, steel, 6); const a = s / 6 * Math.PI * 2 + j * .2;
+    tine.position.set(-.44 + j * .22, Math.cos(a) * .25, Math.sin(a) * .25); tine.rotation.x = a; reel.add(tine); }
+  const [x0, z0] = (p.path || [[-2, 0], [2, 0]])[0], [x1, z1] = (p.path || [[-2, 0], [2, 0]])[1], T = p.travel || 8;
+  g.userData.tick = (t, age) => { reel.rotation.x = -t * 5; const u = (Math.sin(((age || 0) / T) * Math.PI * 2 - Math.PI / 2) + 1) / 2;
+    g.position.set(x0 + (x1 - x0) * u, Math.sin(t * 9) * .008, z0 + (z1 - z0) * u); g.rotation.y = Math.atan2(x1 - x0, z1 - z0) + (Math.cos(((age || 0) / T) * Math.PI * 2 - Math.PI / 2) < 0 ? Math.PI : 0); };
+  return shadowed(g); }
+function berryCut(p = {}) { // x-ray: a giant cranberry cut in half, showing four hollow air chambers and seeds
+  const g = new THREE.Group(), R = p.r || .55, inner = new THREE.Group(); g.add(inner); inner.position.y = R + (p.lift ?? .2);
+  const skin = new THREE.Mesh(new THREE.SphereGeometry(R, 40, 28, 0, Math.PI), std('#a3122a', { r: .3, extra: { side: THREE.DoubleSide } })); inner.add(skin);
+  const tex = canvasTex(512, 512, (c, w, h) => { const gr = c.createRadialGradient(w / 2, h / 2, w * .1, w / 2, h / 2, w / 2);
+      gr.addColorStop(0, '#f4dcd2'); gr.addColorStop(.78, '#ecc2b8'); gr.addColorStop(.9, '#c43a4a'); gr.addColorStop(1, '#7d0c1c'); c.fillStyle = gr; c.beginPath(); c.arc(w / 2, h / 2, w / 2, 0, 7); c.fill();
+      for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2 + .3; c.save(); c.translate(w / 2 + Math.cos(a) * w * .2, h / 2 + Math.sin(a) * h * .2); c.rotate(a);
+        c.fillStyle = '#5a1a20'; c.beginPath(); c.ellipse(0, 0, w * .13, h * .075, 0, 0, 7); c.fill(); c.fillStyle = '#2a0b0e'; c.beginPath(); c.ellipse(0, 0, w * .1, h * .05, 0, 0, 7); c.fill();
+        c.fillStyle = '#f2e6c8'; for (let s = 0; s < 3; s++) { c.beginPath(); c.ellipse(-w * .07 + s * w * .05, h * .04, w * .012, h * .02, 0, 0, 7); c.fill(); } c.restore(); } });
+  tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping; tex.repeat.set(1, 1);
+  const face = new THREE.Mesh(new THREE.CircleGeometry(R * .995, 48), new THREE.MeshStandardMaterial({ map: tex, roughness: .6 })); face.rotation.y = -Math.PI / 2; inner.add(face);
+  inner.rotation.y = Math.PI / 2 + .5;
+  g.userData.tick = t => { inner.rotation.y = Math.PI / 2 + .5 + Math.sin(t * .6) * .35; inner.position.y = R + (p.lift ?? .2) + Math.sin(t * 1.3) * .03; };
+  return shadowed(g); }
+function berryBounce(p = {}) { // a fresh cranberry bouncing on a wooden board, with squash & stretch and a contact shadow
+  const g = new THREE.Group(), R = p.r || .2, H = p.h || 1.1, P = p.period || .85;
+  const board = box(1.6, .08, 1, woodMat()); board.position.y = .04; g.add(board);
+  const berry = new THREE.Mesh(new THREE.SphereGeometry(R, 32, 24), std('#b3162a', { r: .25, m: .05 })); g.add(berry);
+  const sh = new THREE.Mesh(new THREE.CircleGeometry(R, 24), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: .35, depthWrite: false })); sh.rotation.x = -Math.PI / 2; sh.position.y = .085; g.add(sh);
+  g.userData.tick = t => { const u = (t / P) % 1, y = 4 * H * u * (1 - u), c = Math.min(u, 1 - u);
+    const sq = c < .06 ? 1 - (1 - c / .06) * .28 : 1 + Math.min(.12, (y / H) * .12 * (c < .3 ? 1 : 0));
+    berry.scale.set(1 / Math.sqrt(sq), sq, 1 / Math.sqrt(sq)); berry.position.y = .08 + R * sq + y;
+    const f = 1 - y / (H * 1.4); sh.scale.setScalar(Math.max(.3, f)); sh.material.opacity = .35 * f; };
+  return shadowed(g); }
+Object.assign(ASSETS, { bog, reel_harvester: reelHarvester, berry_cut: berryCut, berry_bounce: berryBounce });
 ASSETS.glb = (p = {}) => {
   const g = GLB[p.model]; if (!g) return box(.5, .5, .5, std('#f0f'));
   const o = skClone(g.scene); o.updateMatrixWorld(true);

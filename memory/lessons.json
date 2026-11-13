@@ -16,9 +16,9 @@
  {
   "code": "beat_too_long",
   "rule": "Split long sentences into two beats with a camera change.",
-  "count": 3,
-  "last_seen": "2026-11-11",
-  "example": "beat 9 lasts 8.2s without a new idea"
+  "count": 4,
+  "last_seen": "2026-11-13",
+  "example": "beat 1 lasts 7.5s without a new idea"
  },
  {
   "code": "caption_flash",
@@ -103,5 +103,47 @@
   "count": 2,
   "last_seen": "2026-11-13",
   "example": "beat 11 adds nothing new visually"
+ },
+ {
+  "code": "flat_primitive_water",
+  "rule": "Water must look real: reflective physical material, small ripples, partial see-through tint. Never a flat opaque coloured box.",
+  "count": 1,
+  "last_seen": "2026-11-13",
+  "example": "cranberry v1: bog water was a mint-green slab"
+ },
+ {
+  "code": "grid_pattern",
+  "rule": "Scatter many small items randomly with size and colour variation (instanced). Never lay them out in a regular grid.",
+  "count": 1,
+  "last_seen": "2026-11-13",
+  "example": "cranberry v1: berries sat in a perfect 16x11 grid"
+ },
+ {
+  "code": "hook_no_subject",
+  "rule": "The first second must show the striking result of the story (e.g. the red sea of floating berries), not bare ground.",
+  "count": 1,
+  "last_seen": "2026-11-13",
+  "example": "cranberry v1: hook frame showed only soil"
+ },
+ {
+  "code": "camera_misses_subject",
+  "rule": "Aim every beat's camera at that beat's new object; people, machines and trucks must be in frame and must not block the subject or fill the frame.",
+  "count": 1,
+  "last_seen": "2026-11-13",
+  "example": "cranberry v1: farmer, harvester and truck off-screen; v2 preview: truck filled the last frames, farmer showed his back"
+ },
+ {
+  "code": "tall_rim_blocks_view",
+  "rule": "Keep rims, dikes and low walls at 0.2 m or less so low and close cameras still see the subject.",
+  "count": 1,
+  "last_seen": "2026-11-13",
+  "example": "cranberry v2 preview: 0.42 m dike hid the vines"
+ },
+ {
+  "code": "critic_blind_to_realism",
+  "rule": "A high critic score does not prove natural graphics. Always look at one sheet and judge realism yourself before sending.",
+  "count": 1,
+  "last_seen": "2026-11-13",
+  "example": "cranberry v1 scored 95 but looked artificial"
  }
 ]

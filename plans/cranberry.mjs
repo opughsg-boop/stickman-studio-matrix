@@ -1,65 +1,59 @@
-// "Why do farmers flood a cranberry field before they pick?" - diorama + realistic ground (sandy bog soil), low vines, flooded bog water, floating berries, shaking harvester, trucks. No on-screen words.
+// "Why do farmers flood a cranberry field before they pick?" (English) - v2, hyper-realistic cranberry pack:
+// sandy bog with dense low vines, reflective tea-brown water that floods ~0.3 m (one foot), 3200 glossy berries that float up and get corralled by a yellow boom,
+// walk-behind reel harvester, workers in waders, pump pipe to a truck, x-ray cut berry with air chambers, a berry bouncing on a board. Pines + ground cover around. No on-screen words.
 import fs from 'fs';
 import { buildCaptions } from '../pipeline/plan.mjs';
 const [trf, out] = process.argv.slice(2);
 const tr = JSON.parse(fs.readFileSync(trf, 'utf8')), S = tr.segments, D = tr.duration;
 const at = (i, k = 0) => (i === 0 && k === 0 ? 0 : S[Math.min(i, S.length - 1)].words[k].start);
 const glb = (id, model, pos, height, extra = {}, more = {}) => ({ id, type: 'glb', pos, params: { model, height, ...extra }, anim: 'grow', ...more });
+const ph = (id, name, pos, height, more = {}) => glb(id, 'ph/' + name, pos, height, {}, { dust: false, ...more });
 
-const BW = 6.4, BD = 4.4, BZ = -.6; // bog area
-const vines = (id, extra = {}, more = {}) => ({ id, type: 'hay', pos: [0, .02, BZ], params: { w: BW, d: BD, count: 380, hgt: .16, color: '#2f5a2c', ...extra }, anim: 'grow', dust: false, ...more });
-const water = (id, y = .1, more = {}) => ({ id, type: 'custom', pos: [0, 0, BZ], params: { parts: [{ shape: 'box', size: [BW + .6, .05, BD + .6], pos: [0, y, 0], color: '#4e6b5c' }] }, anim: 'rise', dust: false, ...more });
-
-// berries: a grid of small red spheres lying in the vines, some already floating
-const berryParts = (y0 = .05, n = 16, m = 11, lift = 0) => {
-  const parts = [];
-  for (let i = 0; i < n; i++) for (let j = 0; j < m; j++) {
-    const x = -BW / 2 + (i + .5) * BW / n + ((i * 7 + j * 3) % 5 - 2) * .02;
-    const z = -BD / 2 + (j + .5) * BD / m + ((i * 3 + j * 5) % 4 - 1.5) * .02;
-    const y = y0 + lift + (((i + j) % 3) * .02);
-    parts.push({ shape: 'sphere', size: [.09, .075, .09], pos: [x, y, z], color: (i + j) % 4 === 0 ? '#8c1a22' : '#b3202a' });
-  }
-  return parts;
-};
-const berries = (id, y0, lift, more = {}) => ({ id, type: 'custom', pos: [0, 0, BZ], params: { parts: berryParts(y0, 16, 11, lift) }, anim: 'rise', dust: false, ...more });
-
-// harvester: a yellow frame with a shaker bar on the vines
-const harvester = (id, pos, more = {}) => ({ id, type: 'custom', pos, params: { parts: [
-  { shape: 'box', size: [1.4, .7, 2.2], pos: [0, .75, 0], color: '#d9a21b' },
-  { shape: 'box', size: [1.6, .18, .25], pos: [0, .4, 1.5], color: '#3a3a3a' },
-  { shape: 'cylinder', size: [.42, .42, .6], pos: [-.7, .42, 1.2], color: '#2b2b2b' },
-  { shape: 'cylinder', size: [.42, .42, .6], pos: [.7, .42, 1.2], color: '#2b2b2b' },
-  { shape: 'box', size: [.5, .9, .9], pos: [0, 1.5, -.5], color: '#c9332d' } ] }, anim: 'grow', dust: false, ...more });
+const BZ = -.6, CX = 1.2, CZ = BZ + .5; // bog centre z, corral centre (world)
+const bog = { id: 'bog', type: 'bog', pos: [0, 0, BZ], params: { w: 7, d: 4.6, level: .3, count: 3200, vines: 7000, corral: [CX, .5], stage: 'corral' }, anim: 'fade', dust: false };
+const surround = [ // natural surroundings: pines behind (real bogs sit in pine woods), grass, shrubs and stones on the bare soil
+  ph('pine1', 'pine_tree_01', [-4.6, 0, -3.9], 8), ph('pine2', 'pine_tree_01', [4.4, 0, -4.2], 9), ph('pine3', 'pine_tree_01', [.6, 0, -4.6], 10), ph('fir1', 'fir_sapling', [-5, 0, -.6], 1.6),
+  ph('sh1', 'shrub_01', [4.6, 0, -1.6], 1.1), ph('sh2', 'shrub_02', [-4.7, 0, 1.6], .9), ph('gr1', 'grass_medium_01', [-4.4, 0, -2.2], .45), ph('gr2', 'grass_medium_02', [4.5, 0, .8], .45),
+  ph('gr3', 'grass_medium_01', [-3.4, 0, 2.6], .4), ph('gr4', 'grass_medium_02', [3.6, 0, 2.5], .4), ph('rk1', 'rock_07', [-4.3, 0, .4], .45), ph('rk2', 'boulder_01', [4.9, 0, 1.9], .7),
+];
+const road = { id: 'road', type: 'custom', pos: [0, 0, 0], params: { parts: [{ shape: 'box', size: [12, .04, 1.5], pos: [0, .02, 3.6], color: '#8a7552' }] }, dust: false };
+const workers = [glb('wk1', 'modular_men/Worker', [CX - 1.9, -.12, CZ + 1.3], 1.75, {}, { rotY: .6, dust: false }), glb('wk2', 'modular_men/Worker', [CX + 2.4, -.12, CZ - .9], 1.75, {}, { rotY: -2.2, delay: .2, dust: false })];
 
 const beats = [
-  // hook: low green vines on a sandy bog, a farmer at the edge
-  { t: 0, kind: 'intro', add: [vines('vines'), { id: 'sand', type: 'hay', pos: [0, .01, BZ], params: { w: BW + .4, d: BD + .4, count: 60, hgt: .03, color: '#c9b48a' }, anim: 'grow', dust: false },
-      glb('farmer', 'modular_men/Farmer', [-4.2, 0, 2.2], 1.75, {}, { delay: .3 })],
-    camera: { preset: 'hero', target: [-.5, 1.2, 0], dist: 13, elev: .32, az: .35, zoom: 'in' } },
-  // the problem: berries are small and hidden in the vines, the farmer bends over them
-  { t: at(1), kind: 'problem', add: [berries('berries', .05, 0), glb('picker', 'modular_men/Worker', [2.4, 0, 1.2], 1.75, {}, { delay: .2 })],
-    camera: { preset: 'low', target: [.5, .4, .8], dist: 5.5, elev: .1, az: .25, zoom: 'out' } },
-  // the fix: the whole bog is flooded with about a foot of water
-  { t: at(3), kind: 'solution', add: [water('bog', .2), { id: 'pump', type: 'custom', pos: [-BW / 2 - .6, 0, BZ], params: { parts: [{ shape: 'cylinder', size: [.3, .3, .9], pos: [0, .45, 0], color: '#2b2b2b' }] }, anim: 'grow', dust: false }],
-    remove: ['picker'], camera: { preset: 'hero', target: [0, .8, BZ], dist: 11, elev: .35, az: -.2, zoom: 'in' } },
-  // the berries loosen and start to rise
-  { t: at(4), kind: 'solution', remove: ['bog'], add: [water('bog', .9), berries('berriesUp', .05, .9)],
-    camera: { preset: 'close', target: [0, .6, BZ], dist: 6, elev: .45, az: .3, zoom: 'out' } },
-  // air pockets: the berries float on the surface
-  { t: at(5), kind: 'solution', remove: ['berries'], add: [water('bogB', .9)],
-    camera: { preset: 'close', target: [.8, .9, BZ], dist: 5, elev: .5, az: -.25, zoom: 'in' } },
-  // the harvester shakes the vines and the berries are pushed to the surface
-  { t: at(6), kind: 'solution', remove: ['bog', 'bogB', 'berriesUp'], add: [water('bogC', .9), berries('berriesC', .05, .9), harvester('harv', [-3.6, 0, BZ + .5])],
-    camera: { preset: 'hero', target: [-.8, 1.2, BZ], dist: 11, elev: .35, az: .15, zoom: 'in' } },
-  // the berries are pumped into a truck
-  { t: at(7), kind: 'solution', remove: ['harv'], add: [
-      { id: 'truck', type: 'truck', pos: [0, 0, 0], params: { path: [[-10, 3.4], [-1.4, 3.4]], travel: 2.8, color: '#b0352b' }, anim: 'fade', dust: false }],
-    camera: { preset: 'hero', target: [0, 1, 1.4], dist: 11, elev: .35, az: .15, zoom: 'in' } },
-  // the surprise: a fresh cranberry bounces like a ball
-  { t: at(8), kind: 'tip', remove: ['truck', 'bogC'], add: [{ id: 'ball', type: 'custom', pos: [0, 0, BZ], params: { parts: [{ shape: 'sphere', size: [.28, .24, .28], pos: [0, .5, 0], color: '#b3202a' }] }, anim: 'grow', dust: false }],
-    camera: { preset: 'close', target: [0, .4, BZ], dist: 5.5, elev: .3, az: -.2, zoom: 'out' } },
-  // CTA: wide orbit pull-out
-  { t: at(9), kind: 'info', remove: ['ball'], camera: { preset: 'orbit', target: [0, 1.5, 0], dist: 15, elev: .38, az: .2, zoom: 'out' } },
+  // 0 hook: a bright red sea of floating cranberries corralled by a boom, workers in waders, pines behind
+  { t: 0, kind: 'intro', add: [bog, road, ...surround, ...workers], modes: { bog: { stage: 'corral' } },
+    camera: { preset: 'hero', target: [.6, .6, BZ + .3], dist: 12, elev: .38, az: .3, zoom: 'in' } },
+  // 1 how they grow: water drains, berries settle back on low vines in the sandy bog
+  { t: at(1), kind: 'info', remove: ['wk1', 'wk2'], modes: { bog: { stage: 'dry', dur: 2.6 } },
+    camera: { preset: 'close', target: [-.8, .2, BZ + .9], dist: 5.5, elev: .38, az: .2, zoom: 'out' } },
+  // 2 problem: tiny berries hidden in tough tangled vines, a farmer bending over them
+  { t: at(2), kind: 'problem', add: [glb('farmer', 'modular_men/Farmer', [-2.5, 0, BZ + 1.5], 1.75, {}, { rotY: .5, dust: false })],
+    camera: { preset: 'detail', target: [-1.5, .55, BZ + 1.2], dist: 5.2, elev: .32, az: .45, zoom: 'in' } },
+  // 3 fix: the whole bog floods with about a foot of water
+  { t: at(3), kind: 'solution', remove: ['farmer'], modes: { bog: { stage: 'flood' } },
+    camera: { preset: 'hero', target: [0, .4, BZ], dist: 11, elev: .4, az: -.25, zoom: 'out' } },
+  // 4 the berries loosen: half of them lift off the vines and float
+  { t: at(4), kind: 'solution', modes: { bog: { stage: 'float', frac: .5, dur: 1.6 } },
+    camera: { preset: 'close', target: [-.6, .35, BZ + .6], dist: 5.5, elev: .4, az: .3, zoom: 'in' } },
+  // 5 x-ray: a giant cut cranberry beside the real ones shows the air pockets inside
+  { t: at(5), kind: 'info', add: [{ id: 'cut', type: 'berry_cut', pos: [-1.5, .3, BZ + 1.5], params: { r: .55, lift: .25 }, anim: 'grow', dust: false }],
+    camera: { preset: 'close', target: [-1.5, 1.05, BZ + 1.5], dist: 5, elev: .22, az: .25, zoom: 'out' } },
+  // 6 the reel harvester churns the vines and every berry rises to the surface
+  { t: at(6), kind: 'solution', remove: ['cut'], add: [{ id: 'harv', type: 'reel_harvester', pos: [0, 0, 0], params: { path: [[-2.6, BZ - 1.1], [.4, BZ - 1.1]], travel: 9 }, anim: 'fade', dust: false }],
+    modes: { bog: { stage: 'float', frac: 1, dur: 3 } },
+    camera: { preset: 'hero', target: [-1, .6, BZ - .6], dist: 9, elev: .36, az: .15, zoom: 'in' } },
+  // 7 boom corrals the berries, a pump lifts them into the truck
+  { t: at(7), kind: 'solution', remove: ['harv'], add: [...workers.map(w => ({ ...w, id: w.id + 'b' })),
+      { id: 'pipe', type: 'custom', pos: [0, 0, 0], params: { parts: [{ shape: 'cylinder', size: [.22, 2.95, .22], pos: [CX + .9, 1.25, CZ + 2.3], rot: [.97, 0, -.1], color: '#2c2c2c', rough: .5 },
+        { shape: 'box', size: [.6, .45, .5], pos: [CX + .8, .22, CZ + 1.15], color: '#3b5f8a', metal: .4, rough: .45 }] }, anim: 'grow', dust: false, delay: .3 },
+      { id: 'truck', type: 'truck', pos: [0, 0, 0], params: { path: [[-11, 3.6], [CX + 1.1, 3.6]], travel: 2.2, color: '#b0352b' }, anim: 'fade', dust: false }],
+    modes: { bog: { stage: 'corral', dur: 2.4 } },
+    camera: { preset: 'hero', target: [CX - .3, .5, CZ + .5], dist: 11, elev: .5, az: -.55, zoom: 'out' } },
+  // 8 surprise: a fresh cranberry bounces like a ball (squash & stretch on a board)
+  { t: at(8), kind: 'tip', add: [{ id: 'bounce', type: 'berry_bounce', pos: [-2.4, 0, 2.75], params: { r: .2, h: 1.1 }, anim: 'grow', dust: false }],
+    camera: { preset: 'detail', target: [-2.4, .75, 2.75], dist: 5, elev: .2, az: -.25, zoom: 'in' } },
+  // 9 CTA: wide orbit pull-out over the red bog
+  { t: at(9), kind: 'info', remove: ['bounce', 'pipe', 'truck'], camera: { preset: 'orbit', target: [0, .8, 0], dist: 14, elev: .42, az: .2, zoom: 'out' } },
 ];
 
 const plan = {
