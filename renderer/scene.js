@@ -914,6 +914,73 @@ function ash(p = {}) { const g = new THREE.Group(), r = rng(p.seed || 29); const
   for (let i = 0; i < 40; i++) { const c = new THREE.Mesh(new THREE.DodecahedronGeometry(.03 + r() * .05), r() < .5 ? m2 : m); const a = r() * 6.3, d = r() * (p.r || .7); c.position.set(Math.cos(a) * d, .02 + (1 - d / (p.r || .7)) * .2, Math.sin(a) * d); g.add(c); }
   return shadowed(g); }
 Object.assign(ASSETS, { kiln, log_pile: logPile, ash });
+// ---------- legumes pack: wheat field (gold/green/sick), faba bean field, roots with nodules (soil cutaway), nitrogen particles, soil glow, giant split nodule ----------
+function headTex() { return SPR.head ||= canvasT(64, 128, (g, w, h) => { g.fillStyle = '#c9a24e'; g.fillRect(0, 0, w, h); const r = rng(5);
+  for (let y = 0; y < h; y += 9) for (let x = (y / 9) % 2 ? 0 : 8; x < w; x += 16) { const gr = g.createRadialGradient(x + 8, y + 4, 1, x + 8, y + 4, 9); gr.addColorStop(0, '#f0d488'); gr.addColorStop(1, 'rgba(120,85,30,.9)'); g.fillStyle = gr; g.beginPath(); g.ellipse(x + 8, y + 4, 7, 5, 0, 0, 7); g.fill(); } }); }
+function wheatField(p = {}) { const g = new THREE.Group(), r = rng(p.seed || 19), w = p.w || 6, d = p.d || 3, n = p.count || 260, st = p.state || 'gold';
+  const C = { gold: ['#c9a548', '#d8b45a', '#ffffff'], green: ['#5f8f35', '#6f9e3c', '#b8d27a'], sick: ['#c8be6a', '#d6cf86', '#e3dca0'] }[st];
+  const stalkM = std(C[0], { r: .7 }), leafM = std(st === 'gold' ? '#c7a85c' : C[1], { r: .8, extra: { map: bladeTex(st === 'gold'), alphaTest: .5, side: THREE.DoubleSide } });
+  const headM = std(C[2], { r: .6, extra: { map: headTex() } }); if (st !== 'gold') headM.color.set(st === 'green' ? '#9cc25a' : '#e8e0a8');
+  const awnM = new THREE.LineBasicMaterial({ color: st === 'green' ? '#b7d47c' : '#e8d39a' }), sway = [], H = (p.h || 1) * (st === 'sick' ? .6 : 1);
+  const leafG = bladeGeo(.45, .035, 1.1);
+  for (let i = 0; i < n; i++) { const s = new THREE.Group(), h = H * (.85 + r() * .25), bend = st === 'sick' ? .5 : .12;
+    const stalk = cyl(.007, .01, h, stalkM, 5); stalk.position.y = h / 2; s.add(stalk);
+    const head = new THREE.Mesh(new THREE.CapsuleGeometry(.018, .08, 3, 6), headM); head.position.y = h + .05; head.rotation.z = bend; s.add(head);
+    if (st !== 'sick') { const pts = []; for (let k = 0; k < 8; k++) { const y = h + .01 + k * .012; pts.push(new THREE.Vector3(0, y, 0), new THREE.Vector3((r() - .5) * .05, y + .1 + r() * .05, (r() - .5) * .05)); } s.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(pts), awnM)); }
+    for (let k = 0; k < 2; k++) { const lf = new THREE.Mesh(leafG, leafM); lf.position.y = h * (.3 + k * .25); lf.rotation.set(st === 'sick' ? 1.5 : .7, r() * 6.3, 0, 'YXZ'); s.add(lf); }
+    s.position.set((r() - .5) * w, 0, (r() - .5) * d); s.rotation.y = r() * 6.3; if (st === 'sick') s.rotation.z = (r() - .5) * .5; g.add(s); sway.push([s, r() * 6, s.rotation.z]); }
+  g.userData.tick = t => sway.forEach(([s, ph, z0]) => { s.rotation.x = Math.sin(t * 1.6 + ph + s.position.x * .5) * .05; });
+  return shadowed(g); }
+function leafletTex() { return SPR.leaflet ||= canvasT(64, 96, (g, w, h) => { const gr = g.createLinearGradient(0, 0, w, 0); gr.addColorStop(0, '#5b7f45'); gr.addColorStop(.5, '#7d9d62'); gr.addColorStop(1, '#5b7f45');
+  g.fillStyle = gr; g.beginPath(); g.ellipse(32, 48, 28, 46, 0, 0, 7); g.fill(); g.strokeStyle = 'rgba(200,220,170,.6)'; g.lineWidth = 2; g.beginPath(); g.moveTo(32, 4); g.lineTo(32, 94); g.stroke();
+  g.lineWidth = 1; for (let k = 0; k < 6; k++) { g.beginPath(); g.moveTo(32, 18 + k * 12); g.lineTo(10, 10 + k * 12); g.moveTo(32, 18 + k * 12); g.lineTo(54, 10 + k * 12); g.stroke(); } }); }
+function flowerTex() { return SPR.flower ||= canvasT(32, 32, g => { g.fillStyle = '#f4f1ea'; g.beginPath(); g.ellipse(16, 14, 11, 13, 0, 0, 7); g.fill(); g.fillStyle = '#1e1a22'; g.beginPath(); g.ellipse(16, 20, 5, 4, 0, 0, 7); g.fill(); }); }
+function beanField(p = {}) { const g = new THREE.Group(), r = rng(p.seed || 27), w = p.w || 6, d = p.d || 3, n = p.count || 70, H = p.h || .9;
+  const stemM = std('#6e8f4f', { r: .7 }), leafM = std('#ffffff', { r: .75, extra: { map: leafletTex(), alphaTest: .5, side: THREE.DoubleSide } }), podM = std('#5f8a3c', { r: .5 });
+  const flM = new THREE.SpriteMaterial({ map: flowerTex(), transparent: true }), leafG = new THREE.PlaneGeometry(.07, .1); leafG.translate(0, .05, 0); const sway = [];
+  const pos = p.rows ? Array.from({ length: n }, (_, i) => [(-w / 2) + (i % Math.ceil(n / p.rows)) * w / Math.ceil(n / p.rows) + (r() - .5) * .08, -d / 2 + Math.floor(i / Math.ceil(n / p.rows)) * d / Math.max(1, p.rows - 1)]) : Array.from({ length: n }, () => [(r() - .5) * w, (r() - .5) * d]);
+  for (const [x, z] of pos) { const s = new THREE.Group(), h = H * (.8 + r() * .35); const stem = box(.018, h, .018, stemM); stem.position.y = h / 2; s.add(stem);
+    for (let k = 0; k < 7; k++) { const y = h * (.22 + k * .11), a = k * 2.4 + r(); for (let j = 0; j < 3; j++) { const lf = new THREE.Mesh(leafG, leafM); lf.position.set(0, y, 0); lf.rotation.set(.9 + r() * .4, a + (j - 1) * .5, 0, 'YXZ'); lf.scale.setScalar(.9 + r() * .4); s.add(lf); } }
+    for (let k = 0; k < 3; k++) { const f = new THREE.Sprite(flM); f.scale.setScalar(.035); f.position.set((r() - .5) * .05, h * (.55 + k * .12), (r() - .5) * .05); s.add(f); }
+    for (let k = 0; k < 2; k++) { const pod = new THREE.Mesh(new THREE.CapsuleGeometry(.014, .09, 3, 6), podM); pod.position.set(.03, h * (.3 + k * .1), 0); pod.rotation.z = .5; s.add(pod); }
+    s.position.set(x, 0, z); s.rotation.y = r() * 6.3; g.add(s); sway.push([s, r() * 6]); }
+  g.userData.tick = t => sway.forEach(([s, ph]) => { s.rotation.x = Math.sin(t * 1.4 + ph) * .04; });
+  return shadowed(g); }
+function roots(p = {}) { // drawn on the island's front cross-section (z = p.face), one root system per x in p.xs
+  const g = new THREE.Group(), r = rng(p.seed || 37), depth = p.depth || 1, rootM = std(p.color || '#dccaa2', { r: .8 }), nodM = std('#e9c3b0', { r: .45, extra: { emissive: col('#ff6f91'), emissiveIntensity: 0 } }), nods = [], tubes = [];
+  for (const x0 of p.xs || [0]) { const branch = (pt, dir, len, rad, lvl) => { const pts = [pt.clone()]; let q = pt.clone(), dv = dir.clone(); for (let k = 0; k < 6; k++) { dv.x += (r() - .5) * .5; dv.y -= .15; dv.normalize(); q = q.clone().add(dv.clone().multiplyScalar(len / 6)); q.z = Math.min(q.z, .06); pts.push(q); }
+      const tube = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 12, rad, 5), rootM); g.add(tube); tubes.push(tube);
+      if (p.nodules && lvl < 2) for (let k = 0; k < 5 - lvl * 2; k++) { const c = pts[1 + Math.floor(r() * 4)]; const nd = sph(.022 + r() * .018, nodM); nd.position.set(c.x + (r() - .5) * .04, c.y + (r() - .5) * .04, .05); g.add(nd); nods.push(nd); }
+      if (lvl < 2) for (let k = 0; k < 3; k++) branch(pts[2 + k], new THREE.Vector3((r() - .5) * 2, -.6, 0), len * .55, rad * .6, lvl + 1); };
+    branch(new THREE.Vector3(x0, 0, .03), new THREE.Vector3(0, -1, 0), depth, .012, 0); }
+  g.userData.tick = (t, age) => { const grow = clamp(age / (p.growTime || 1.6)); tubes.forEach((tb, i) => { tb.scale.setScalar(Math.max(.001, easeIO(clamp(grow * 1.6 - (i % 7) * .08)))); });
+    const mo = g.userData.mode || {}; const gl = (mo.glow ?? p.glow ?? 0) * (.75 + Math.sin(t * 5) * .25); nodM.emissiveIntensity = gl;
+    nods.forEach((n, i) => n.scale.setScalar(Math.max(.001, easeOutBack(clamp(grow * 1.8 - .6 - i * .01))))); };
+  return shadowed(g); }
+function n2(p = {}) { // nitrogen molecules (wordless twin spheres): float in the air, stream down into the soil, or rise out of it into the crop
+  const g = new THREE.Group(), r = rng(p.seed || 43), n = p.count || 60, w = p.w || 8, d = p.d || 4, hgt = p.h || 4, m = std(p.color || '#7fc4ff', { r: .3, extra: { emissive: col(p.color || '#7fc4ff'), emissiveIntensity: .5 } }), list = [];
+  for (let i = 0; i < n; i++) { const mol = new THREE.Group(); const a = sph(.045, m), b = sph(.045, m); a.position.x = -.035; b.position.x = .035; mol.add(a, b); g.add(mol);
+    list.push({ mol, h: new THREE.Vector3((r() - .5) * w, .4 + r() * hgt, (r() - .5) * d), tgt: new THREE.Vector3((r() - .5) * (p.tw || w), -.15 - r() * (p.tdepth || .6), p.tz ?? d / 2), ph: r() * 6, delay: r() * 1.6, rs: (r() - .5) * 2 }); }
+  g.userData.tick = (t, age) => { const mo = g.userData.mode || { mode: p.mode || 'float' }, ma = g.userData.modeAge ?? age;
+    list.forEach(o => { let pos = o.h.clone().add(new THREE.Vector3(Math.sin(t * .6 + o.ph) * .25, Math.sin(t * .9 + o.ph) * .15, Math.cos(t * .5 + o.ph) * .2)), s = 1;
+      if (mo.mode === 'bounce') { pos.y = Math.max(.35, pos.y - .4) + Math.abs(Math.sin(t * 2 + o.ph)) * .3; }
+      if (mo.mode === 'stream') { const k = clamp((ma - o.delay) / 1.6); pos = pos.lerp(o.tgt, easeIO(k)); s = k > .95 ? Math.max(.001, (1 - k) * 20) : 1; }
+      if (mo.mode === 'rise') { const k = ((t * .4 + o.ph) % 1); pos = o.tgt.clone().lerp(new THREE.Vector3(o.tgt.x, (p.riseTo || .9), o.tgt.z - .4 - (o.ph % 1) * 1.5), k); s = Math.sin(k * Math.PI); }
+      o.mol.position.copy(pos); o.mol.rotation.set(t * o.rs, t * o.rs * .7, 0); o.mol.scale.setScalar(Math.max(.001, s)); }); };
+  return g; }
+function soilGlow(p = {}) { const g = new THREE.Group(), m = new THREE.MeshBasicMaterial({ color: col(p.color || '#7dff6a'), transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending });
+  const top = new THREE.Mesh(new THREE.PlaneGeometry(p.w || 6, p.d || 4), m); top.rotation.x = -Math.PI / 2; top.position.y = .03; g.add(top);
+  const face = new THREE.Mesh(new THREE.PlaneGeometry(p.w || 6, p.fd || .9), m); face.position.set(0, -(p.fd || .9) / 2, (p.d || 4) / 2 + .02); g.add(face);
+  g.userData.tick = (t, age) => { m.opacity = clamp(age / 1.2) * (.18 + Math.sin(t * 3) * .05); }; return g; }
+function noduleCut(p = {}) { const g = new THREE.Group(), R = p.r || .45, r = rng(53);
+  const skin = std('#d9b9a0', { r: .7 }), inner = new THREE.MeshStandardMaterial({ color: col('#e46e8c'), roughness: .35, emissive: col('#ff4f7a'), emissiveIntensity: .25 });
+  const halves = []; for (const sgn of [-1, 1]) { const h = new THREE.Group(); const shell = new THREE.Mesh(new THREE.SphereGeometry(R, 32, 20, 0, Math.PI), skin); shell.rotation.y = sgn > 0 ? -Math.PI / 2 : Math.PI / 2; h.add(shell);
+    const face = new THREE.Mesh(new THREE.CircleGeometry(R * .97, 32), inner); face.rotation.y = sgn > 0 ? -Math.PI / 2 : Math.PI / 2; face.position.x = sgn * .002; h.add(face);
+    const bm = std('#7a2a40', { r: .4 }); for (let i = 0; i < 40; i++) { const a = r() * 6.3, d = Math.sqrt(r()) * R * .85; const b = new THREE.Mesh(new THREE.CapsuleGeometry(.008, .03, 2, 5), bm); b.position.set(sgn * .006, Math.sin(a) * d, Math.cos(a) * d); b.rotation.x = r() * 3; h.add(b); }
+    g.add(h); halves.push([h, sgn]); }
+  g.userData.tick = (t, age) => { const k = easeIO(clamp((age - .5) / 1.2)); halves.forEach(([h, s]) => { h.position.x = s * k * R * .7; h.rotation.y = s * k * 1.2; }); g.position.y = Math.sin(t * 1.5) * .05; };
+  return shadowed(g); }
+Object.assign(ASSETS, { wheat_field: wheatField, bean_field: beanField, roots, n2, soil_glow: soilGlow, nodule_cut: noduleCut });
 ASSETS.glb = (p = {}) => {
   const g = GLB[p.model]; if (!g) return box(.5, .5, .5, std('#f0f'));
   const o = skClone(g.scene); o.updateMatrixWorld(true);
