@@ -1,0 +1,12 @@
+{ "title": "الدرة في سطر",
+  "hero": { "model": "Corn_Crop", "height": 2.2 },
+  "lines": [
+    { "shot": "sky", "question": true },
+    { "shot": "close", "glow": "#3aa8ff" },
+    { "shot": "walk" },
+    { "shot": "twist", "glow": "#ff3b30", "flash": true },
+    { "shot": "route", "from": "المَيّة", "to": "الأخدود", "follow": true },
+    { "shot": "flock", "count": 5 },
+    { "shot": "science" },
+    { "shot": "cta" }
+  ] }
