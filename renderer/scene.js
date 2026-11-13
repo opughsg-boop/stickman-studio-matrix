@@ -766,6 +766,67 @@ async function preloadGLB(p) {
   const l = new GLTFLoader();
   await Promise.all([...names].map(async n => { GLB[n] = await l.loadAsync(n.startsWith('ph/') ? `/assets/${n}/${n.slice(3)}.gltf` : `/assets/lib/${n}.glb`); }));
 }
+// ---------- sugar-cane pack: field (green / burnt / cut), fire sweep, smoke column, juicy cut stalk, fleeing critters, truck ----------
+function caneField(p = {}) { const g = new THREE.Group(), r = rng(p.seed || 11), w = p.w || 7, d = p.d || 5, n = p.count || 140, burnt = !!p.burnt;
+  const stalkM = std(burnt ? '#2b211c' : '#9a8f3c', { r: .7 }), nodeM = std(burnt ? '#14100d' : '#6f5a2a'), leafM = std('#5d8c34', { r: .8, extra: { side: THREE.DoubleSide } }), dryM = std('#c4a76a', { extra: { side: THREE.DoubleSide } });
+  const sway = [];
+  for (let i = 0; i < n; i++) { const s = new THREE.Group(), h = (p.h || 2.6) * (.75 + r() * .4), x = (r() - .5) * w, z = (r() - .5) * d;
+    const st = cyl(.035, .045, h, stalkM, 7); st.position.y = h / 2; s.add(st);
+    for (let k = .35; k < h; k += .38 + r() * .1) { const nd = cyl(.05, .05, .04, nodeM, 7); nd.position.y = k; s.add(nd); }
+    if (!burnt && p.leaves !== false) for (let k = 0; k < 4; k++) { const lf = box(.05, 1.1, .005, leafM); lf.geometry.translate(0, .55, 0); lf.position.y = h - .1 - k * .18; lf.rotation.set(.5 + r() * .5, r() * 6.3, 0, 'YXZ'); s.add(lf); }
+    if (!burnt && p.dry !== false) for (let k = 0; k < 3; k++) { const lf = box(.06, .8, .005, dryM); lf.geometry.translate(0, -.4, 0); lf.position.y = .4 + r() * h * .5; lf.rotation.set(-.6 - r() * .6, r() * 6.3, 0, 'YXZ'); s.add(lf); }
+    if (p.cut) { s.scale.y = .001; }
+    s.position.set(x, 0, z); s.rotation.y = r() * 6.3; g.add(s); sway.push([s, r() * 6]); }
+  g.userData.tick = (t, age) => sway.forEach(([s, ph]) => { s.rotation.z = Math.sin(t * 1.3 + ph) * (burnt ? .01 : .035); });
+  return shadowed(g); }
+function fire(p = {}) { const g = new THREE.Group(), r = rng(p.seed || 5), w = p.w || 7, d = p.d || 5, n = p.count || 70, dur = p.sweep || 3;
+  const mats = ['#ff5a14', '#ff8a1e', '#ffc23a'].map(c => new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: .85, depthWrite: false, blending: THREE.AdditiveBlending }));
+  const fl = []; for (let i = 0; i < n; i++) { const m = new THREE.Mesh(new THREE.ConeGeometry(.22 + r() * .2, 1, 7), mats[i % 3]); const x = (r() - .5) * w, z = (r() - .5) * d; m.position.set(x, 0, z); g.add(m); fl.push({ m, x, ph: r() * 6, hh: (p.h || 1.6) * (.5 + r() * .7) }); }
+  const glow = new THREE.PointLight('#ff7a2a', 0, 14); glow.position.y = 1.5; g.add(glow);
+  g.userData.tick = (t, age) => { const front = -w / 2 + (w + 2) * Math.min(1, age / dur); let on = 0;
+    fl.forEach(f => { const a = front - f.x; const k = a < 0 ? 0 : a < 1.5 ? 1 : Math.max(0, 1 - (a - 1.5) / (p.trail || 3)); const s = k * (1 + Math.sin(t * 13 + f.ph) * .25);
+      f.m.scale.set(Math.max(.001, k), Math.max(.001, s * f.hh), Math.max(.001, k)); f.m.position.y = s * f.hh / 2; on += k; });
+    glow.intensity = Math.min(8, on * .25); glow.position.x = Math.min(front, w / 2); };
+  return g; }
+function smoke(p = {}) { const g = new THREE.Group(), r = rng(p.seed || 3), n = p.count || 46, H = p.h || 9;
+  const puffs = []; for (let i = 0; i < n; i++) { const m = new THREE.Mesh(new THREE.SphereGeometry(1, 12, 10), new THREE.MeshStandardMaterial({ color: col(p.color || '#1c1a19'), roughness: 1, transparent: true, opacity: .8, depthWrite: false }));
+    g.add(m); puffs.push({ m, ph: i / n, ox: (r() - .5) * (p.w || 2), oz: (r() - .5) * (p.w || 2), sp: .8 + r() * .4 }); }
+  g.userData.tick = (t, age) => { const grow = Math.min(1, age / 1.2);
+    puffs.forEach(o => { const k = (t * .12 * o.sp + o.ph) % 1; const s = (.5 + k * 2.4) * (p.scale || 1);
+      o.m.position.set(o.ox * (1 + k) + k * k * (p.drift ?? 2.5), .5 + k * H * grow, o.oz * (1 + k)); o.m.scale.setScalar(Math.max(.001, s * grow)); o.m.material.opacity = (p.opacity ?? .85) * Math.min(1, k * 6) * (1 - k * .6); }); };
+  return g; }
+function caneCut(p = {}) { const g = new THREE.Group(), h = p.h || 3, R = p.r || .45, burnt = !!p.burnt;
+  const skin = std(burnt ? '#231a15' : '#a39a42', { r: burnt ? 1 : .55 }), node = std(burnt ? '#0f0b09' : '#7a6230');
+  const st = cyl(R, R * 1.05, h, skin, 32); st.position.y = h / 2; g.add(st);
+  for (let k = .55; k < h - .2; k += .8) { const nd = cyl(R * 1.08, R * 1.08, .09, node, 32); nd.position.y = k; g.add(nd); }
+  const core = cyl(R * .93, R * .93, .02, std('#f1ecc8', { r: .25 }), 32); core.position.y = h + .005; g.add(core);
+  const fib = std('#e3dca8', { r: .3 }); for (let i = 0; i < 26; i++) { const a = i * 2.4, rr = Math.sqrt(i / 26) * R * .85; const f = sph(.03, fib); f.scale.y = .3; f.position.set(Math.cos(a) * rr, h + .02, Math.sin(a) * rr); g.add(f); }
+  const dm = new THREE.MeshStandardMaterial({ color: col('#7cc8ff'), roughness: .05, metalness: .1, transparent: true, opacity: .85 }), drops = [];
+  for (let i = 0; i < (p.drops ?? 7); i++) { const d = sph(.07, dm); d.scale.y = 1.4; g.add(d); drops.push({ d, a: i * .9, ph: i / 7 }); }
+  g.userData.tick = (t) => drops.forEach(o => { const k = (t * .7 + o.ph) % 1; o.d.position.set(Math.cos(o.a) * R * 1.02, h - k * h * .9, Math.sin(o.a) * R * 1.02); o.d.scale.setScalar(Math.max(.001, Math.min(1, k * 8))); });
+  return shadowed(g); }
+function critters(p = {}) { const g = new THREE.Group(), r = rng(p.seed || 9), list = [];
+  const ratM = std('#6d625a'), snakeM = std('#5b5a2a', { r: .5 });
+  for (let i = 0; i < (p.rats ?? 5); i++) { const b = new THREE.Group(); const bd = sph(.12, ratM); bd.scale.set(.8, .7, 1.4); bd.position.y = .1; b.add(bd);
+    const hd = sph(.07, ratM); hd.position.set(0, .12, .17); b.add(hd); const tl = cyl(.012, .006, .3, ratM, 5); tl.rotation.x = 1.3; tl.position.set(0, .07, -.27); b.add(tl);
+    g.add(b); list.push({ o: b, rat: true, x: (r() - .5) * (p.w || 5), z: (r() - .5) * (p.d || 3), dir: r() * 6.3, sp: 1.5 + r() }); }
+  for (let i = 0; i < (p.snakes ?? 2); i++) { const b = new THREE.Group(), seg = []; for (let k = 0; k < 14; k++) { const s = sph(.055 - k * .002, snakeM); s.scale.y = .7; b.add(s); seg.push(s); }
+    g.add(b); list.push({ o: b, seg, x: (r() - .5) * (p.w || 5), z: (r() - .5) * (p.d || 3), dir: r() * 6.3, sp: .9 }); }
+  g.userData.tick = (t, age) => { const run = p.flee ? Math.max(0, age - .2) : 0;
+    list.forEach(c => { const dx = Math.sin(c.dir), dz = Math.cos(c.dir); const dist = run * c.sp; c.o.position.set(c.x + dx * dist, 0, c.z + dz * dist); c.o.rotation.y = c.dir;
+      if (c.rat) c.o.position.y = Math.abs(Math.sin(t * (p.flee ? 16 : 3) + c.x)) * (p.flee ? .06 : .01);
+      else c.seg.forEach((s, k) => s.position.set(Math.sin(t * 6 - k * .6) * .07, .04, -k * .07)); }); };
+  return shadowed(g); }
+function truck(p = {}) { const g = new THREE.Group(), body = new THREE.Group(); g.add(body);
+  const paint = std(p.color || '#2f6fb3', { r: .45, m: .2 }), dark = std('#1c1d20', { r: .6 }), glass = std('#9fd3ff', { r: .1, m: .3 });
+  const cab = box(1.1, 1.0, 1.2, paint); cab.position.set(0, .95, 1.55); body.add(cab); const win = box(1.02, .4, .02, glass); win.position.set(0, 1.18, 2.16); body.add(win);
+  const bed = box(1.3, .12, 2.6, dark); bed.position.set(0, .55, -.3); body.add(bed);
+  for (const [x, z, w2, d2] of [[-.63, -.3, .04, 2.6], [.63, -.3, .04, 2.6], [0, -1.58, 1.3, .04]]) { const s = box(w2, .55, d2, std('#7a5a3a')); s.position.set(x, .87, z); body.add(s); }
+  if (p.load !== false) { const lm = std('#8f7f3a'); for (let i = 0; i < 40; i++) { const c = cyl(.035, .035, 2.4, lm, 6); c.rotation.x = Math.PI / 2; c.position.set(-.55 + (i % 10) * .12, .68 + Math.floor(i / 10) * .07, -.3); body.add(c); } }
+  for (const [x, z] of [[-.62, 1.4], [.62, 1.4], [-.62, -.9], [.62, -.9]]) { const wh = cyl(.3, .3, .18, dark, 18); wh.rotation.z = Math.PI / 2; wh.position.set(x, .3, z); body.add(wh); }
+  const P = p.path; g.userData.tick = (t, age) => { if (!P) return; const k = easeIO(Math.min(1, age / (p.travel || 3))); body.position.set(lerp(P[0][0], P[1][0], k), Math.abs(Math.sin(t * 9)) * .02, lerp(P[0][1], P[1][1], k)); body.rotation.y = Math.atan2(P[1][0] - P[0][0], P[1][1] - P[0][1]); };
+  return shadowed(g); }
+Object.assign(ASSETS, { cane_field: caneField, fire, smoke, cane_cut: caneCut, critters, truck });
 ASSETS.glb = (p = {}) => {
   const g = GLB[p.model]; if (!g) return box(.5, .5, .5, std('#f0f'));
   const o = skClone(g.scene); o.updateMatrixWorld(true);
