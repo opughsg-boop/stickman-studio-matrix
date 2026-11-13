@@ -1,7 +1,7 @@
 # Diorama Studio: instructions for Claude
 
 The user speaks Egyptian Arabic and is not technical. Reply in short, simple Egyptian Arabic. Never ask them to run commands.
-Read `STYLE_GUIDE.md` first (complete approved style). Full history and context: `HANDOFF.md`. Style guides: `STYLE_ZD.md` (cine, the current main style) and `STYLE.md` (diorama).
+Read `STYLE_GUIDE.md` first (complete approved style). **The hyper-realistic look in its section 2b is LOCKED.** A real sky is the engine default, and objects use real models, real sizes and natural motion. Start new diorama plans from `plans/cane.mjs`. Full history and context: `HANDOFF.md`. Style guides: `STYLE_ZD.md` (cine, the current main style) and `STYLE.md` (diorama).
 
 ## Setup (fresh container, ~1 min, run once)
 ```bash
@@ -42,6 +42,7 @@ Keep creative work in the main conversation: scripts, plans and shot choices, vi
 ## STYLE LOCK (user decisions, never change without the user asking)
 - No words on screen except the spoken captions: no signs, labels, counters, pins or button text. The engines enforce this unless a plan sets `style.allowText: true`. Only wordless icons are allowed (✓ ✗ arrows).
 - Transition sound: the soft low "whoom" (`soft_transition` in `pipeline/sfx.py`). The hissy noise whoosh ("تش تش") was rejected.
+- Hyper-realism: real sky (default), natural light, real models at real sizes, everything alive. The blueprint room is retired (`env.sky:false` only if asked).
 - Diorama: continuous camera (`camEase` 0.6, no punch cuts), 2-word Arabic captions per spoken line, ✓/✗ icons on fix/problem beats.
 
 ## Extra tools (installed once, already in package.json and the skills folder; do not reinstall)

@@ -404,7 +404,8 @@ window.setup = async (p, opts = {}) => {
   makeTextures();
   if (p.env?.soil) { const L = new THREE.TextureLoader(), rs = {}; for (const k of ['diff', 'nor', 'rough']) { try { const t = await L.loadAsync(`/assets/ph_tex/${p.env.soil}/${k}.jpg`);
       t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(p.env.soilRepeat || 3, p.env.soilRepeat || 3); if (k === 'diff') t.colorSpace = THREE.SRGBColorSpace; rs[k] = t; } catch {} } if (rs.diff) TEX.realSoil = rs; }
-  if (p.env?.sky) try { const tex = await new RGBELoader().loadAsync(`/assets/hdri/${p.env.sky}.hdr`); tex.mapping = THREE.EquirectangularReflectionMapping;
+  const skyName = p.env?.sky === false ? null : (p.env?.sky || 'kloofendal_48d_partly_cloudy_puresky'); // LOCKED: realistic sky is the default; sky:false = old blueprint room
+  if (skyName) try { const tex = await new RGBELoader().loadAsync(`/assets/hdri/${skyName}.hdr`); tex.mapping = THREE.EquirectangularReflectionMapping;
     TEX.sky = { tex, env: new THREE.PMREMGenerator(renderer).fromEquirectangular(tex).texture }; } catch (e) { console.warn('sky failed', e); }
   buildEnvironment(p.env || {}); await preloadGLB(p); instantiate();
   await document.fonts.load('italic 800 40px Cap'); await document.fonts.load('40px CapAr');
@@ -855,7 +856,7 @@ function critters(p = {}) { const g = new THREE.Group(), r = rng(p.seed || 9), l
       if (c.rat) c.o.position.y = Math.abs(Math.sin(t * (p.flee ? 16 : 3) + c.x)) * (p.flee ? .06 : .01);
       else c.seg.forEach((s, k) => s.position.set(Math.sin(t * 6 - k * .6) * .07, .04, -k * .07)); }); };
   return shadowed(g); }
-function truck(p = {}) { const g = new THREE.Group(), body = new THREE.Group(); g.add(body);
+function truck(p = {}) { const g = new THREE.Group(), body = new THREE.Group(); g.add(body); body.scale.setScalar(p.scale ?? 1.7); // real size: ~2.5 m tall cane truck
   const paint = std(p.color || '#2f6fb3', { r: .45, m: .2 }), dark = std('#1c1d20', { r: .6 }), glass = std('#9fd3ff', { r: .1, m: .3 });
   const cab = box(1.1, 1.0, 1.2, paint); cab.position.set(0, .95, 1.55); body.add(cab); const win = box(1.02, .4, .02, glass); win.position.set(0, 1.18, 2.16); body.add(win);
   const bed = box(1.3, .12, 2.6, dark); bed.position.set(0, .55, -.3); body.add(bed);

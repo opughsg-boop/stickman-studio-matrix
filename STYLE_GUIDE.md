@@ -1,4 +1,4 @@
-# Diorama Studio: complete style guide (the approved style after the last update)
+# Diorama Studio: complete style guide (LOCKED: hyper-realistic look, after the sugar-cane upgrade)
 
 > **To Claude in a new conversation:** this file is everything decided with the user so far. Follow it exactly.
 > The user speaks Egyptian Arabic and is not technical. Reply in short, simple Egyptian Arabic, never ask them to run commands, and keep the conversation short to save their daily usage (one video per conversation).
@@ -23,25 +23,41 @@ python3 assets/fetch_polyhaven.py   # realistic grass, shrubs, rocks, props and 
 3. **Camera:** continuous and never still, with no hard cuts (`camEase` 0.6, `punch:false`). Zoom in and zoom out alternate between beats.
 4. **Captions:** 2 words at a time, never mixing two spoken lines. White bold Arabic, at 78 % of the frame height, aligned to the user's exact script.
 5. **Format:** 1080x1920, 30 fps, H.264 + AAC, -14 LUFS.
+6. **Hyper-realism (LOCKED):** a real sky, natural light, and every object with its natural shape, material and real size (see 2b). The old blue blueprint room is retired, so use it only if the user asks (`env.sky:false`).
+7. **Spoken language:** general Egyptian Arabic by default. Every script opens with a curiosity *question* hook plus a strong *visual* hook in the first second.
 
-## 2b. NEXT TARGET: hyper-realism (user request, after the sugar-cane video)
-The user loved the cane video but wants future videos as hyper-realistic as their three reference reels (Spanish: rabbit hutch build-up, sugar-cane burning, beehive build-up). What those references do and ours still lacks:
-- **Real sky and surroundings:** a daylight HDRI sky with clouds, distant trees and a horizon, or a real backdrop (a plastered house wall with a window). The island still floats over water, with a real soil cross-section. Not the blue grid room.
-- **Dense, detailed vegetation:** hundreds of real-looking stalks and leaves with natural colour variation, plus walk-through shots *inside* the crop between the stalks.
-- **Real materials everywhere:** wood grain, wire mesh, corrugated metal, PBR textures. Never plain-coloured primitives (no cone flames, sphere animals or box trucks) when a real model or texture exists.
-- **Volumetric-looking effects:** soft billowing smoke sprites, real fire sprites and embers, not solid spheres or cones.
-- **Living animals:** real animated models (rabbits, bees, snakes, rats, birds) doing natural things: walking, sniffing, eating, fleeing.
-- **Natural sunlight:** soft shadows, bright exposure, warm daylight grade.
-**Done so far (realism upgrade v1, in `renderer/scene.js`):**
-- `env.sky:'<hdri>'` gives a real HDRI sky with image-based lighting, a warm sun and the island floating over open water, with no blue grid room. HDRIs live in `assets/hdri/` (`bash assets/fetch_assets.sh`): `kloofendal_48d_partly_cloudy_puresky` (default daylight) and `forest_slope`. Options: `skyBlur`, `envLight`, `fog`, `water`.
-- **Use `env.sky` in every new plan from now on.**
-- Smoke and fire are soft sprites: billowing puffs that go from dark to grey, flickering flame sprites, embers and a fire glow light.
-- The cane field has textured, curved leaf blades and dry hanging leaves.
-- **Still to do:** realistic vehicles (the truck is still boxy), real rat, snake and rabbit models, a backdrop option (a house wall), and denser instanced fields.
+## 2b. THE LOCKED LOOK: hyper-realistic natural simulation
+Target: the user's three reference reels (Spanish: rabbit hutch build-up, sugar-cane burning, beehive build-up). Everything must look like it lives its real life.
 
-## 3. The approved look: realistic blueprint diorama
+**Built into the engine (`renderer/scene.js`), on automatically:**
+- **Real sky (default):** an HDRI daylight sky with clouds (`kloofendal_48d_partly_cloudy_puresky`) gives image-based lighting and a warm sun. The island floats over open water and keeps its real soil cross-section.
+  - Other skies: `env.sky:'forest_slope'`. Tuning: `skyBlur`, `envLight`, `fog`, `water`.
+  - `env.sky:false` brings back the old blueprint room (only if asked).
+  - HDRIs are committed in `assets/hdri/`.
+- **Smoke:** soft billowing sprite puffs, dark at the bottom and grey higher up (`type:'smoke'`: `h`, `w`, `scale`, `color`, `top`, `opacity`, `drift`). Always place smoke **behind** the subject, never between it and the camera.
+- **Fire:** flickering flame sprites with rising embers and an orange glow light, sweeping across an area (`type:'fire'`: `w`, `d`, `count`, `sweep` seconds, `trail`).
+- **Sugar-cane pack:**
+  - `cane_field`: textured, curved leaf blades, dry hanging leaves and wind sway. Options: `burnt`, `leaves:false`, `dry:false`.
+  - `cane_cut`: a giant cut stalk with juice drips (`burnt:true` blackens the skin).
+  - `critters`: rats and snakes (`flee:true` makes them run).
+  - `truck`: real size by default, `scale` 1.7. Options: `path`, `travel`, `color`.
+- **Critic:** the self-review knows the sky mode, so it does not ask for the blue room.
+
+**Rules for every new plan:**
+1. **Real models first:** Quaternius animals and people (`type:'glb'`), Poly Haven ground cover, rocks and props (`ph/<id>`), real soil. Hand-built primitives only when nothing real exists, and then give them textures or natural colour variation, never flat single colours.
+2. **Real sizes, in metres:** person 1.75, cow 1.4, horse 1.9, donkey 1.3, fox 0.6, dog 0.7, sheep or goat 0.9, chicken 0.4, rat 0.25 long, sugar cane 3-3.5, maize 2.2, wheat or rice 1, palm 8-12, small tree 4-6, barrel 0.9-1.3, cart 1.4, cane truck 2.5. Magnify on purpose only for an "x-ray" explainer prop (like the giant cut stalk), and show it beside the real thing.
+3. **Alive:** animals always play a clip (Eating, Walk, Idle_2…) or walk a `path`. Plants sway. Smoke, fire, water and clocks move. Nothing is frozen.
+4. **Dense and natural:** fields of 120-200 stalks with varied heights. Scatter grass, shrubs and stones over the bare soil.
+5. **Bright daylight:** keep exposure up and avoid dark beats (the critic flags luma < 60). Burnt or night beats get a closer and brighter camera.
+6. **Story styles that match the references:**
+   - **Build-up:** "تحط كذا… بس مشكلة… فـ الحل… اسمه كذا". Each line adds a real part, as in the rabbit hutch and the beehive.
+   - **Inside-the-process story:** a strange event, then the camera dives inside to explain it, as in the sugar cane.
+
+**Still missing (next upgrades):** detailed vehicle models (the truck is still built from boxes), real rat, snake and rabbit models, a backdrop option (a plastered house wall with a window), and instanced fields for even denser crops.
+
+## 3. Diorama building blocks (the world is now the real-sky island of 2b)
 **World:**
-- A floating island with a cross-section soil edge, inside a blue blueprint grid room with soft light rays.
+- A floating island with a cross-section soil edge, under a real sky over open water (the blue blueprint room is retired).
 - The island top uses a **real soil texture** (`env.soil`).
 
 **Story = scene build-up:**
@@ -75,17 +91,19 @@ modes: { cow: { clip:'Walk', path:[[0,0],[2,-2]] } }
 - Horse size: `height` 1.9.
 
 ## 4. Script formula (Egyptian Arabic, 30-45 s, 70-100 words)
-1. **Hook (line 1):** a shocking or strange claim. Examples: "الحصان ده ممكن يكسر الإسطبل برفسة واحدة!", "عشة الفراخ الغلط بتتعب فراخك من أول يوم!".
+1. **Hook (line 1):** a curiosity **question** with a strange twist, paired with a strong visual in the first second. Example: "ليه الفلاح في الصعيد بيولّع النار في غيط القصب بإيده… والقصب نفسه ما بيتحرقش؟!" (visual: a green field with a huge black smoke column). Older claim-style hooks also work: "الحصان ده ممكن يكسر الإسطبل برفسة واحدة!".
 2. **3-4 problem/fix pairs:** "بس …" (problem) → "فـ …" (fix). For facts or stories use "ده بسبب إن…" → "بس…" → "فـ…" → a surprise instead.
 3. **Tip:** "وخلي بالك: …" with one surprising detail.
-4. **CTA:** "لو استفدت، اعمل لايك وتابع صفحة وسّع مخك... عشان مخك يوسع!"
+4. **CTA (no page name unless the user asks):** "لو عرفت حاجة جديدة، اعمل لايك وتابع عشان تعرف أكتر!" In English: "If you learned something new, like and follow. Your brain will thank you."
 
-Write one spoken sentence per line. When giving a script to record, add a TTS style line on top: "اقرأ باللهجة المصرية، راوي متحمس وسريع، وقفة قصيرة قبل «بس» و«وخلي بالك»، آخر جملة بنبرة ودودة". The user records with ElevenLabs (Felix) or Google AI Studio.
+Write one spoken sentence per line. When giving a script to record, add a TTS style line on top: "اقرأ باللهجة المصرية، راوي متحمس وسريع، وقفة قصيرة قبل «بس» و«وخلي بالك»، آخر جملة بنبرة ودودة". The user records with ElevenLabs (Hazem for Egyptian Arabic, Felix for English) or Google AI Studio. Scripts can also be in American English (`--lang en`); the captions then switch to English automatically.
 
 ## 5. One video = one command
 1. Save the script to `runs/<name>/script.txt`, one spoken line per line.
 2. Write `plans/<name>.mjs`, copying the closest proven plan:
-   - `plans/stable.mjs`: horse stable, uses the realistic library. **Best template.**
+   - `plans/cane.mjs`: sugar cane, the hyper-realistic look (sky, smoke, fire, field, trucks). **Best template now.**
+   - `plans/stable.mjs`: horse stable, uses the realistic library.
+   - `plans/cow.mjs`: cow with an x-ray stomach prop.
    - `plans/coop.mjs`: chickens.
    - `plans/goats.mjs`: goats.
    - `plans/ants.mjs`: ants.
@@ -102,6 +120,9 @@ Write one spoken sentence per line. When giving a script to record, add a TTS st
 ## 6. Results so far (self-review scores)
 | Video | Score |
 |---|---|
+| Sugar cane, hyper-realistic (sky, sprite smoke and fire) | **98** |
+| Sugar cane, first version | 95 |
+| Cow, four stomachs (English) | 100 |
 | Horse stable (realistic library) | **93** |
 | Ant colony | **93** |
 | Chicken coop | 90 |
