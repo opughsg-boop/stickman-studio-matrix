@@ -13,3 +13,4 @@
 {"run": "stable", "time": "2026-11-12 13:19", "score": 93, "issues": 2, "codes": ["no_context", "too_dark"]}
 {"run": "cow", "time": "2026-11-12 18:49", "score": 100, "issues": 0, "codes": []}
 {"run": "cane", "time": "2026-11-13 13:41", "score": 95, "issues": 1, "codes": ["too_dark"]}
+{"run": "cane2", "time": "2026-11-13 14:14", "score": 98, "issues": 1, "codes": ["no_context"]}

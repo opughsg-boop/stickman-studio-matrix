@@ -55,8 +55,9 @@ for i, b in enumerate(plan['beats']):
     metrics.append({'beat': i, 't': round(t, 2), 'luma': round(float(luma), 1), 'blueprint_ratio': round(float(blue), 3)})
     if luma < (38 if night else 60): issue('too_dark', 2, f'beat {i} too dark (luma {luma:.0f})', t, {'exposure': +.08})
     if luma > 205: issue('too_bright', 2, f'beat {i} washed out (luma {luma:.0f})', t, {'exposure': -.06})
-    if blue > .78: issue('subject_lost', 2, f'beat {i}: subject too small / off-frame ({blue:.0%} background)', t, {'camScale': .92})
-    if blue < .03 and not night and b['camera'].get('preset') not in ('inside', 'detail'):
+    sky = bool((plan.get('env') or {}).get('sky'))  # realistic sky mode: no blueprint room to look for
+    if not sky and blue > .78: issue('subject_lost', 2, f'beat {i}: subject too small / off-frame ({blue:.0%} background)', t, {'camScale': .92})
+    if not sky and blue < .03 and not night and b['camera'].get('preset') not in ('inside', 'detail'):
         issue('no_context', 1, f'beat {i}: blueprint room not visible, framing too tight', t, {'camScale': 1.05})
     mids.append((i, f))
 for (i, a), (j, b2) in zip(mids, mids[1:]):
