@@ -15,3 +15,4 @@
 {"run": "cane", "time": "2026-11-13 13:41", "score": 95, "issues": 1, "codes": ["too_dark"]}
 {"run": "cane2", "time": "2026-11-13 14:14", "score": 98, "issues": 1, "codes": ["no_context"]}
 {"run": "charcoal", "time": "2026-11-13 14:59", "score": 95, "issues": 1, "codes": ["dead_beat"]}
+{"run": "beans", "time": "2026-11-13 18:28", "score": 100, "issues": 0, "codes": []}
