@@ -49,8 +49,8 @@ const shots = [
   // 6 the wild part: a glossy toy person leans back (ah... ah...), then the air rockets out of the nose; 100 MPH badge on "100"
   { t: at(5), set: SUNSET, props: [
       { id: 'kid', type: 'person', pos: [0, 0, 0], rotY: Math.PI / 2, tilt: [.25, at(5, 6) - at(5)], halfLids: [.6, 1.6], sneezeAt: at(5, 7) - at(5) },
-      { id: 'air', type: 'burst', from: [.15, .615, 0], dir: [1, -.25, 0], len: 1.05, at: at(5, 7) - at(5) + .02, dur: at(5, 15) - at(5, 7) + .3, travel: .42, shadow: false }],
-    camera: { pos: [.3, .68, 1.75], target: [.25, .5, 0], to: { pos: [.42, .64, 1.85], target: [.33, .5, 0] }, fov: 36, handheld: .3, dof: { aperture: .01, maxblur: .008 } },
+      { id: 'air', type: 'burst', from: [.15, .615, 0], dir: [1, -.25, 0], len: 1.05, at: at(5, 7) - at(5) + .02, dur: at(5, 15) - at(5, 7) + .3, travel: .42, count: 200, streaks: 70, rings: 7, shadow: false }],
+    camera: { pos: [1.2, .76, 1.0], target: [.12, .52, 0], to: { pos: [1.32, .72, 1.12], target: [.16, .5, 0] }, fov: 36, handheld: .3, dof: { aperture: .01, maxblur: .008 } },
     fx: { bloom: .35 }, ui: [{ type: 'badge', text: '100 MPH', at: [.7, .34], start: at(5, 12) - at(5) }] },
   // 7 droplets arc out and land on the floor up to ~6 ft (1.8 m) away; camera rises and pulls back to show the distance
   { t: at(6), set: { ...SUNSET, shadowSize: 2.4, fogNear: 4, fogFar: 16 }, props: [

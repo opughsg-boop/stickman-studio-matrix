@@ -202,12 +202,12 @@ export const REF_PROPS = {
   burst: p => { const g = new THREE.Group(), R = rnd(p.seed || 21), O = new THREE.Vector3(...(p.from || [0, 0, 0])), Dv = new THREE.Vector3(...(p.dir || [1, 0, 0])).normalize();
     const side = new THREE.Vector3().crossVectors(Dv, new THREE.Vector3(0, 1, 0)).normalize(), upv = new THREE.Vector3().crossVectors(side, Dv).normalize();
     const n = p.count || 140, ns = p.streaks || 50, t0 = p.at || 0, dur = p.dur || 1.5, tr = p.travel || .45, L = p.len || 1;
-    const puffs = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 20, 14), gloss(p.color || '#e6fbff', { rough: .12, opacity: .55, emissive: '#bdf3ff', glow: .25 }), n);
-    const streaks = new THREE.InstancedMesh(new THREE.CylinderGeometry(1, 1, 1, 8), new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: .75 }), ns);
+    const puffs = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 20, 14), gloss(p.color || '#fff6e6', { rough: .12, opacity: .82, emissive: '#ffe2b8', glow: .9 }), n);
+    const streaks = new THREE.InstancedMesh(new THREE.CylinderGeometry(1, 1, 1, 8), new THREE.MeshBasicMaterial({ color: '#fff3dc', transparent: true, opacity: .95 }), ns);
     puffs.castShadow = streaks.castShadow = false; puffs.frustumCulled = streaks.frustumCulled = false; g.add(puffs, streaks);
-    const P = Array.from({ length: n }, (_, i) => ({ b: t0 + dur * (i / n) + R() * .03, a: R() * 6.28, sp: .04 + R() * .16, r: .006 + R() * .012, tr: tr * (.8 + R() * .4) }));
+    const P = Array.from({ length: n }, (_, i) => ({ b: t0 + dur * (i / n) + R() * .03, a: R() * 6.28, sp: .05 + R() * .18, r: .012 + R() * .02, tr: tr * (.8 + R() * .4) }));
     const S = Array.from({ length: ns }, (_, i) => ({ b: t0 + dur * (i / ns) + R() * .05, a: R() * 6.28, off: .02 + R() * .12, len: .08 + R() * .16 }));
-    const rings = Array.from({ length: p.rings ?? 5 }, () => { const m = new THREE.Mesh(new THREE.TorusGeometry(1, .035, 8, 64), new THREE.MeshBasicMaterial({ color: '#dff8ff', transparent: true, opacity: 0, depthWrite: false }));
+    const rings = Array.from({ length: p.rings ?? 5 }, () => { const m = new THREE.Mesh(new THREE.TorusGeometry(1, .06, 8, 64), new THREE.MeshBasicMaterial({ color: '#fff0d0', transparent: true, opacity: 0, depthWrite: false }));
       m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), Dv); g.add(m); return m; });
     const M = new THREE.Matrix4(), Q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), Dv), Pp = new THREE.Vector3(), Sc = new THREE.Vector3(), I = new THREE.Quaternion();
     const at = (u, a, off) => Pp.copy(O).addScaledVector(Dv, L * u).addScaledVector(side, Math.cos(a) * off).addScaledVector(upv, Math.sin(a) * off);
@@ -215,10 +215,10 @@ export const REF_PROPS = {
       P.forEach((q, i) => { const u = (lt - q.b) / q.tr; if (u < 0 || u > 1) { M.makeScale(0, 0, 0); puffs.setMatrixAt(i, M); return; }
         at(easeOut(u * .9 + .1 * u), q.a, q.sp * u); const s = q.r * (.5 + 2.2 * u) * (1 - u * u * u); M.compose(Pp, I, Sc.set(s, s, s)); puffs.setMatrixAt(i, M); });
       S.forEach((q, i) => { const u = (lt - q.b) / (tr * .6); if (u < 0 || u > 1) { M.makeScale(0, 0, 0); streaks.setMatrixAt(i, M); return; }
-        at(u, q.a, q.off * (.3 + u)); M.compose(Pp, Q, Sc.set(.0018, q.len * (1 - u * .6), .0018)); streaks.setMatrixAt(i, M); });
+        at(u, q.a, q.off * (.3 + u)); M.compose(Pp, Q, Sc.set(.0035, q.len * (1 - u * .6), .0035)); streaks.setMatrixAt(i, M); });
       puffs.instanceMatrix.needsUpdate = streaks.instanceMatrix.needsUpdate = true;
       rings.forEach((m, j) => { const u = ((lt - t0 - j * dur / rings.length) / .5); m.visible = u > 0 && u < 1 && lt < t0 + dur + .5;
-        if (m.visible) { m.position.copy(at(u, 0, 0)); m.scale.setScalar(.03 + .1 * u); m.material.opacity = .7 * (1 - u); } }); };
+        if (m.visible) { m.position.copy(at(u, 0, 0)); m.scale.setScalar(.03 + .1 * u); m.material.opacity = .95 * (1 - u); } }); };
     return g; },
 
   // droplet spray: glossy water beads arc out from p.from along p.dir and land on the floor p.near..p.far metres away (splat flat)
