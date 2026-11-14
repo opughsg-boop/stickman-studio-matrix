@@ -418,8 +418,9 @@ function updateCamera(t) {
   // 'fly' camera: one continuous move across a beat (dist/elev/az/target interpolated with easing), e.g. dive into a body
   const F = beats[i].camera?.fly;
   if (F) { const b = beats[i], u = easeIO(Math.min(1, Math.max(0, (t - b.start) / Math.max(.01, b.end - b.start))));
-    const L = (q) => q[0] + (q[1] - q[0]) * u;
-    cur = { dist: L(F.dist), elev: L(F.elev), az: L(F.az), target: new THREE.Vector3(...F.target[0]).lerp(new THREE.Vector3(...F.target[1]), u) }; }
+    const uu = Math.min(1, Math.max(0, (t - b.start) / Math.max(.01, b.end - b.start))); // constant speed
+    const L = (q) => q[0] + (q[1] - q[0]) * uu;
+    cur = { dist: L(F.dist), elev: L(F.elev), az: L(F.az), target: new THREE.Vector3(...F.target[0]).lerp(new THREE.Vector3(...F.target[1]), uu) }; }
   if (i > 0 && !F && (beats[i].camera?.cut !== true)) {
     const k = easeIO((t - beats[i].start) / style.camEase);
     if (k < 1) { const prev = camState(beats[i - 1], beats[i].start);
@@ -1166,7 +1167,8 @@ ASSETS.glb = (p = {}) => {
   o.scale.setScalar(s); o.position.y = -bb.min.y * s; o.position.x = -(bb.min.x + bb.max.x) / 2 * s; o.position.z = -(bb.min.z + bb.max.z) / 2 * s;
   const w = new THREE.Group(); w.add(o); shadowed(o); o.traverse(m => { if (m.isMesh) m.frustumCulled = false; });
   // x-ray / medical look: a see-through body. Materials are cloned so other copies of the same model stay opaque.
-  if (p.opacity != null && p.opacity < 1) o.traverse(m => { if (!m.isMesh) return; m.material = [].concat(m.material).map(mt => { const c = mt.clone(); c.transparent = true; c.opacity = p.opacity; c.depthWrite = false; c.needsUpdate = true; return c; }); if (Array.isArray(m.material) && m.material.length === 1) m.material = m.material[0]; m.castShadow = false; });
+  const xr0 = p.xrayFrom ?? p.opacity; const xrMats = [];
+  if (xr0 != null && xr0 < 1 || p.xrayFrom != null) o.traverse(m => { if (!m.isMesh) return; m.material = [].concat(m.material).map(mt => { const c = mt.clone(); c.transparent = true; c.opacity = xr0; xrMats.push(c); c.depthWrite = false; c.needsUpdate = true; return c; }); if (Array.isArray(m.material) && m.material.length === 1) m.material = m.material[0]; m.castShadow = false; });
   if (!g.animations.length) { // un-animated people come in T-pose: drop the arms to a natural A-pose
     o.traverse(b => { if (!b.isBone) return; const n = b.name;
       if (/^UpperArm\.?L$/i.test(n)) b.rotateX(-(p.arms ?? 1.25)); if (/^UpperArm\.?R$/i.test(n)) b.rotateX(-(p.arms ?? 1.25));
@@ -1177,7 +1179,8 @@ ASSETS.glb = (p = {}) => {
   let cur = null; const play = n => { if (!n || cur === n || !acts[n]) return; Object.values(acts).forEach(a => a.stop()); acts[n].play(); cur = n; };
   play(p.clip || (acts.Idle ? 'Idle' : Object.keys(acts)[0]));
   const P = p.path;
-  w.userData.tick = (t) => {
+  const xrTick = (t) => { if (p.xrayFrom == null || p.xrayTo == null) return; const k = Math.min(1, Math.max(0, (t - p.xrayT0) / Math.max(.01, p.xrayT1 - p.xrayT0))), e = k * k * (3 - 2 * k); xrMats.forEach(c => { c.opacity = p.xrayFrom + (p.xrayTo - p.xrayFrom) * e; }); };
+  w.userData.tick = (t) => { xrTick(t);
     const mo = w.userData.mode || {}; play(mo.clip || p.clip || (acts.Idle ? 'Idle' : Object.keys(acts)[0]));
     mixer.setTime((t + (p.offset || 0)) * (mo.speed ?? p.speed ?? 1));
     const path = mo.path || P;
