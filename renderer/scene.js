@@ -88,11 +88,15 @@ function buildSky3D(env = {}) {
     g.position.set(cx, cy, cz); g.userData.x0 = cx; g.userData.speed = .4 + rnd() * .6; cl.add(g);
   }
   fx.clouds = cl; scene.add(cl);
+  // image-based light from the same sky, so the blue sky fills shadows naturally (like the HDRI mode)
+  const es = new THREE.Scene(), esky = new Sky(); esky.scale.setScalar(380); esky.material.uniforms = u; es.add(esky);
+  const pm = new THREE.PMREMGenerator(renderer); scene.environment = pm.fromScene(es, 0, .1, 1000).texture; pm.dispose();
+  scene.environmentIntensity = env.envLight ?? .8;
 }
 
 function buildEnvironment(env = {}) {
   if (env.sky === 'sky3d') { // 3D atmosphere + 3D clouds, island over water (no HDRI image)
-    scene.background = col('#8fb8e0'); scene.environment = null; scene.environmentIntensity = 1;
+    scene.background = col('#8fb8e0');
     buildSky3D(env);
     scene.fog = new THREE.Fog(col(env.fog || '#c3d9ef'), 60, 240);
     const wm = new THREE.MeshStandardMaterial({ color: col(env.water || '#3f6f8f'), roughness: .12, metalness: .35 });
