@@ -81,3 +81,8 @@ Keep creative work in the main conversation: scripts, plans and shot choices, vi
 
 ## Cartoon short style (LOCKED by the user)
 For 2D cartoon shorts with the hero and coworker cast and real sound effects, follow `cartoon/STYLE_CARTOON.md`. Lessons from each video are in `cartoon/LESSONS.md`. Sounds and credits: `cartoon/sfx/`, `cartoon/CREDITS.md`.
+
+## Model routing (subagents)
+- `routine-runner` (Haiku): installs, fetching assets, running a given command, waiting for renders, log checks, git add/commit/push. No judgment or taste.
+- `graphics-designer` (Opus 5.5): plans, scenes, camera and motion, story and script structure, visual review. Anything creative or complex.
+- The main session hands work to these two agents; it does not do the heavy creative work itself.
