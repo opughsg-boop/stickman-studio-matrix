@@ -6,7 +6,7 @@
  "maxBeat": 4.5,
  "minBeat": 2.6,
  "cine": {
-  "bright": 0.94,
-  "handheld": 0.8
+  "bright": 0.88,
+  "handheld": 0.95
  }
 }

@@ -22,3 +22,4 @@
 {"run": "bricks", "time": "2026-11-13 21:30", "score": 100, "issues": 0, "codes": []}
 {"run": "flood", "time": "2026-11-14 15:20", "score": 100, "issues": 0, "codes": []}
 {"run": "rumen", "time": "2026-11-14 15:25", "score": 100, "issues": 0, "codes": []}
+{"run": "sneeze", "time": "2026-11-14 20:32", "score": 85, "issues": 3, "codes": ["ref_slow_cuts", "ref_static", "ref_too_bright"]}
