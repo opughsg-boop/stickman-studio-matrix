@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 import { clone as skClone } from 'three/addons/utils/SkeletonUtils.js';
+import { Sky } from 'three/addons/objects/Sky.js';
 
 const R = { W: 540, H: 960 };
 let renderer, scene, camera, comp, cctx, plan, objects = [], lights = {}, fx = {};
@@ -66,7 +67,39 @@ function makeTextures() {
 }
 
 // ---------- environment ----------
+// 3D sky (opt-in: env.sky:'sky3d'). A real 3D atmosphere dome (three.js Sky addon, Preetham model)
+// plus 3D cumulus clouds built from spheres that drift slowly with time t.
+function buildSky3D(env = {}) {
+  const sky = new Sky(); sky.scale.setScalar(380); sky.frustumCulled = false; // camera far plane is 400, so the sky box must stay inside it scene.add(sky);
+  const u = sky.material.uniforms;
+  u.turbidity.value = env.turbidity ?? 4; u.rayleigh.value = env.rayleigh ?? 1.6; u.mieCoefficient.value = .004; u.mieDirectionalG.value = .85;
+  const elev = THREE.MathUtils.degToRad(env.sunElev ?? 38), az = THREE.MathUtils.degToRad(env.sunAz ?? 150);
+  const sunDir = new THREE.Vector3().setFromSphericalCoords(1, Math.PI / 2 - elev, az);
+  u.sunPosition.value.copy(sunDir);
+  fx.sky = sky; fx.sunDir = sunDir;
+  // 3D clouds: deterministic random clusters of spheres, flat-bottomed, at 45-75 m
+  const cl = new THREE.Group(); let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const cloudMat = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 1, emissive: '#c9d6e6', emissiveIntensity: .25 });
+  for (let c = 0; c < 14; c++) {
+    const g = new THREE.Group(); const cx = -120 + rnd() * 240, cz = -150 + rnd() * 120, cy = 45 + rnd() * 30;
+    const n = 7 + Math.floor(rnd() * 6), w = 9 + rnd() * 10;
+    for (let k = 0; k < n; k++) { const r = 3 + rnd() * 4.5, s = new THREE.Mesh(new THREE.SphereGeometry(r, 16, 12), cloudMat);
+      s.position.set((rnd() - .5) * w * 2.2, (rnd() - .3) * 3, (rnd() - .5) * w * 1.1); s.scale.y = .6; s.castShadow = false; g.add(s); }
+    g.position.set(cx, cy, cz); g.userData.x0 = cx; g.userData.speed = .4 + rnd() * .6; cl.add(g);
+  }
+  fx.clouds = cl; scene.add(cl);
+}
+
 function buildEnvironment(env = {}) {
+  if (env.sky === 'sky3d') { // 3D atmosphere + 3D clouds, island over water (no HDRI image)
+    scene.background = col('#8fb8e0'); scene.environment = null; scene.environmentIntensity = 1;
+    buildSky3D(env);
+    scene.fog = new THREE.Fog(col(env.fog || '#c3d9ef'), 60, 240);
+    const wm = new THREE.MeshStandardMaterial({ color: col(env.water || '#3f6f8f'), roughness: .12, metalness: .35 });
+    const water = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), wm); water.rotation.x = -Math.PI / 2; water.position.y = -(env.island?.depth || 3.2) - .6; water.receiveShadow = true; scene.add(water);
+    fx.water = water; fx.rays = new THREE.Group(); buildIsland(env, true);
+    // the sun light follows the same sun direction as the 3D sky; soft sky fill
+    lights.sun.position.copy(fx.sunDir).multiplyScalar(40); lights.hemi.intensity = .9; return; }
   if (TEX.sky) { // realistic mode: real HDRI sky + image-based light, island floating over open water
     scene.background = TEX.sky.tex; scene.backgroundBlurriness = env.skyBlur ?? .02; scene.environment = TEX.sky.env; scene.environmentIntensity = env.envLight ?? .9;
     scene.fog = new THREE.Fog(col(env.fog || '#c8d8e6'), 45, 170);
@@ -358,6 +391,7 @@ function updateCamera(t) {
 
 // ---------- effects per beat ----------
 function updateEffects(t, bi) {
+  if (fx.clouds) fx.clouds.children.forEach((g, i) => { g.position.x = g.userData.x0 + Math.sin(t * .02 * g.userData.speed + i) * 3; });
   const fxs = new Set(plan.beats[bi].effects || []);
   const night = fxs.has('night') ? 1 : 0, hot = fxs.has('heat') ? 1 : 0;
   fx.nightK = lerp(fx.nightK ?? 0, night, .15); if (Math.abs(fx.nightK - night) < .02) fx.nightK = night;
@@ -404,7 +438,7 @@ window.setup = async (p, opts = {}) => {
   makeTextures();
   if (p.env?.soil) { const L = new THREE.TextureLoader(), rs = {}; for (const k of ['diff', 'nor', 'rough']) { try { const t = await L.loadAsync(`/assets/ph_tex/${p.env.soil}/${k}.jpg`);
       t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(p.env.soilRepeat || 3, p.env.soilRepeat || 3); if (k === 'diff') t.colorSpace = THREE.SRGBColorSpace; rs[k] = t; } catch {} } if (rs.diff) TEX.realSoil = rs; }
-  const skyName = p.env?.sky === false ? null : (p.env?.sky || 'kloofendal_48d_partly_cloudy_puresky'); // LOCKED: realistic sky is the default; sky:false = old blueprint room
+  const skyName = (p.env?.sky === false || p.env?.sky === 'sky3d') ? null : (p.env?.sky || 'kloofendal_48d_partly_cloudy_puresky'); // LOCKED: realistic sky is the default; sky:false = old blueprint room
   if (skyName) try { const tex = await new RGBELoader().loadAsync(`/assets/hdri/${skyName}.hdr`); tex.mapping = THREE.EquirectangularReflectionMapping;
     TEX.sky = { tex, env: new THREE.PMREMGenerator(renderer).fromEquirectangular(tex).texture }; } catch (e) { console.warn('sky failed', e); }
   buildEnvironment(p.env || {}); await preloadGLB(p); instantiate();
