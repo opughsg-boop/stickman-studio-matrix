@@ -86,3 +86,8 @@ For 2D cartoon shorts with the hero and coworker cast and real sound effects, fo
 - `routine-runner` (Haiku): installs, fetching assets, running a given command, waiting for renders, log checks, git add/commit/push. No judgment or taste.
 - `graphics-designer` (Opus 5.5): plans, scenes, camera and motion, story and script structure, visual review. Anything creative or complex.
 - The main session hands work to these two agents; it does not do the heavy creative work itself.
+
+## Glossy toy look (user-approved 2026-11-14, sneeze video)
+- The user approved the glossy "toy" reference look: on-screen counter badges (e.g. "0.03 mm", "100 MPH") and top captions with cyan underlined key words are allowed for this look only.
+- Set `style.allowText:true` in that plan. Other styles keep the no-words lock.
+- Engine: `plans/sneeze_ref.mjs` + `renderer/cine_ref.js`. The sample covers lines 1-4 only.
