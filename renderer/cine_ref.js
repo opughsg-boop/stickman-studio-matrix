@@ -204,7 +204,7 @@ export const REF_PROPS = {
     const n = p.count || 140, ns = p.streaks || 50, t0 = p.at || 0, dur = p.dur || 1.5, tr = p.travel || .45, L = p.len || 1;
     const puffs = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 20, 14), gloss(p.color || '#e6fbff', { rough: .12, opacity: .55, emissive: '#bdf3ff', glow: .25 }), n);
     const streaks = new THREE.InstancedMesh(new THREE.CylinderGeometry(1, 1, 1, 8), new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: .75 }), ns);
-    puffs.castShadow = streaks.castShadow = false; g.add(puffs, streaks);
+    puffs.castShadow = streaks.castShadow = false; puffs.frustumCulled = streaks.frustumCulled = false; g.add(puffs, streaks);
     const P = Array.from({ length: n }, (_, i) => ({ b: t0 + dur * (i / n) + R() * .03, a: R() * 6.28, sp: .04 + R() * .16, r: .006 + R() * .012, tr: tr * (.8 + R() * .4) }));
     const S = Array.from({ length: ns }, (_, i) => ({ b: t0 + dur * (i / ns) + R() * .05, a: R() * 6.28, off: .02 + R() * .12, len: .08 + R() * .16 }));
     const rings = Array.from({ length: p.rings ?? 5 }, () => { const m = new THREE.Mesh(new THREE.TorusGeometry(1, .035, 8, 64), new THREE.MeshBasicMaterial({ color: '#dff8ff', transparent: true, opacity: 0, depthWrite: false }));
@@ -223,7 +223,7 @@ export const REF_PROPS = {
 
   // droplet spray: glossy water beads arc out from p.from along p.dir and land on the floor p.near..p.far metres away (splat flat)
   spray: p => { const g = new THREE.Group(), R = rnd(p.seed || 33), n = p.count || 60, O = new THREE.Vector3(...(p.from || [0, .6, 0])), yaw = Math.atan2(-(p.dir || [1, 0, 0])[2], (p.dir || [1, 0, 0])[0]);
-    const im = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 20, 14), gloss(p.color || '#a9e6ff', { rough: .05, opacity: .85, emissive: '#7fd8ff', glow: .15 }), n); im.castShadow = true; g.add(im);
+    const im = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 20, 14), gloss(p.color || '#a9e6ff', { rough: .05, opacity: .85, emissive: '#7fd8ff', glow: .15 }), n); im.castShadow = true; im.frustumCulled = false; g.add(im);
     const D = Array.from({ length: n }, (_, i) => { const d = (p.near || .4) + Math.pow(R(), .7) * ((p.far || 1.8) - (p.near || .4)), a = yaw + (R() - .5) * (p.spread || .7);
       return { b: (p.at || 0) + R() * (p.emit || .5), d, a, h: .05 + R() * .18, T: .7 + d * .35 + R() * .2, r: (p.rMin || .003) + R() * ((p.rMax || .008) - (p.rMin || .003)) }; });
     const M = new THREE.Matrix4(), Pp = new THREE.Vector3(), Sc = new THREE.Vector3(), I = new THREE.Quaternion();
