@@ -50,18 +50,18 @@ const shots = [
   { t: at(5), set: SUNSET, props: [
       { id: 'kid', type: 'person', pos: [0, 0, 0], rotY: Math.PI / 2, tilt: [.25, at(5, 6) - at(5)], halfLids: [.6, 1.6], sneezeAt: at(5, 7) - at(5) },
       { id: 'air', type: 'burst', from: [.15, .615, 0], dir: [1, -.25, 0], len: 1.05, at: at(5, 7) - at(5) + .02, dur: at(5, 15) - at(5, 7) + .3, travel: .42, shadow: false }],
-    camera: { pos: [.62, .74, .78], target: [.06, .6, 0], to: { pos: [.92, .66, 1.0], target: [.38, .55, 0] }, fov: 36, handheld: .3, dof: { aperture: .01, maxblur: .008 } },
+    camera: { pos: [.45, .72, 1.1], target: [.3, .58, 0], to: { pos: [.58, .68, 1.22], target: [.4, .56, 0] }, fov: 36, handheld: .3, dof: { aperture: .01, maxblur: .008 } },
     fx: { bloom: .35 }, ui: [{ type: 'badge', text: '100 MPH', at: [.7, .34], start: at(5, 12) - at(5) }] },
   // 7 droplets arc out and land on the floor up to ~6 ft (1.8 m) away; camera rises and pulls back to show the distance
   { t: at(6), set: { ...SUNSET, shadowSize: 2.4, fogNear: 4, fogFar: 16 }, props: [
       { id: 'kid', type: 'person', pos: [0, 0, 0], rotY: Math.PI / 2, sneezeAt: .12 },
       { id: 'drops', type: 'spray', from: [.15, .615, 0], dir: [1, 0, 0], near: .35, far: 1.85, count: 80, at: .14, emit: .5, spread: .6, rMin: .004, rMax: .011 }],
     camera: { pos: [-.42, 1.0, .72], target: [.55, .38, 0], to: { pos: [-.62, 1.35, .98], target: [1.0, .1, 0] }, fov: 36, handheld: .25, dof: { aperture: .006, maxblur: .006 } },
-    fx: { bloom: .3 }, ui: [{ type: 'badge', text: '6 FT', at: [.68, .42], start: at(6, 4) - at(6) }] },
+    fx: { bloom: .3 } },
   // 8 the eyes slam shut on "slam" and the head jolts forward - the reflex cannot be stopped; slow push into the face
   { t: at(7), set: SUNSET, props: [
       { id: 'kid', type: 'person', pos: [0, 0, 0], closeAt: at(7, 2) - at(7), sneezeAt: at(7, 2) - at(7) + .14, snapAmp: .2, reopen: 99 }],
-    camera: { pos: [.13, .71, .46], target: [0, .675, .07], to: { pos: [.05, .69, .31], target: [0, .668, .08] }, fov: 34, handheld: .35, dof: { aperture: .008, maxblur: .008 } }, fx: { bloom: .25 } },
+    camera: { pos: [.1, .7, .6], target: [0, .67, .07], to: { pos: [.06, .69, .5], target: [0, .668, .08] }, fov: 34, handheld: .35, dof: { aperture: .008, maxblur: .008 } }, fx: { bloom: .25 } },
   // 9 tip: the right arm comes up and the sneeze goes into the elbow (check), an open hand pops up beside (cross)
   { t: at(8), set: SUNSET, props: [
       { id: 'kid', type: 'person', pos: [0, 0, 0], rotY: .45, raise: [.4, at(8, 4) - at(8) - .1], sneezeAt: at(8, 4) - at(8) + .25, snapAmp: .14 },
@@ -72,10 +72,10 @@ const shots = [
   // 10 closing card: the glossy brain breathes softly, a heart (like) and a plus (follow) pop in, the brain glows on "thank you"
   { t: at(9), set: SUNSET, props: [
       { id: 'brain', type: 'brain', pos: [0, .075, 0], pulse: .012, flashAt: at(9, 11) - at(9), bob: .004 },
-      { id: 'heart', type: 'heart', pos: [-.07, .25, .02], size: .08, popAt: at(9, 5) - at(9), bob: .006 },
-      { id: 'plus', type: 'plus', pos: [.075, .25, .02], size: .06, popAt: at(9, 7) - at(9), bob: .006, bobPh: 1.5 },
+      { id: 'heart', type: 'heart', pos: [-.055, .25, .02], size: .08, popAt: at(9, 5) - at(9), bob: .006 },
+      { id: 'plus', type: 'plus', pos: [.06, .25, .02], size: .06, popAt: at(9, 7) - at(9), bob: .006, bobPh: 1.5 },
       { id: 'motes', type: 'particles', count: 50, area: [.5, .3, .4], pos: [-.25, .05, -.2], size: .0011, color: '#fff1c9', glow: 1.2, drift: .5, shadow: false }],
-    camera: { pos: [.14, .3, .78], target: [0, .17, 0], orbit: .2, to: { pos: [.08, .26, .6] }, fov: 34, handheld: .2, dof: { aperture: .012, maxblur: .01 } }, fx: { bloom: .3 } },
+    camera: { pos: [.12, .3, .92], target: [0, .17, 0], orbit: .15, to: { pos: [.08, .27, .8] }, fov: 34, handheld: .2, dof: { aperture: .012, maxblur: .01 } }, fx: { bloom: .3 } },
 ].filter(s => s.t < D);
 
 const HL = { inside: CYAN, nose: CYAN, brain: CYAN, throat: CYAN, pollen: '#ffd84d', chest: CYAN, air: CYAN, droplets: CYAN, eyes: CYAN, 'elbow,': CYAN };

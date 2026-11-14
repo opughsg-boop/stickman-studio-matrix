@@ -147,11 +147,11 @@ export const REF_PROPS = {
     return g; },
 
   // rib cage (glossy ivory) around the lungs + glowing intercostal muscle bands; squeezes in at p.squeeze = [t0, t1...]
-  ribs: p => { const g = new THREE.Group(), bone = gloss(p.color || '#fbefd9', { rough: .3 }), mus = gloss(p.muscle || '#d8344f', { rough: .3, emissive: '#ff2a4a' }), ribs = [];
+  ribs: p => { const g = new THREE.Group(), bone = gloss(p.color || '#fff6ea', { rough: .3, opacity: .9 }), mus = gloss(p.muscle || '#d8344f', { rough: .3, emissive: '#ff2a4a' }), ribs = [];
     for (let i = 0; i < 6; i++) { const y = -.07 + i * .034, w = .15 + .025 * Math.sin(i / 5 * Math.PI) - i * .004;
       const ring = (tube, gap, mt, yy, k) => { const r = new THREE.Mesh(new THREE.TorusGeometry(1, tube / w, 10, 64, Math.PI * 2 - gap), mt); r.rotation.set(Math.PI / 2, 0, Math.PI / 2 + gap / 2);
         const e = new THREE.Group(); e.scale.set(w * k, w * k, w * k * .72); e.add(r); const h = new THREE.Group(); h.position.y = yy; h.rotation.x = -.12; h.add(e); g.add(h); ribs.push(h); };
-      ring(.0075, .7, bone, y, 1); if (i < 5) ring(.0055, .9, mus, y + .017, .985); }
+      ring(.0052, .7, bone, y, 1); if (i < 5) ring(.004, .9, mus, y + .017, .985); }
     const st = new THREE.Mesh(new RoundedBoxGeometry(.022, .19, .01, 3, .004), bone); st.position.set(0, .015, .118); g.add(st);
     const spine = new THREE.Mesh(new THREE.CylinderGeometry(.009, .009, .24, 16), bone); spine.position.set(0, .01, -.1); g.add(spine);
     const sq = p.squeeze || [];
@@ -170,7 +170,7 @@ export const REF_PROPS = {
     const hr = new THREE.Mesh(new THREE.SphereGeometry(1, 64, 40, 0, Math.PI * 2, 0, Math.PI * .48), hair); hr.scale.set(.083, .118, .1); hr.rotation.x = -.42; hr.position.set(0, .006, -.006); H.add(hr);
     for (const s of [-1, 1]) { const e = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 16), skin); e.scale.set(.012, .022, .016); e.position.set(s * .077, -.004, -.004); H.add(e); }
     const nose = new THREE.Mesh(new THREE.SphereGeometry(1, 32, 24), skin); nose.scale.set(.014, .02, .02); nose.position.set(0, -.012, .095); H.add(nose);
-    const mouth = new THREE.Mesh(new THREE.TorusGeometry(.013, .0035, 10, 32, Math.PI), gloss('#9a2b3a', { rough: .3 })); mouth.position.set(0, -.048, .086); mouth.rotation.set(-.25, 0, Math.PI); H.add(mouth);
+    const mouth = new THREE.Mesh(new THREE.TorusGeometry(.015, .0024, 10, 32, 2.1), gloss('#9a2b3a', { rough: .3 })); mouth.position.set(0, -.048, .086); mouth.rotation.set(-.25, 0, Math.PI + (Math.PI - 2.1) / 2); mouth.scale.y = .45; H.add(mouth);
     const lids = [];
     for (const s of [-1, 1]) { const eg = new THREE.Group(); eg.position.set(s * .031, .022, .078); eg.rotation.y = s * .25; H.add(eg);
       eg.add(new THREE.Mesh(new THREE.SphereGeometry(.0135, 32, 24), gloss('#ffffff', { rough: .15 })));
@@ -184,7 +184,7 @@ export const REF_PROPS = {
       c.position.copy(A).addScaledVector(d, .5); c.quaternion.setFromUnitVectors(Y, d.normalize()); c.scale.set(r, L, r); j.position.copy(B); j.scale.setScalar(r); } }; };
     const V3 = a => new THREE.Vector3(...a), arms = [-1, 1].map(s => ({ s, up: seg(0, 0, .046, shirt), lo: seg(0, 0, .04, shirt), hand: new THREE.Mesh(joint, skin) }));
     arms.forEach(a => { a.hand.scale.set(.034, .04, .034); g.add(a.hand); const sh = new THREE.Mesh(joint, shirt); sh.scale.setScalar(.052); sh.position.set(a.s * .165, .42, 0); g.add(sh); });
-    const REST = s => [V3([s * .165, .42, 0]), V3([s * .215, .21, .02]), V3([s * .13, .08, .15])], UP = [V3([-.165, .42, 0]), V3([.05, .555, .21]), V3([.13, .68, .13])];
+    const REST = s => [V3([s * .165, .42, 0]), V3([s * .215, .21, .02]), V3([s * .13, .08, .15])], UP = [V3([-.165, .42, 0]), V3([.02, .6, .2]), V3([.12, .66, .05])];
     const [r0, r1] = p.raise || [1e9, 1e9], [t0, t1] = p.tilt || [1e9, 1e9], sa = p.sneezeAt ?? 1e9, ca = p.closeAt ?? 1e9, [h0, h1] = p.halfLids || [1e9, 1e9], amp = p.snapAmp ?? .32;
     g.userData.tick = lt => {
       arms.forEach(a => { const R = REST(a.s), k = a.s < 0 ? easeIO((lt - r0) / (r1 - r0)) : 0, P = R.map((v, i) => v.clone().lerp(UP[i], k));
