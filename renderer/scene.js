@@ -5,6 +5,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 import { clone as skClone } from 'three/addons/utils/SkeletonUtils.js';
 import { Sky } from 'three/addons/objects/Sky.js';
+import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 
 const R = { W: 540, H: 960 };
 let renderer, scene, camera, comp, cctx, plan, objects = [], lights = {}, fx = {};
@@ -70,26 +71,39 @@ function makeTextures() {
 // 3D sky (opt-in: env.sky:'sky3d'). A real 3D atmosphere dome (three.js Sky addon, Preetham model)
 // plus 3D cumulus clouds built from spheres that drift slowly with time t.
 function buildSky3D(env = {}) {
-  const sky = new Sky(); sky.scale.setScalar(380); sky.frustumCulled = false; // camera far plane is 400, so the sky box must stay inside it scene.add(sky);
+  // sky box must stay inside the camera far plane (400); the shader itself draws it at the far plane
+  const sky = new Sky(); sky.scale.setScalar(380); sky.frustumCulled = false; scene.add(sky);
+  // the Preetham sky outputs very bright HDR values (three's own example lowers the whole exposure to 0.5);
+  // we dim only the sky with a gain, so the island keeps its normal exposure and the sky keeps its blue
+  // skyTint: the raw model is neutral white near the horizon; a camera-like cool balance gives the pale-blue haze of real photos
+  sky.material.uniforms.skyGain = { value: env.skyGain ?? .4 };
+  sky.material.uniforms.skyTint = { value: new THREE.Vector3(...(env.skyTint || [.8, .93, 1.15])) };
+  sky.material.fragmentShader = 'uniform float skyGain;\nuniform vec3 skyTint;\n' + sky.material.fragmentShader.replace('gl_FragColor = vec4( retColor, 1.0 );', 'gl_FragColor = vec4( retColor * skyGain * skyTint, 1.0 );');
   const u = sky.material.uniforms;
-  u.turbidity.value = env.turbidity ?? 4; u.rayleigh.value = env.rayleigh ?? 1.6; u.mieCoefficient.value = .004; u.mieDirectionalG.value = .85;
-  const elev = THREE.MathUtils.degToRad(env.sunElev ?? 38), az = THREE.MathUtils.degToRad(env.sunAz ?? 150);
+  u.turbidity.value = env.turbidity ?? 2.5; u.rayleigh.value = env.rayleigh ?? 2; u.mieCoefficient.value = .003; u.mieDirectionalG.value = .8; // clear-day values: smooth zenith-to-horizon gradient, thin haze
+  // default sun: behind the usual camera (cameras sit on +z looking at -z) and to the right, like a well-lit daytime photo;
+  // facing the sun makes the sky white and the subject a dark silhouette
+  const elev = THREE.MathUtils.degToRad(env.sunElev ?? 45), az = THREE.MathUtils.degToRad(env.sunAz ?? 35);
   const sunDir = new THREE.Vector3().setFromSphericalCoords(1, Math.PI / 2 - elev, az);
   u.sunPosition.value.copy(sunDir);
   fx.sky = sky; fx.sunDir = sunDir;
-  // 3D clouds: deterministic random clusters of spheres, flat-bottomed, at 45-75 m
+  // 3D clouds: scattered cumulus (real skies have gaps between clouds), far and high so they sit in the sky,
+  // not as one pale sheet. Each cloud is a cluster of flattened spheres with a flat base; fog off so distance keeps them white.
   const cl = new THREE.Group(); let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
-  const cloudMat = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 1, emissive: '#c9d6e6', emissiveIntensity: .25 });
-  for (let c = 0; c < 14; c++) {
-    const g = new THREE.Group(); const cx = -120 + rnd() * 240, cz = -150 + rnd() * 120, cy = 45 + rnd() * 30;
-    const n = 7 + Math.floor(rnd() * 6), w = 9 + rnd() * 10;
-    for (let k = 0; k < n; k++) { const r = 3 + rnd() * 4.5, s = new THREE.Mesh(new THREE.SphereGeometry(r, 16, 12), cloudMat);
-      s.position.set((rnd() - .5) * w * 2.2, (rnd() - .3) * 3, (rnd() - .5) * w * 1.1); s.scale.y = .6; s.castShadow = false; g.add(s); }
+  const cloudMat = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 1, emissive: '#ffffff', emissiveIntensity: .35, fog: false });
+  const nC = env.clouds ?? 9;
+  for (let c = 0; c < nC; c++) {
+    const g = new THREE.Group(); const a = -1.2 + (c / Math.max(1, nC - 1)) * 2.4 + (rnd() - .5) * .25, d = 230 + rnd() * 120;
+    const cx = Math.sin(a) * d, cz = -Math.cos(a) * d, cy = 70 + rnd() * 45;
+    const n = 6 + Math.floor(rnd() * 5), w = 10 + rnd() * 9;
+    for (let k = 0; k < n; k++) { const r = 4 + rnd() * 5, s = new THREE.Mesh(new THREE.SphereGeometry(r, 18, 12), cloudMat);
+      s.position.set((rnd() - .5) * w * 2, Math.abs(rnd() - .3) * 4, (rnd() - .5) * w); s.scale.y = .55; g.add(s); }
     g.position.set(cx, cy, cz); g.userData.x0 = cx; g.userData.speed = .4 + rnd() * .6; cl.add(g);
   }
   fx.clouds = cl; scene.add(cl);
   // image-based light from the same sky, so the blue sky fills shadows naturally (like the HDRI mode)
-  const es = new THREE.Scene(), esky = new Sky(); esky.scale.setScalar(380); esky.material.uniforms = u; es.add(esky);
+  // the lighting sky must get the same gain as the visible sky, or the scene is lit by a far too bright sky (washed-out colours)
+  const es = new THREE.Scene(), esky = new Sky(); esky.scale.setScalar(380); esky.material.uniforms = u; esky.material.fragmentShader = sky.material.fragmentShader; es.add(esky);
   const pm = new THREE.PMREMGenerator(renderer); scene.environment = pm.fromScene(es, 0, .1, 1000).texture; pm.dispose();
   scene.environmentIntensity = env.envLight ?? .8;
 }
@@ -98,9 +112,10 @@ function buildEnvironment(env = {}) {
   if (env.sky === 'sky3d') { // 3D atmosphere + 3D clouds, island over water (no HDRI image)
     scene.background = col('#8fb8e0');
     buildSky3D(env);
-    scene.fog = new THREE.Fog(col(env.fog || '#c3d9ef'), 60, 240);
-    const wm = new THREE.MeshStandardMaterial({ color: col(env.water || '#3f6f8f'), roughness: .12, metalness: .35 });
-    const water = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), wm); water.rotation.x = -Math.PI / 2; water.position.y = -(env.island?.depth || 3.2) - .6; water.receiveShadow = true; scene.add(water);
+    scene.fog = new THREE.Fog(col(env.fog || '#c8dae6'), 40, 220); // fully fogged by 220 so the horizon blends into the sky
+    const wm = new THREE.MeshStandardMaterial({ color: col(env.water || '#2c5872'), roughness: .3, metalness: .05, envMapIntensity: .7, fog: false }); // real sea is darker than the sky at the horizon
+    // water must run out to the horizon, otherwise its edge shows as a hard seam; fog hides the far part
+    const water = new THREE.Mesh(new THREE.PlaneGeometry(2000, 2000), wm); water.rotation.x = -Math.PI / 2; water.position.y = -(env.island?.depth || 3.2) - .6; water.receiveShadow = true; scene.add(water);
     fx.water = water; fx.rays = new THREE.Group(); buildIsland(env, true);
     // the sun light follows the same sun direction as the 3D sky; soft sky fill
     lights.sun.position.copy(fx.sunDir).multiplyScalar(40); lights.hemi.intensity = .9; return; }
@@ -403,7 +418,7 @@ function updateEffects(t, bi) {
   lights.sun.intensity = 2.6 * (1 - .45 * fx.nightK) * style.exposure;
   lights.hemi.intensity = (lights.hemiBase ?? 1.25) * (1 + .1 * fx.nightK) * style.exposure;
   lights.hemi.color.set(fx.nightK ? 0x6f86c9 : 0xcfe3ff);
-  if (!TEX.sky) { scene.background.set(fx.nightK ? '#24427a' : (plan.env?.bg || '#3d7fd0')); scene.fog.color.copy(scene.background); }
+  if (!TEX.sky && plan.env?.sky !== 'sky3d') { scene.background.set(fx.nightK ? '#24427a' : (plan.env?.bg || '#3d7fd0')); scene.fog.color.copy(scene.background); }
   else scene.backgroundIntensity = scene.environmentIntensity = (plan.env?.envLight ?? .9) * (1 - .6 * fx.nightK);
   lights.heat.intensity = hot ? 40 + Math.sin(t * 5) * 8 : 0;
   fx.rays.visible = !fx.nightK;
@@ -817,6 +832,11 @@ async function preloadGLB(p) {
   const names = new Set(); for (const b of p.beats || []) for (const a of b.add || []) { if (a.type === 'glb') names.add(a.params.model); if (a.params?.rider) names.add(a.params.rider); }
   const l = new GLTFLoader();
   await Promise.all([...names].map(async n => { GLB[n] = await l.loadAsync(n.startsWith('ph/') ? `/assets/${n}/${n.slice(3)}.gltf` : `/assets/lib/${n}.glb`); }));
+  // 3D-sky (realistic) plans: smooth the low-poly animal meshes so facets do not show as flat triangles.
+  // Vertices with the same position are welded and normals averaged; the silhouette stays the same.
+  if (p.env?.sky === 'sky3d' && p.env?.smoothAnimals !== false) for (const n of names) if (n.startsWith('animals_pack/') && GLB[n]) GLB[n].scene.traverse(m => {
+    if (!m.isMesh) return; let g = m.geometry; g.deleteAttribute('normal'); g = mergeVertices(g, 1e-3); g.computeVertexNormals(); m.geometry = g;
+    for (const mt of [].concat(m.material)) { mt.flatShading = false; mt.roughness = .92; mt.metalness = 0; mt.needsUpdate = true; } }); // hide and hair are matte, not plastic
 }
 // ---------- sugar-cane pack: field (green / burnt / cut), fire sweep, smoke column, juicy cut stalk, fleeing critters, truck ----------
 function bladeTex(dry) { const k = dry ? 'bladeD' : 'blade'; if (SPR[k]) return SPR[k]; const c = document.createElement('canvas'); c.width = 32; c.height = 256; const g = c.getContext('2d'), r = rng(dry ? 7 : 4);
