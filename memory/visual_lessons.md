@@ -35,6 +35,12 @@ Rule: when a preview or final video shows a mistake, add one entry here (what wa
 - Scale check that passed: the Renderpeople GLB is in centimetres (height 172 units), so `height:1.75` scales it to a real person.
 - Source for the model: [Renderpeople free models](https://renderpeople.com/free-3d-people/). The download is a free GLB sample, and the page says free models may be used commercially.
 
+## Inside / x-ray dives (sample: plans/rumen_dive.mjs, 2026-11-14)
+- **Works:** `glb` with `opacity:.2` gives a see-through body, and a camera dive in 2 steps (dist 3.6 then 1.9) reads as "going inside".
+- **Mistake 1:** at dist 1.9 the view is only the stomach surface, so the viewer cannot tell where they are. Fix: stop at dist 3.2-3.6 with the body outline visible, and add a short cut-in only for the last step.
+- **Mistake 2:** the stomachs are flat pink spheres, which is not medical. Fix: use textured, glossy tissue with folds (rumen papillae), translucent when inside. Still open.
+- **Mistake 3:** the x-ray body is faint. Fix: opacity .3 and a thin darker outline.
+
 ## Process
 - Judge a preview with the critic in mind: luma above 60, no dark beats, no flat colours.
 - Before saying a scene is realistic, list in one line what is still stylised (animals, sky, grass), so the user knows what is real and what is not.

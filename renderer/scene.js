@@ -1140,6 +1140,8 @@ ASSETS.glb = (p = {}) => {
   const bb = new THREE.Box3().setFromObject(o, true), s = (p.height || 1) / Math.max(.001, bb.max.y - bb.min.y);
   o.scale.setScalar(s); o.position.y = -bb.min.y * s; o.position.x = -(bb.min.x + bb.max.x) / 2 * s; o.position.z = -(bb.min.z + bb.max.z) / 2 * s;
   const w = new THREE.Group(); w.add(o); shadowed(o); o.traverse(m => { if (m.isMesh) m.frustumCulled = false; });
+  // x-ray / medical look: a see-through body. Materials are cloned so other copies of the same model stay opaque.
+  if (p.opacity != null && p.opacity < 1) o.traverse(m => { if (!m.isMesh) return; m.material = [].concat(m.material).map(mt => { const c = mt.clone(); c.transparent = true; c.opacity = p.opacity; c.depthWrite = false; c.needsUpdate = true; return c; }); if (Array.isArray(m.material) && m.material.length === 1) m.material = m.material[0]; m.castShadow = false; });
   if (!g.animations.length) { // un-animated people come in T-pose: drop the arms to a natural A-pose
     o.traverse(b => { if (!b.isBone) return; const n = b.name;
       if (/^UpperArm\.?L$/i.test(n)) b.rotateX(-(p.arms ?? 1.25)); if (/^UpperArm\.?R$/i.test(n)) b.rotateX(-(p.arms ?? 1.25));
