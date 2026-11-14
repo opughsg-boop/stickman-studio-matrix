@@ -3,6 +3,11 @@
 The user speaks Egyptian Arabic and is not technical. Reply in short, simple Egyptian Arabic. Never ask them to run commands.
 Read `STYLE_GUIDE.md` first (complete approved style). **The hyper-realistic look in its section 2b is LOCKED.** A real sky is the engine default, and objects use real models, real sizes and natural motion. Start new diorama plans from `plans/cane.mjs`. Full history and context: `HANDOFF.md`. Style guides: `STYLE_ZD.md` (cine, the current main style) and `STYLE.md` (diorama).
 
+## Learn from mistakes (required)
+- Before planning any video, read `memory/visual_lessons.md` and check the plan against it.
+- After any preview or final video, if something looks wrong (sky, ground, animals, framing, scale), add one entry to `memory/visual_lessons.md` with the mistake, the fix and a source, and commit it.
+- When a sky, ground or model is needed, search the web for how the real thing looks first, then build it.
+
 ## Setup (fresh container, ~1 min, run once)
 ```bash
 npm install
