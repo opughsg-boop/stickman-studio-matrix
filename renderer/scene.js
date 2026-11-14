@@ -415,7 +415,12 @@ function shakeAt(t) { let s = 0; for (const it of impacts) { const d = t - it; i
 function updateCamera(t) {
   const beats = plan.beats; let i = beats.findIndex(b => t < b.end); if (i < 0) i = beats.length - 1;
   let cur = camState(beats[i], t);
-  if (i > 0 && (beats[i].camera?.cut !== true)) {
+  // 'fly' camera: one continuous move across a beat (dist/elev/az/target interpolated with easing), e.g. dive into a body
+  const F = beats[i].camera?.fly;
+  if (F) { const b = beats[i], u = easeIO(Math.min(1, Math.max(0, (t - b.start) / Math.max(.01, b.end - b.start))));
+    const L = (q) => q[0] + (q[1] - q[0]) * u;
+    cur = { dist: L(F.dist), elev: L(F.elev), az: L(F.az), target: new THREE.Vector3(...F.target[0]).lerp(new THREE.Vector3(...F.target[1]), u) }; }
+  if (i > 0 && !F && (beats[i].camera?.cut !== true)) {
     const k = easeIO((t - beats[i].start) / style.camEase);
     if (k < 1) { const prev = camState(beats[i - 1], beats[i].start);
       cur = { dist: lerp(prev.dist, cur.dist, k), elev: lerp(prev.elev, cur.elev, k), az: lerp(prev.az, cur.az, k), target: prev.target.clone().lerp(cur.target, k) }; }

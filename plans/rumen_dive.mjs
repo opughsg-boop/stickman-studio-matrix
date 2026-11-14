@@ -42,14 +42,14 @@ const beats = [
   // problem: dry grass is hard to digest
   { t: at(2), kind: 'problem', remove: ['swallow'], add: [{ id: 'dry', type: 'hay', pos: [.2, .04, 1.9], params: { w: 1.3, d: .9, count: 130, hgt: .16, color: '#b59a52' }, anim: 'grow', dust: false }],
     modes: { cow: { clip: 'Idle_Headlow' } }, camera: { preset: 'close', target: [-.3, .4, 1.9], dist: 5, elev: .35, az: .25, zoom: 'in' } },
-  // 1) zoom in on the real cow from the side (opaque, the stomachs are hidden inside it)
+  // 1) one continuous approach: the camera moves in from the side toward the real cow (opaque)
   { t: at(3, 0), kind: 'solution', add: [...stomach],
-    camera: { preset: 'close', target: [-1.5, .75, .2], dist: 4.2, elev: .15, az: .9, zoom: 'in' } },
-  // 2) the body turns see-through (x-ray) and the camera moves closer to the belly
+    camera: { fly: { dist: [4.6, 2.4], elev: [.12, .15], az: [1.1, .55], target: [[-1.5, .75, .2], [-1.5, .75, .2]] } } },
+  // 2) the body turns see-through (x-ray) and ONE continuous dive goes through the belly towards the rumen
   { t: at(3, 5), kind: 'solution', remove: ['cow'], add: [{ id: 'shell', type: 'glb', pos: [-1.5, 0, .2], params: { model: 'animals_pack/Cow', height: 1.4, clip: 'Idle', opacity: .45 }, anim: 'grow' }, arrow('in', MOUTH, [RX - .55, RY + .2, .3], '#ffd23f', .3)],
-    camera: { preset: 'close', target: [-1.5, .75, .2], dist: 2.6, elev: .15, az: .6, zoom: 'in' } },
-  // 3) the camera goes INSIDE the body, towards the rumen
-  { t: at(4, 0), kind: 'info', remove: ['in'], add: [microbes], camera: { preset: 'inside', target: [RX + .1, RY, .2], dist: .55, elev: .1, az: .3, zoom: 'in' } },
+    camera: { fly: { dist: [2.4, .55], elev: [.15, .1], az: [.55, .3], target: [[-1.5, .75, .2], [RX + .1, RY, .2]] } } },
+  // 3) inside the body, looking at the rumen
+  { t: at(4, 0), kind: 'info', remove: ['in'], add: [microbes], camera: { fly: { dist: [.55, .5], elev: [.1, .1], az: [.3, .25], target: [[RX + .1, RY, .2], [RX + .1, RY, .2]] } } },
   // it brings up a small bite (the cud) and chews it again, calmly
   { t: at(5), kind: 'solution', remove: ['microbes'], add: [arrow('up', [RX - .55, RY + .55, .5], MOUTH, '#7be36b', .3)],
     modes: { shell: { clip: 'Idle_2' } }, camera: { preset: 'close', target: [0, 1.1, .7], dist: 6.8, elev: .25, az: .4, zoom: 'out' } },
