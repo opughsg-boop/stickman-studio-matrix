@@ -1172,12 +1172,15 @@ function river(p = {}) { const g = new THREE.Group(), L = p.w || 16, W = p.d || 
   const tex = canvasTex(512, 256, (c, w, h) => { const gr = c.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#356f80'); gr.addColorStop(.5, '#4a8fa3'); gr.addColorStop(1, '#356f80'); c.fillStyle = gr; c.fillRect(0, 0, w, h);
     const rr = rng(7); for (let i = 0; i < 300; i++) { c.strokeStyle = `rgba(${rr() > .45 ? '225,245,250' : '25,70,85'},${.1 + rr() * .2})`; c.lineWidth = 1 + rr() * 2; const x = rr() * w, y = rr() * h, l = 20 + rr() * 70;
       c.beginPath(); c.moveTo(x, y); c.quadraticCurveTo(x + l / 2, y + (rr() - .5) * 6, x + l, y); c.stroke(); } }, [L / 4, W / 4]);
-  const water = new THREE.Mesh(new THREE.PlaneGeometry(L, W), new THREE.MeshStandardMaterial({ map: tex, roughness: .1, metalness: .2 }));
+  const wmat = new THREE.MeshStandardMaterial({ map: tex, roughness: .1, metalness: .2 }), water = new THREE.Mesh(new THREE.PlaneGeometry(L, W), wmat);
   water.rotation.x = -Math.PI / 2; water.position.y = .06; water.receiveShadow = true; g.add(water);
   const bank = std('#5e4a33', { r: .95 }); for (const s of [-1, 1]) { const b = box(L, .12, .5, bank); b.position.set(0, .03, s * (W / 2 + .2)); g.add(b); }
   const sm = new THREE.MeshBasicMaterial({ map: streakTex(), transparent: true, opacity: .5, depthWrite: false }), streaks = [];
   for (let i = 0; i < (p.streaks ?? 46); i++) { const s = new THREE.Mesh(new THREE.PlaneGeometry(.8 + r() * 1.4, .08), sm.clone()); s.rotation.x = -Math.PI / 2; g.add(s); streaks.push({ s, x0: r() * L, z: (r() - .5) * W * .85, sp: .7 + r() * .6 }); }
-  g.userData.tick = t => { tex.offset.x = -t * flow / 4;
+  const spk = p.specks ? new THREE.InstancedMesh(new THREE.SphereGeometry(.035, 6, 4), std('#6b4a26'), p.specks) : null, sd = []; if (spk) { g.add(spk); for (let i = 0; i < p.specks; i++) sd.push([r() * L, (r() - .5) * W * .9, r()]); }
+  const WHITE = col('#ffffff'), MUD = col('#c09a62'), m4 = new THREE.Matrix4();
+  g.userData.tick = t => { tex.offset.x = -t * flow / 4; const mud = modeLerp(g, p, 'mud'); wmat.color.copy(WHITE).lerp(MUD, mud);
+    if (spk) { spk.visible = mud > .2; sd.forEach(([x0, z, ph], i) => { m4.makeTranslation((x0 + t * flow * 1.4) % L - L / 2, .02 + ph * .05, z + Math.sin(t + ph * 9) * .1); spk.setMatrixAt(i, m4); }); spk.instanceMatrix.needsUpdate = true; }
     streaks.forEach(o => { const u = (o.x0 + t * flow * o.sp * 2) % L; o.s.position.set(u - L / 2, .075, o.z + Math.sin(t * .8 + o.x0) * .08); o.s.material.opacity = .55 * Math.sin(Math.PI * u / L); }); };
   return g; }
 function wind(p = {}) { const g = new THREE.Group(), r = rng(p.seed || 6), L = p.w || 16, D = p.d || 8, sp = p.speed || 4.5, list = [];
@@ -1314,3 +1317,75 @@ function clayCut(p = {}) { const g = new THREE.Group(), r = rng(p.seed || 21), S
     ox.forEach(o => { const u = clamp(k * 1.6 - o.d); o.o.visible = u > 0 && u < 1; o.o.position.copy(o.from).lerp(o.tgt.s.position, easeIO(u)); }); };
   return shadowed(g); }
 Object.assign(ASSETS, { bricks, brick_burst: brickBurst, clay_cut: clayCut });
+// ---------- flood pack: rising muddy flood sheet (level / mud / silt / settle via modes), earth dikes, cracked dry soil, mud-brick house, rain cloud, High Dam with lake + trapped silt, nilometer, gold coin stacks ----------
+// modeLerp: numeric mode key eased from the previous mode's value (plans pass cumulative modes so every key is always present)
+function modeLerp(o, p, k) { const m = o.userData.mode, pr = o.userData.prevMode, from = pr?.[k] ?? p[k] ?? 0; if (!m) return p[k] ?? 0; const to = m[k] ?? from; return lerp(from, to, easeIO(clamp((o.userData.modeAge ?? 0) / (m.dur ?? 2.5)))); }
+function waterTex(rep, base = '#4a8fa3') { const r = rng(7); return canvasTex(512, 256, (c, w, h) => { c.fillStyle = base; c.fillRect(0, 0, w, h);
+  for (let i = 0; i < 300; i++) { c.strokeStyle = `rgba(${r() > .45 ? '225,245,250' : '25,70,85'},${.1 + r() * .2})`; c.lineWidth = 1 + r() * 2; const x = r() * w, y = r() * h, l = 20 + r() * 70; c.beginPath(); c.moveTo(x, y); c.quadraticCurveTo(x + l / 2, y + (r() - .5) * 6, x + l, y); c.stroke(); } }, rep); }
+function flood(p = {}) { const g = new THREE.Group(), W = p.w || 10, Dd = p.d || 6, r = rng(p.seed || 12), n = p.specks ?? 360;
+  const tex = waterTex([W / 4, Dd / 4], '#c4c4c4'), wm = new THREE.MeshStandardMaterial({ map: tex, roughness: .12, metalness: .15, transparent: true, opacity: .93 });
+  const water = new THREE.Mesh(new THREE.PlaneGeometry(W, Dd), wm); water.rotation.x = -Math.PI / 2; g.add(water);
+  const bm = new THREE.MeshStandardMaterial({ color: col('#7a5e3c'), transparent: true, opacity: .6, roughness: .2 }), body = box(W, 1, Dd, bm); g.add(body);
+  const sm = new THREE.MeshStandardMaterial({ color: col('#33251a'), roughness: 1, transparent: true, opacity: 0 }), silt = new THREE.Mesh(new THREE.PlaneGeometry(W, Dd), sm); silt.rotation.x = -Math.PI / 2; silt.position.y = .03; g.add(silt);
+  const spk = new THREE.InstancedMesh(new THREE.SphereGeometry(.03, 6, 4), std('#5a3d20'), n), sd = []; g.add(spk); for (let i = 0; i < n; i++) sd.push([(r() - .5) * W * .96, (r() - .5) * Dd * .96, r()]);
+  const MUD = col('#94704a'), CLR = col('#5d9cb0'), BM = col('#7a5e3c'), BC = col('#4d7f8f'), m4 = new THREE.Matrix4();
+  g.userData.tick = (t) => { const L = modeLerp(g, p, 'level'), mud = modeLerp(g, p, 'mud'), st = modeLerp(g, p, 'settle'), sl = modeLerp(g, p, 'silt');
+    const on = L > .01; water.visible = body.visible = on; water.position.y = L + .03; body.scale.y = Math.max(.001, L); body.position.y = L / 2 + .015; tex.offset.set(t * .03, t * .01);
+    wm.color.copy(CLR).lerp(MUD, mud); bm.color.copy(BC).lerp(BM, mud); sm.opacity = clamp(sl); silt.position.y = .03 + sl * .02;
+    spk.visible = on && mud > .15; if (spk.visible) { sd.forEach(([x, z, ph], i) => { const k = clamp(st * 1.6 - ph * .6), y = lerp(L * (.15 + .75 * ph), .05, easeIO(k));
+      m4.makeTranslation(x + Math.sin(t * .7 + ph * 20) * .12 * (1 - k), y, z + Math.cos(t * .6 + ph * 17) * .12 * (1 - k)); spk.setMatrixAt(i, m4); }); spk.instanceMatrix.needsUpdate = true; } };
+  return g; }
+function cracked(p = {}) { const W = p.w || 10, Dd = p.d || 6, r = rng(p.seed || 33);
+  const tex = canvasTex(512, 512, (c, w, h) => { c.fillStyle = '#b59670'; c.fillRect(0, 0, w, h); for (let i = 0; i < 1500; i++) { c.fillStyle = `rgba(${r() > .5 ? '240,225,195' : '90,70,45'},${r() * .15})`; c.fillRect(r() * w, r() * h, 2, 2); }
+    c.strokeStyle = '#3f2f1f'; c.lineCap = 'round'; for (let i = 0; i < 70; i++) { let x = r() * w, y = r() * h, a = r() * 6.3; c.lineWidth = 1.5 + r() * 2.5; c.beginPath(); c.moveTo(x, y);
+      for (let k = 0; k < 6; k++) { a += (r() - .5) * 1.4; x += Math.cos(a) * 22; y += Math.sin(a) * 22; c.lineTo(x, y); } c.stroke(); } }, [W / 4, Dd / 4]);
+  const m = new THREE.MeshStandardMaterial({ map: tex, roughness: 1, transparent: true, opacity: 0 }), pl = new THREE.Mesh(new THREE.PlaneGeometry(W, Dd), m); pl.rotation.x = -Math.PI / 2; pl.position.y = .045; pl.receiveShadow = true;
+  pl.userData.tick = (t, age) => { m.opacity = clamp(age / 1.2); }; return pl; }
+function mudhouse(p = {}) { const g = new THREE.Group(), w = p.w || 2.6, d = p.d || 2.6, h = p.h || 2.8, r = rng(p.seed || 3);
+  const tex = canvasTex(128, 128, (c, W, H) => { c.fillStyle = '#d8d0c4'; c.fillRect(0, 0, W, H); for (let i = 0; i < 700; i++) { c.fillStyle = `rgba(${r() > .5 ? '255,250,240' : '80,60,40'},${r() * .12})`; c.fillRect(r() * W, r() * H, 1 + r() * 4, 1 + r() * 3); } }, [2, 2]);
+  const pm = new THREE.MeshStandardMaterial({ map: tex, color: col(p.color || '#c9a67a'), roughness: 1 }), dark = std('#3a2a1c'), wood = std('#6b4628');
+  const b = box(w, h, d, pm); b.position.y = h / 2; g.add(b);
+  for (const [x, z, sw, sd] of [[0, d / 2 - .06, w, .12], [0, -d / 2 + .06, w, .12], [w / 2 - .06, 0, .12, d], [-w / 2 + .06, 0, .12, d]]) { const e = box(sw, .3, sd, pm); e.position.set(x, h + .15, z); g.add(e); }
+  const door = box(.75, 1.6, .06, wood); door.position.set(-w * .2, .8, d / 2 + .02); g.add(door);
+  for (const x of [w * .22]) { const wi = box(.45, .45, .06, dark); wi.position.set(x, h * .62, d / 2 + .02); g.add(wi); }
+  const sticks = std('#a08454'); for (let i = 0; i < 14; i++) { const s = cyl(.03, .03, w * .7, sticks, 5); s.rotation.z = Math.PI / 2 + (r() - .5) * .3; s.rotation.y = (r() - .5) * .5; s.position.set((r() - .5) * .3, h + .06 + (i % 3) * .05, (r() - .5) * d * .6); g.add(s); }
+  return shadowed(g); }
+function cloud(p = {}) { const g = new THREE.Group(), r = rng(p.seed || 44), list = [], c = col(p.color || '#7d838c');
+  for (let i = 0; i < (p.count || 40); i++) { const m = new THREE.Sprite(new THREE.SpriteMaterial({ map: puffTex(), color: c.clone().multiplyScalar(.85 + r() * .3), transparent: true, depthWrite: false, opacity: .95 }));
+    const o = { m, x: (r() - .5) * (p.w || 5), y: (r() - .5) * 1.2, z: (r() - .5) * (p.d || 3), s: 1.6 + r() * 2, ph: r() * 6 }; m.material.rotation = r() * 6; g.add(m); list.push(o); }
+  g.userData.tick = (t, age) => { const k = clamp(age / 1); list.forEach(o => { o.m.position.set(o.x + Math.sin(t * .3 + o.ph) * .2, o.y, o.z); o.m.scale.setScalar(o.s * k + .001); }); }; return g; }
+function concreteTex() { return SPR.concrete ||= canvasT(256, 256, (c, w, h) => { const r = rng(55); c.fillStyle = '#c4c0b6'; c.fillRect(0, 0, w, h);
+  for (let i = 0; i < 1600; i++) { c.fillStyle = `rgba(${r() > .5 ? '255,255,250' : '70,70,65'},${r() * .1})`; c.fillRect(r() * w, r() * h, 1 + r() * 3, 1 + r() * 3); }
+  c.strokeStyle = 'rgba(80,78,72,.35)'; c.lineWidth = 2; for (let y = 32; y < h; y += 64) { c.beginPath(); c.moveTo(0, y); c.lineTo(w, y); c.stroke(); } }, [2, 2]); }
+function dam(p = {}) { const g = new THREE.Group(), W = p.w || 4, H = p.h || 2.4, T = p.t || 1.8, LK = p.lake || 3, r = rng(p.seed || 61);
+  const sh = new THREE.Shape(); sh.moveTo(-T / 2, 0); sh.lineTo(T / 2, 0); sh.lineTo(T * .12, H); sh.lineTo(-T * .2, H); sh.closePath();
+  const geo = new THREE.ExtrudeGeometry(sh, { depth: W, bevelEnabled: false }); geo.translate(0, 0, -W / 2);
+  const cm = new THREE.MeshStandardMaterial({ map: concreteTex(), color: col('#a49e92'), roughness: .85 }); const body = new THREE.Mesh(geo, cm); g.add(body);
+  const road = box(T * .32 + .1, .08, W, std('#5c5a56')); road.position.set(-T * .04, H + .04, 0); g.add(road);
+  for (const z of [-W / 2 + .05, W / 2 - .05]) { const rail = box(T * .32, .12, .05, std('#e8e4dc')); rail.position.set(-T * .04, H + .14, z); g.add(rail); }
+  const lm = new THREE.MeshStandardMaterial({ color: col('#3f8196'), roughness: .1, metalness: .15, transparent: true, opacity: .72 }), lake = box(LK, H * .8, W - .1, lm); lake.position.set(-T * .3 - LK / 2, H * .4, 0); g.add(lake);
+  const lt = waterTex([LK / 3, W / 3]), ls = new THREE.Mesh(new THREE.PlaneGeometry(LK, W - .1), new THREE.MeshStandardMaterial({ map: lt, roughness: .1, metalness: .2 })); ls.rotation.x = -Math.PI / 2; ls.position.set(lake.position.x, H * .8 + .01, 0); g.add(ls);
+  const sm = std('#4e3722', { r: 1 }), siltB = box(LK - .02, 1, W - .14, sm); siltB.position.x = lake.position.x; g.add(siltB);
+  const spk = new THREE.InstancedMesh(new THREE.SphereGeometry(.03, 6, 4), std('#5a3d20'), 160), sd = []; g.add(spk); for (let i = 0; i < 160; i++) sd.push([lake.position.x + (r() - .5) * LK * .95, (r() - .5) * W * .9, r()]);
+  const jets = []; for (let i = 0; i < 22; i++) { const m = new THREE.Sprite(new THREE.SpriteMaterial({ map: puffTex(), color: '#ffffff', transparent: true, depthWrite: false })); g.add(m); jets.push({ m, z: (r() - .5) * W * .6, ph: r() }); }
+  const m4 = new THREE.Matrix4();
+  g.userData.tick = (t, age) => { lt.offset.x = t * .01; const sl = p.silt ? clamp((age - (p.siltDelay ?? .3)) / (p.siltDur || 3)) : (p.silt0 || 0), sh2 = .05 + sl * H * .35;
+    siltB.scale.y = sh2; siltB.position.y = sh2 / 2 + .01; spk.visible = !!p.silt && age > (p.siltDelay ?? .3) && sl < 1;
+    sd.forEach(([x, z, ph], i) => { const u = (t * .25 + ph) % 1; m4.makeTranslation(x, lerp(H * .78, sh2, u), z); spk.setMatrixAt(i, m4); }); spk.instanceMatrix.needsUpdate = true;
+    jets.forEach(j => { const u = (t * .8 + j.ph) % 1; j.m.position.set(T * .5 + u * 1.8, .25 + Math.sin(u * Math.PI) * .35, j.z + (j.ph - .5) * u); j.m.scale.setScalar(.3 + u * .7); j.m.material.opacity = .8 * (1 - u); }); };
+  return shadowed(g); }
+function nilometer(p = {}) { const g = new THREE.Group(), S = p.size || 1.9, H = p.h || 2.6, th = .22, r = rng(p.seed || 71);
+  const stone = new THREE.MeshStandardMaterial({ map: brickTex(), color: col('#d9bd8c'), roughness: .95 });
+  for (const [x, z, w, d, h] of [[0, -S / 2, S + th, th, H], [-S / 2, 0, th, S, H], [S / 2, 0, th, S, H], [0, S / 2, S + th, th, .35]]) { const b = box(w, h, d, stone); b.position.set(x, h / 2, z); g.add(b); }
+  for (let i = 0; i < 8; i++) { const st = box(.42, .12, .4, stone); st.position.set(-S / 2 + th / 2 + .21, H - .2 - i * .3, -S / 2 + .3 + i * .17); g.add(st); }
+  const colM = std('#cbb083', { r: .9 }), col8 = cyl(.17, .19, H * 1.05, colM, 8); col8.position.y = H * .525; g.add(col8);
+  const nm = std('#4a3a26'); for (let y = .25, i = 1; y < H; y += .25, i++) { const ring = cyl(.2, .2, i % 4 ? .025 : .05, nm, 8); ring.position.y = y; g.add(ring); }
+  const cap = box(.5, .12, .5, colM); cap.position.y = H * 1.05 + .06; g.add(cap);
+  const wm = new THREE.MeshStandardMaterial({ color: col('#5d8c88'), roughness: .1, metalness: .15, transparent: true, opacity: .78 }), water = box(S - .02, 1, S - .02, wm); g.add(water);
+  g.userData.tick = (t, age) => { const L = lerp(.15, p.level || H * .7, easeIO(clamp((age - .4) / (p.dur || 3)))) + Math.sin(t * 1.2) * .02; water.scale.y = L; water.position.y = L / 2 + .01; };
+  return shadowed(g); }
+function coins(p = {}) { const g = new THREE.Group(), r = rng(p.seed || 81), n = p.n || 28, gm = new THREE.MeshStandardMaterial({ color: col('#e3b33d'), metalness: .9, roughness: .28, emissive: col('#3a2600') }), geo = new THREE.CylinderGeometry(.12, .12, .035, 20), ims = [], m4 = new THREE.Matrix4();
+  for (let s = 0; s < (p.stacks || 3); s++) { const im = new THREE.InstancedMesh(geo, gm, n), ox = (s - 1) * .3, oz = (s % 2) * .12; for (let i = 0; i < n; i++) { m4.makeTranslation(ox + (r() - .5) * .02, .02 + i * .036, oz + (r() - .5) * .02); im.setMatrixAt(i, m4); } im.count = 0; g.add(im); ims.push(im); }
+  g.userData.tick = (t, age) => { const k = easeIO(clamp((age - .4) / (p.dur || 3))); ims.forEach((im, s) => { im.count = Math.floor(n * k * (1 - s * .18)); }); };
+  return shadowed(g); }
+Object.assign(ASSETS, { flood, cracked, mudhouse, cloud, dam, nilometer, coins });
