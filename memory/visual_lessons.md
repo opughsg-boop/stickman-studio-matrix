@@ -39,3 +39,8 @@ Rule: when a preview or final video shows a mistake, add one entry here (what wa
 - Judge a preview with the critic in mind: luma above 60, no dark beats, no flat colours.
 - Before saying a scene is realistic, list in one line what is still stylised (animals, sky, grass), so the user knows what is real and what is not.
 - Pure stills are not enough for motion. Check at least one beat with a clip or a path.
+
+## Cartoon short: The Empty Chair (2D cartoon, dinner scene)
+- **Mistake:** the mother's long hair was drawn over her face and chest, so she looked bearded. **Fix:** draw long hair behind the head and keep it short at the sides. **Source:** our own render check of frames 150 and 600.
+- **Mistake:** the voice-over was an upbeat "Confident, Playful" voice, which weakens a sad story. **Fix:** check the voice's style against the story's mood before rendering. **Source:** the ElevenLabs file name the user sent.
+- **Mistake:** caption times overlapped, so two lines showed at once. **Fix:** clip each caption's end to the next caption's start. **Source:** frame review of the encoded video.
