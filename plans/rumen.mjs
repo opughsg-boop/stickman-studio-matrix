@@ -24,12 +24,12 @@ const microbes = { id: 'microbes', type: 'custom', pos: [0, 0, 0], anim: 'grow',
     const rr = Math.sqrt(Math.max(.05, r * r - y * y)); return sph(.07 + (i % 3) * .02, [RX + Math.cos(a) * rr, RY + y, .3 + Math.abs(Math.sin(a)) * rr * .8], ['#7be36b', '#b07bff', '#5fd0ff'][i % 3]); }) } };
 // natural pasture: Poly Haven grass, shrubs, rocks, one real tree, a scanned farmer behind
 const grass = [[-2.8, 1.5], [-.4, 1.8], [-3, -1.2], [.2, -1.6], [3.2, -1.3], [-3.6, .2], [3.5, 1.7], [1, 2.4], [-1.8, -2.3], [2.4, -2.4]]
-  .map(([x, z], i) => glb('g' + i, ['ph/grass_medium_01', 'ph/grass_medium_02', 'ph/grass_bermuda_01'][i % 3], [x, 0, z], .45));
+  .map(([x, z], i) => glb('g' + i, ['ph/grass_medium_01', 'ph/grass_medium_02'][i % 2], [x, 0, z], .45));
 const scenery = [...grass,
   glb('tree', 'ph/island_tree_01', [3.6, 0, -2.8], 5),
   glb('shrub1', 'ph/shrub_02', [-3.6, 0, -2.2], .9), glb('shrub2', 'ph/shrub_01', [4, 0, .9], .8),
   glb('rock', 'ph/boulder_01', [-4, 0, 1.6], .7), glb('stones', 'ph/namaqualand_stones_01', [2.6, 0, 2.6], .25),
-  glb('farmer', 'people_rp/rp_posed_00178_29', [-3.4, 0, -1.4], 1.75, {}, { delay: .4 })];
+  glb('farmer', 'people_rp/rp_posed_00178_29', [-4.4, 0, -3.3], 1.75, {}, { delay: .4 })];
 
 const beats = [
   // hook: the cow keeps chewing with nothing in front of it
@@ -50,8 +50,8 @@ const beats = [
   { t: at(5), kind: 'solution', add: [arrow('up', [RX - .55, RY + .55, .5], MOUTH, '#7be36b', .3)],
     modes: { cow: { clip: 'Idle_2' } }, camera: { preset: 'close', target: [0, 1.1, .7], dist: 6.8, elev: .25, az: .4, zoom: 'out' } },
   // that can take about eight hours a day
-  { t: at(6), kind: 'info', remove: ['up'], add: [{ id: 'clock', type: 'clock24', pos: [-3.2, 0, .9], params: { r: .55 }, anim: 'grow', delay: .2 }],
-    modes: { cow: { clip: 'Idle' }, clock: { speed: 6 } }, camera: { preset: 'close', target: [-2.3, .9, .7], dist: 5.6, elev: .25, az: .6, zoom: 'in' } },
+  { t: at(6), kind: 'info', remove: ['up'], add: [{ id: 'clock', type: 'clock24', pos: [-2.7, 0, 1.9], params: { r: .45 }, anim: 'grow', delay: .2 }],
+    modes: { cow: { clip: 'Idle' }, clock: { speed: 6 } }, camera: { preset: 'close', target: [-2.4, .8, .9], dist: 6.6, elev: .25, az: .2, zoom: 'in' } },
   // then the food passes the reticulum, omasum and finally the abomasum
   { t: at(7), kind: 'info', remove: ['clock', 'microbes'], add: [arrow('a1', [RX - .55, RY + .5, .4], [RX - .95, RY + .5, .45], '#5fd0ff', .1),
       arrow('a2', [RX - .7, RY + .7, .5], [RX + .75, RY + .55, .6], '#5fd0ff', .7), arrow('a3', [RX + 1, RY, .65], [RX + 1.05, RY - .2, .75], '#5fd0ff', 1.3)],
