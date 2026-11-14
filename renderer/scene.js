@@ -474,6 +474,7 @@ window.setup = async (p, opts = {}) => {
   R.W = opts.width || 540; R.H = opts.height || 960;
   renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
   renderer.setSize(R.W, R.H); renderer.setPixelRatio(1);
+  renderer.localClippingEnabled = true; // cutaway: a glb with cutY is sliced open to show the organs inside
   renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05 * style.exposure;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -1167,6 +1168,9 @@ ASSETS.glb = (p = {}) => {
   o.scale.setScalar(s); o.position.y = -bb.min.y * s; o.position.x = -(bb.min.x + bb.max.x) / 2 * s; o.position.z = -(bb.min.z + bb.max.z) / 2 * s;
   const w = new THREE.Group(); w.add(o); shadowed(o); o.traverse(m => { if (m.isMesh) m.frustumCulled = false; });
   // x-ray / medical look: a see-through body. Materials are cloned so other copies of the same model stay opaque.
+  // cutaway (medical-diagram look): remove everything above y = cutY so the organs inside show, like an opened anatomy model
+  if (p.cutY != null) { const pl = new THREE.Plane(new THREE.Vector3(0, -1, 0), p.cutY);
+    o.traverse(m => { if (!m.isMesh) return; for (const mt of [].concat(m.material)) { mt.clippingPlanes = [pl]; mt.side = THREE.DoubleSide; mt.needsUpdate = true; } }); }
   const xr0 = p.xrayFrom ?? p.opacity; const xrMats = [];
   if (xr0 != null && xr0 < 1 || p.xrayFrom != null) o.traverse(m => { if (!m.isMesh) return; m.material = [].concat(m.material).map(mt => { const c = mt.clone(); c.transparent = true; c.opacity = xr0; xrMats.push(c); c.depthWrite = false; c.needsUpdate = true; return c; }); if (Array.isArray(m.material) && m.material.length === 1) m.material = m.material[0]; m.castShadow = false; });
   if (!g.animations.length) { // un-animated people come in T-pose: drop the arms to a natural A-pose
