@@ -15,6 +15,7 @@
     "@fontsource/cairo": "^5.1.0",
     "@fontsource/lalezar": "^5.1.0",
     "@fontsource/montserrat": "^5.1.0",
+    "@fontsource/nunito": "^5.3.0",
     "express": "^4.21.2",
     "multer": "^1.4.5-lts.1",
     "three": "^0.170.0"

@@ -53,3 +53,10 @@ Rule: when a preview or final video shows a mistake, add one entry here (what wa
 - **Mistake:** the mother's long hair was drawn over her face and chest, so she looked bearded. **Fix:** draw long hair behind the head and keep it short at the sides. **Source:** our own render check of frames 150 and 600.
 - **Mistake:** the voice-over was an upbeat "Confident, Playful" voice, which weakens a sad story. **Fix:** check the voice's style against the story's mood before rendering. **Source:** the ElevenLabs file name the user sent.
 - **Mistake:** caption times overlapped, so two lines showed at once. **Fix:** clip each caption's end to the next caption's start. **Source:** frame review of the encoded video.
+
+## Glossy "toy" reference look (sample: plans/sneeze_ref.mjs + renderer/cine_ref.js, 2026-11-14)
+- **Mistake:** first pass was pastel and washed out (pale pink organs, pale floor), unlike the saturated reference. **Fix:** exposure .9, key 2.2, fill .5, env .6, grade sat 1.15, and deeper base colours (#e3566f lungs, #1c64c8 box). **Source:** reference frames (deep red heart, dark purple sky) vs our first stills.
+- **Mistake:** the sunset sky showed only orange-pink, because the camera looks slightly down at tabletop scale and the purple started too high. **Fix:** squeeze the gradient: orange band at 0-.025, red .08, purple by .18. **Source:** reference contact sheet (horizon at ~45 % of frame, purple above).
+- **Mistake:** the lungs were built upside down in shape (narrow at the bottom). Real lungs have a narrow apex at the top and a broad concave base on the diaphragm. **Fix:** lobe width grows toward the base. **Source:** basic anatomy (lung apex vs base).
+- **Mistake:** the camera ended level with the throat valve, so the "snaps shut" disc was edge-on and invisible. **Fix:** end the camera above the larynx looking down into it. **Source:** our still at 13.0 s.
+- **Mistake:** nose cilia read as long white grass. **Fix:** shorter, thicker, pink cilia, fewer of them, and a higher camera angle on the lining. **Source:** our still at 4.2 s.

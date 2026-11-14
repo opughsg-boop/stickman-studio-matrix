@@ -18,6 +18,7 @@ export function startStatic() {
   app.use('/assets', express.static(path.join(ROOT, 'assets')));
   app.use('/fonts2', express.static(path.join(ROOT, 'node_modules/@fontsource/montserrat/files')));
   app.use('/fonts3', express.static(path.join(ROOT, 'node_modules/@fontsource/cairo/files')));
+  app.use('/fonts4', express.static(path.join(ROOT, 'node_modules/@fontsource/nunito/files')));
   return new Promise(r => { const s = app.listen(0, () => r({ server: s, url: `http://127.0.0.1:${s.address().port}/renderer/` })); });
 }
 

@@ -13,6 +13,7 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { REF_PROPS, refSet, gloss } from './cine_ref.js';
 
 const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -68,7 +69,8 @@ function gradientDome(top, bottom) {
 async function buildSet(scene, s = {}) {
   const env = await loadEnv(s.hdri || (s.type === 'studio' ? 'studio_small_09' : 'kloofendal_48d_partly_cloudy_puresky'));
   scene.environment = env.env; scene.environmentIntensity = s.envIntensity ?? 1;
-  if (s.type === 'studio') { // seamless cyclorama like a product studio
+  if (refSet(scene, s)) {}
+  else if (s.type === 'studio') { // seamless cyclorama like a product studio
     const c = new THREE.Color(s.color || '#2fb8cc');
     scene.add(gradientDome(c.clone().offsetHSL(0, -.05, .12), c.clone().offsetHSL(0, 0, -.05)));
     const floor = new THREE.Mesh(new THREE.CircleGeometry(60, 64), new THREE.MeshStandardMaterial({ color: c.clone().offsetHSL(0, -.05, .02), roughness: .85 }));
@@ -80,10 +82,10 @@ async function buildSet(scene, s = {}) {
   } else { scene.background = env.tex; scene.backgroundBlurriness = s.blur ?? .15; }
   if (s.floorColor) { const f = new THREE.Mesh(new THREE.PlaneGeometry(s.floorSize || 30, s.floorSize || 30), new THREE.MeshStandardMaterial({ color: s.floorColor, roughness: .9 }));
     f.rotation.x = -Math.PI / 2; f.position.y = .002; f.receiveShadow = true; scene.add(f); }
-  const key = new THREE.DirectionalLight(s.keyColor || 0xfff1e0, s.key ?? 2.2); key.position.set(...(s.keyPos || [4, 8, 5])); key.castShadow = true;
-  key.shadow.mapSize.set(1024, 1024); Object.assign(key.shadow.camera, { left: -8, right: 8, top: 8, bottom: -8, near: .5, far: 40 }); key.shadow.bias = -.0004; key.shadow.radius = 5;
-  scene.add(key); scene.add(new THREE.HemisphereLight(0xdfefff, 0x6a5a4a, s.fill ?? .5));
-  if (s.rim !== false) { const rim = new THREE.DirectionalLight(0xbfe4ff, s.rim ?? 1.2); rim.position.set(-5, 4, -6); scene.add(rim); }
+  const key = new THREE.DirectionalLight(s.keyColor || 0xfff1e0, s.key ?? 2.2); key.position.set(...(s.keyPos || [4, 8, 5])); key.castShadow = true; const ss = s.shadowSize || 8;
+  key.shadow.mapSize.set(1024, 1024); key.shadow.mapSize.set(2048, 2048); Object.assign(key.shadow.camera, { left: -ss, right: ss, top: ss, bottom: -ss, near: .5, far: 40 }); key.shadow.bias = -.0004; key.shadow.radius = 5;
+  scene.add(key); scene.add(new THREE.HemisphereLight(s.skyFill || 0xdfefff, s.groundFill || 0x6a5a4a, s.fill ?? .5));
+  if (s.rim !== false) { const rim = new THREE.DirectionalLight(s.rimColor || 0xbfe4ff, s.rim ?? 1.2); rim.position.set(-5, 4, -6); scene.add(rim); }
 }
 
 // ---------- props ----------
@@ -114,7 +116,7 @@ const PROP = {
     const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: p.color || '#ffd31a', emissive: p.color || '#ffd31a', emissiveIntensity: 1.2 }));
     const head = new THREE.Mesh(new THREE.SphereGeometry((p.r || .03) * 2.4, 16, 12), m.material); const g = new THREE.Group(); g.add(m, head);
     const total = geo.index.count;
-    g.userData.tick = lt => { const k = easeIO(lt / (p.dur || 1.2)); geo.setDrawRange(0, Math.max(3, Math.floor(total * k / 3) * 3)); head.position.copy(curve.getPoint(k)); };
+    g.userData.tick = lt => { const k = easeIO((lt - (p.delay || 0)) / (p.dur || 1.2)); m.visible = head.visible = lt >= (p.delay || 0); geo.setDrawRange(0, Math.max(3, Math.floor(total * k / 3) * 3)); head.position.copy(curve.getPoint(k)); };
     return g; },
   pedestal: p => { const g = new THREE.Group(); const c = new THREE.Mesh(new THREE.CylinderGeometry(p.r || .5, (p.r || .5) * 1.1, p.h || 1, 48), new THREE.MeshStandardMaterial({ color: p.color || '#f1ece4', roughness: .35 }));
     c.position.y = (p.h || 1) / 2; g.add(c); const top = new THREE.Mesh(new THREE.CylinderGeometry((p.r || .5) * 1.15, (p.r || .5) * 1.15, .06, 48), c.material); top.position.y = p.h || 1; g.add(top); return g; },
@@ -122,7 +124,8 @@ const PROP = {
     if (p.height) { const b = new THREE.Box3().setFromObject(o), s = p.height / (b.max.y - b.min.y); o.scale.multiplyScalar(s); const c = b.getCenter(new THREE.Vector3()).multiplyScalar(s); o.position.sub(c); }
     const w = new THREE.Group(); w.add(o); return w; },
 };
-function mat(p) { const o = { color: p.color || '#cccccc', roughness: p.rough ?? .5, metalness: p.metal ?? 0 };
+Object.assign(PROP, REF_PROPS);
+function mat(p) { if (p.gloss) return gloss(p.color || '#cccccc', { rough: p.rough, glow: p.glow, emissive: p.glow ? p.color : undefined }); const o = { color: p.color || '#cccccc', roughness: p.rough ?? .5, metalness: p.metal ?? 0 };
   if (p.glow) { o.emissive = p.color; o.emissiveIntensity = p.glow; }
   if (p.opacity != null) { o.transparent = true; o.opacity = p.opacity; }
   return p.glass ? new THREE.MeshPhysicalMaterial({ ...o, transmission: .9, thickness: .2, roughness: .05 }) : new THREE.MeshStandardMaterial(o); }
@@ -152,12 +155,12 @@ async function buildShot(s) {
   return { s, scene, things };
 }
 function poseThing(th, lt, dur, sh) {
-  const a = th.a, k = clamp(lt / dur), ek = a.ease === 'linear' ? k : easeIO(k);
+  const a = th.a, k = clamp((lt - (a.moveAt || 0)) / (a.moveDur || dur)), ek = a.ease === 'linear' ? k : a.ease === 'out' ? easeOut(k) : easeIO(k);
   if (a.follow && sh) { const tgt = sh.things.find(x => x.a.id === a.follow); if (tgt) { const off = V(a.offset || [0, 0, 0]).applyAxisAngle(new THREE.Vector3(0, 1, 0), tgt.holder.rotation.y);
       th.holder.position.copy(tgt.holder.position).add(off); th.holder.rotation.set(0, tgt.holder.rotation.y, 0); th.holder.scale.copy(tgt.holder.scale); th.o.traverse(m => m.userData.tick && m.userData.tick(lt)); return; } }
   const from = a.pos || [0, 0, 0], to = a.to || from; const p = lerpV(from, to, ek);
   th.holder.position.set(...p);
-  let ry = a.rotY ?? 0; if (a.spin) ry += lt * a.spin; if (a.faceMove && a.to) ry = Math.atan2(to[0] - from[0], to[2] - from[2]);
+  let ry = a.rotY ?? 0; if (a.spin) ry += (a.spinStop ? Math.min(lt, a.spinStop) : lt) * a.spin; if (a.bob) th.holder.position.y += Math.sin(lt * 1.6 + (a.bobPh || 0)) * a.bob; if (a.faceMove && a.to) ry = Math.atan2(to[0] - from[0], to[2] - from[2]);
   th.holder.rotation.set(a.rotX || 0, ry, a.rotZ || 0);
   let s = a.appear === 'pop' ? easeOutBack(lt / .35) : 1; if (a.grow) s *= lerp(a.grow[0], a.grow[1], easeIO(k)); th.holder.scale.setScalar(Math.max(.001, s));
   if (th.mixer) th.mixer.setTime(((a.clipOffset || 0) + lt) * (a.speed ?? 1));
@@ -193,6 +196,16 @@ function drawUI(sh, lt) {
     if (u.type === 'viewfinder') { const m = W * .12, L = W * .12; cctx.strokeStyle = 'rgba(255,255,255,.95)'; cctx.lineWidth = W * .008;
       for (const [x, y, sx, sy] of [[m, H * .2, 1, 1], [W - m, H * .2, -1, 1], [m, H * .62, 1, -1], [W - m, H * .62, -1, -1]]) { cctx.beginPath(); cctx.moveTo(x, y + sy * L); cctx.lineTo(x, y); cctx.lineTo(x + sx * L, y); cctx.stroke(); }
       if (Math.floor(lt * 2) % 2 === 0) { cctx.fillStyle = '#ff2a2a'; cctx.beginPath(); cctx.arc(W - m - W * .03, H * .2 + W * .05, W * .018, 0, 7); cctx.fill(); } }
+    else if (u.type === 'badge') { // rounded orange-yellow counter badge (on-screen words: needs style.allowText)
+      if (style.allowText !== true) { cctx.restore(); continue; }
+      const [x, y] = u.at || [.72, .33], fs = W * (u.size || .062), bob = Math.sin(lt * 2.4) * W * .004; cctx.translate(x * W, y * H + bob); cctx.scale(pop, pop); cctx.rotate(u.tilt ?? -.03);
+      cctx.font = `900 ${fs}px CapRound, CapEn`; const tw = cctx.measureText(u.text).width, bw = tw + fs * 1.0, bh = fs * 1.55, r = bh * .32;
+      cctx.shadowColor = 'rgba(60,20,0,.45)'; cctx.shadowBlur = fs * .5; cctx.shadowOffsetY = fs * .12;
+      cctx.fillStyle = u.edge || '#d9780b'; cctx.beginPath(); cctx.roundRect(-bw / 2, -bh / 2 + fs * .08, bw, bh, r); cctx.fill(); cctx.shadowColor = 'transparent';
+      const gr = cctx.createLinearGradient(0, -bh / 2, 0, bh / 2); gr.addColorStop(0, u.top || '#ffd84d'); gr.addColorStop(1, u.color || '#ffb21f');
+      cctx.fillStyle = gr; cctx.beginPath(); cctx.roundRect(-bw / 2, -bh / 2, bw, bh - fs * .06, r); cctx.fill();
+      cctx.fillStyle = 'rgba(255,255,255,.35)'; cctx.beginPath(); cctx.roundRect(-bw / 2 + fs * .2, -bh / 2 + fs * .12, bw - fs * .4, bh * .28, r * .6); cctx.fill();
+      cctx.fillStyle = u.ink || '#2b1d0e'; cctx.textAlign = 'center'; cctx.textBaseline = 'middle'; cctx.fillText(u.text, 0, fs * .02); }
     else if (u.type === 'counter') { const [x, y] = u.at || [.5, .2]; cctx.translate(x * W, y * H); cctx.scale(pop, pop); txt(u.text, 0, 0, W * (u.size || .16), u.color || '#ff2b2b', { strokeColor: 'rgba(255,255,255,.9)' }); }
     else if (u.type === 'pin') { let [x, y] = u.at ? [u.at[0] * W, u.at[1] * H] : project(sh, u.world); cctx.translate(x, y); cctx.scale(pop, pop);
       const r = W * .045; cctx.fillStyle = '#fff'; cctx.beginPath(); cctx.roundRect(-r, -r * 2.2, r * 2, r * 1.6, r * .3); cctx.fill();
@@ -213,8 +226,21 @@ function drawUI(sh, lt) {
     cctx.restore();
   }
 }
+function drawCaptionRef(c) { // reference look: rounded heavy font, white, key words coloured + underlined
+  const size = H * style.captionSize, font = s => `900 ${s}px ${style.captionFont}, CapEn`; let fs = size; cctx.save(); cctx.font = font(fs);
+  const words = c.text.split(' '), sp = () => cctx.measureText(' ').width; let tw = () => words.reduce((a, w) => a + cctx.measureText(w).width, 0) + sp() * (words.length - 1);
+  while (tw() > W * .8) { fs *= .93; cctx.font = font(fs); }
+  let x = W / 2 - tw() / 2; const y = H * style.captionY; cctx.textBaseline = 'middle'; cctx.textAlign = 'left';
+  for (const w of words) { const ww = cctx.measureText(w).width, hc = c.hl && c.hl[w.toLowerCase()];
+    cctx.shadowColor = 'rgba(20,0,20,.75)'; cctx.shadowBlur = fs * .3; cctx.shadowOffsetY = fs * .06; cctx.fillStyle = hc || '#ffffff'; cctx.fillText(w, x, y);
+    cctx.shadowBlur = 0; cctx.shadowOffsetY = 0; cctx.fillText(w, x, y);
+    if (hc) { cctx.strokeStyle = hc; cctx.lineWidth = fs * .08; cctx.lineCap = 'round'; cctx.beginPath(); cctx.moveTo(x, y + fs * .55); for (let k = 1; k <= 12; k++) cctx.lineTo(x + ww * k / 12, y + fs * .55 + Math.sin(k * 1.4) * fs * .035); cctx.stroke(); }
+    x += ww + sp(); }
+  cctx.restore();
+}
 function drawCaption(t) {
   const c = (plan.captions || []).find(w => t >= w.start && t < w.end); if (!c) return;
+  if (style.captionFont) return drawCaptionRef(c);
   const ar = /[؀-ۿ]/.test(c.text), size = H * style.captionSize * (ar ? 1.12 : 1);
   cctx.save(); cctx.font = `${ar ? 800 : 700} ${size}px ${ar ? 'CapAr2' : 'CapEn'}`; cctx.textAlign = 'center'; cctx.textBaseline = 'middle'; cctx.direction = ar ? 'rtl' : 'ltr';
   let fs = size; while (cctx.measureText(c.text).width > W * .86) { fs *= .93; cctx.font = `${ar ? 800 : 700} ${fs}px ${ar ? 'CapAr2' : 'CapEn'}`; }
@@ -234,26 +260,28 @@ window.setup = async (p, o = {}) => {
   bloom = new UnrealBloomPass(new THREE.Vector2(W, H), .35, .5, .85); composer.addPass(bloom); composer.addPass(new OutputPass());
   comp = document.createElement('canvas'); comp.width = W; comp.height = H; cctx = comp.getContext('2d');
   for (const s of p.shots) { const sh = await buildShot(s); sh.start = s.start; sh.end = s.end; shots.push(sh); }
-  await document.fonts.load('700 40px CapEn'); await document.fonts.load('800 40px CapAr2');
+  await document.fonts.load('700 40px CapEn'); await document.fonts.load('800 40px CapAr2'); await document.fonts.load('900 40px CapRound');
   return { shots: shots.length, models: Object.keys(MODELS) };
 };
 window.renderAt = (t, q = .9) => {
   let i = shots.findIndex(s => t < s.end); if (i < 0) i = shots.length - 1; const sh = shots[i], lt = t - sh.start, dur = sh.end - sh.start;
-  for (const th of sh.things) if (!th.a.follow) poseThing(th, lt, dur, sh);
-  for (const th of sh.things) if (th.a.follow) poseThing(th, lt, dur, sh);
-  poseCamera(sh, lt, dur);
-  renderPass.scene = sh.scene; bokeh.scene = sh.scene; bloom.strength = sh.s.fx?.bloom ?? .3;
-  composer.render();
-  const g = { ...style.grade, ...(sh.s.fx?.grade || {}) };
-  cctx.filter = `saturate(${g.sat}) brightness(${g.bright}) contrast(${g.contrast})`;
+  const drawShot = (s, l, d) => { for (const th of s.things) if (!th.a.follow) poseThing(th, l, d, s);
+    for (const th of s.things) if (th.a.follow) poseThing(th, l, d, s);
+    poseCamera(s, l, d); renderPass.scene = s.scene; bokeh.scene = s.scene; bloom.strength = s.s.fx?.bloom ?? .3; composer.render();
+    const g = { ...style.grade, ...(s.s.fx?.grade || {}) }; cctx.filter = `saturate(${g.sat}) brightness(${g.bright}) contrast(${g.contrast})`; };
+  const DS = sh.s.dissolve ?? .4, prev = shots[i - 1], soft = x => x === 'cut' || x === 'dissolve'; let mixed = false;
+  if (sh.s.transition === 'dissolve' && prev && lt < DS) { // soft cross-dissolve: previous shot keeps moving underneath
+    drawShot(prev, t - prev.start, prev.end - prev.start); cctx.globalAlpha = 1; cctx.drawImage(renderer.domElement, 0, 0);
+    drawShot(sh, lt, dur); cctx.globalAlpha = easeIO(lt / DS); cctx.drawImage(renderer.domElement, 0, 0); cctx.globalAlpha = 1; mixed = true;
+  } else drawShot(sh, lt, dur);
   // whip transition: directional smear at the start of a shot (and end of the previous one)
-  const next = shots[i + 1], whipIn = sh.s.transition !== 'cut' && i > 0 && lt < .1, whipOut = next && next.s.transition !== 'cut' && sh.end - t < .08;
+  const next = shots[i + 1], whipIn = !mixed && !soft(sh.s.transition) && i > 0 && lt < .1, whipOut = !mixed && next && !soft(next.s.transition) && sh.end - t < .08;
   if (whipIn || whipOut) { const k = whipIn ? 1 - lt / .1 : 1 - (sh.end - t) / .08, dir = (sh.s.whipDir || 1) * (whipIn ? -1 : 1);
     cctx.globalAlpha = 1; cctx.drawImage(renderer.domElement, 0, 0); for (let j = 1; j <= 6; j++) { cctx.globalAlpha = .22; cctx.drawImage(renderer.domElement, dir * j * W * .035 * k, 0); } cctx.globalAlpha = 1; }
-  else cctx.drawImage(renderer.domElement, 0, 0);
+  else if (!mixed) cctx.drawImage(renderer.domElement, 0, 0);
   cctx.filter = 'none';
   if (sh.s.flash && lt < .15) { cctx.fillStyle = `rgba(255,255,255,${.7 * (1 - lt / .15)})`; cctx.fillRect(0, 0, W, H); }
-  const vg = cctx.createRadialGradient(W / 2, H / 2, H * .35, W / 2, H / 2, H * .8); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,.28)'); cctx.fillStyle = vg; cctx.fillRect(0, 0, W, H);
+  const vg = cctx.createRadialGradient(W / 2, H / 2, H * .35, W / 2, H / 2, H * .8); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, `rgba(0,0,0,${sh.s.fx?.vignette ?? .28})`); cctx.fillStyle = vg; cctx.fillRect(0, 0, W, H);
   drawUI(sh, lt); drawCaption(t);
   const fo = clamp((t - (plan.duration - .25)) / .25), fi = 1 - clamp(t / .15); if (Math.max(fo, fi) > 0) { cctx.fillStyle = `rgba(0,0,0,${Math.max(fo, fi)})`; cctx.fillRect(0, 0, W, H); }
   return comp.toDataURL('image/jpeg', q).slice(23);
