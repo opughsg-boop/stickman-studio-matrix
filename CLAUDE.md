@@ -79,3 +79,5 @@ Keep creative work in the main conversation: scripts, plans and shot choices, vi
   - Best look: Quaternius animals and trees + Poly Haven ground cover, rocks and props + real soil. Example: `runs/realtest/plan.json`.
   - Huge scanned trees (64-914 MB) are excluded: they are too heavy for CPU rendering.
 
+## Cartoon short style (LOCKED by the user)
+For 2D cartoon shorts with the hero and coworker cast and real sound effects, follow `cartoon/STYLE_CARTOON.md`. Lessons from each video are in `cartoon/LESSONS.md`. Sounds and credits: `cartoon/sfx/`, `cartoon/CREDITS.md`.
