@@ -14,6 +14,9 @@ const SUNSET = { type: 'sunset', key: 2.2, keyColor: '#ffe2c4', keyPos: [2, 5, 4
   rim: .9, rimColor: '#ff9ad0', envIntensity: .6, shadowSize: .5, fogNear: 2.5, fogFar: 14 };
 const RED = { type: 'flat', color: '#8a0f1f', key: 2.4, keyPos: [2, 6, 4], fill: .65, skyFill: '#ffd0d8', groundFill: '#4a0610', rim: 1.1, rimColor: '#ff8fa8', envIntensity: .9, shadowSize: 3, fogNear: 2.6, fogFar: 8 };
 const CYAN = '#4fd6ff';
+// realism pass (lines 5-10): one warm sun key + soft purple sky fill, low pink rim, detailed wood, grain; organs/skin/fabric use realMat
+const REAL = { ...SUNSET, real: true, key: 2.5, keyColor: '#ffd2a1', keyPos: [3, 4, 5], fill: .55, skyFill: '#e6c2d6', rim: .3, rimColor: '#ffb38a', envIntensity: .45 };
+const RFX = { bloom: .12, grain: .06 };
 
 const shots = [
   // 1 hook: a tissue box on a warm wooden table at sunset, dust motes in the light; slow push toward the tissue
@@ -42,40 +45,40 @@ const shots = [
       { id: 'lungs', type: 'lungs', pos: [0, .3, 0], inhale: [at(3, 1) - at(3), at(3, 3) - at(3)], shutAt: at(3, 6) - at(3), bob: .003 }],
     camera: { pos: [.3, .42, 1.05], target: [0, .31, 0], to: { pos: [.12, .66, .42], target: [0, .48, 0] }, fov: 34, handheld: .25, dof: { aperture: .012, maxblur: .01 } }, fx: { bloom: .25 } },
   // 5 chest muscles squeeze the full lungs (rib cage clamps in on "squeeze", harder on "hard"); camera eases back down to the chest
-  { t: at(4), set: SUNSET, props: [
-      { id: 'lungs', type: 'lungs', pos: [0, .3, 0], inhale: [-2, -1], shutAt: -5, noAir: true, squeeze: [at(4, 4) - at(4), at(4, 5) - at(4)], bob: .002 },
-      { id: 'ribs', type: 'ribs', pos: [0, .3, 0], squeeze: [at(4, 4) - at(4), at(4, 5) - at(4)], bob: .002 }],
-    camera: { pos: [.1, .5, .62], target: [0, .36, 0], to: { pos: [.34, .36, .7], target: [0, .3, 0] }, fov: 34, handheld: .3, dof: { aperture: .012, maxblur: .01 } }, fx: { bloom: .3 } },
+  { t: at(4), set: REAL, props: [
+      { id: 'lungs', type: 'lungs', pos: [0, .3, 0], inhale: [-2, -1], shutAt: -5, noAir: true, real: true, squeeze: [at(4, 4) - at(4), at(4, 5) - at(4)], bob: .002 },
+      { id: 'ribs', type: 'ribs', pos: [0, .3, 0], real: true, squeeze: [at(4, 4) - at(4), at(4, 5) - at(4)], bob: .002 }],
+    camera: { pos: [.1, .5, .62], target: [0, .36, 0], to: { pos: [.34, .36, .7], target: [0, .3, 0] }, fov: 34, handheld: .3, dof: { aperture: .012, maxblur: .01 } }, fx: RFX },
   // 6 the wild part: a glossy toy person leans back (ah... ah...), then the air rockets out of the nose; 100 MPH badge on "100"
-  { t: at(5), set: SUNSET, props: [
+  { t: at(5), set: REAL, props: [
       { id: 'kid', type: 'person', pos: [0, 0, 0], rotY: Math.PI / 2, tilt: [.25, at(5, 6) - at(5)], halfLids: [.6, 1.6], sneezeAt: at(5, 7) - at(5) },
-      { id: 'air', type: 'burst', from: [.15, .615, 0], dir: [1, -.25, 0], len: 1.05, at: at(5, 7) - at(5) + .02, dur: at(5, 15) - at(5, 7) + .3, travel: .42, count: 200, streaks: 70, rings: 7, shadow: false }],
+      { id: 'air', type: 'burst', from: [.15, .615, 0], dir: [1, -.25, 0], len: .6, at: at(5, 7) - at(5) + .02, dur: at(5, 15) - at(5, 7) + .3, travel: .6, count: 300, streaks: 220, dust: 40, shadow: false }],
     camera: { pos: [1.2, .76, 1.0], target: [.12, .52, 0], to: { pos: [1.32, .72, 1.12], target: [.16, .5, 0] }, fov: 36, handheld: .3, dof: { aperture: .01, maxblur: .008 } },
-    fx: { bloom: .35 }, ui: [{ type: 'badge', text: '100 MPH', at: [.7, .34], start: at(5, 12) - at(5) }] },
+    fx: RFX, ui: [{ type: 'badge', text: '100 MPH', at: [.7, .34], start: at(5, 12) - at(5) }] },
   // 7 droplets arc out and land on the floor up to ~6 ft (1.8 m) away; camera rises and pulls back to show the distance
-  { t: at(6), set: { ...SUNSET, shadowSize: 2.4, fogNear: 4, fogFar: 16 }, props: [
+  { t: at(6), set: { ...REAL, shadowSize: 2.4, fogNear: 4, fogFar: 16 }, props: [
       { id: 'kid', type: 'person', pos: [0, 0, 0], rotY: Math.PI / 2, sneezeAt: .12 },
       { id: 'drops', type: 'spray', from: [.15, .615, 0], dir: [1, 0, 0], near: .35, far: 1.85, count: 80, at: .14, emit: .5, spread: .6, rMin: .004, rMax: .011 }],
     camera: { pos: [-.42, 1.0, .72], target: [.55, .38, 0], to: { pos: [-.62, 1.35, .98], target: [1.0, .1, 0] }, fov: 36, handheld: .25, dof: { aperture: .006, maxblur: .006 } },
-    fx: { bloom: .3 } },
+    fx: RFX },
   // 8 the eyes slam shut on "slam" and the head jolts forward - the reflex cannot be stopped; slow push into the face
-  { t: at(7), set: SUNSET, props: [
+  { t: at(7), set: REAL, props: [
       { id: 'kid', type: 'person', pos: [0, 0, 0], closeAt: at(7, 2) - at(7), sneezeAt: at(7, 2) - at(7) + .14, snapAmp: .2, reopen: 99 }],
-    camera: { pos: [.1, .7, .6], target: [0, .67, .07], to: { pos: [.06, .69, .5], target: [0, .668, .08] }, fov: 34, handheld: .35, dof: { aperture: .008, maxblur: .008 } }, fx: { bloom: .25 } },
+    camera: { pos: [.1, .7, .6], target: [0, .67, .07], to: { pos: [.06, .69, .5], target: [0, .668, .08] }, fov: 34, handheld: .35, dof: { aperture: .008, maxblur: .008 } }, fx: RFX },
   // 9 tip: the right arm comes up and the sneeze goes into the elbow (check), an open hand pops up beside (cross)
-  { t: at(8), set: SUNSET, props: [
+  { t: at(8), set: REAL, props: [
       { id: 'kid', type: 'person', pos: [0, 0, 0], rotY: .45, raise: [.4, at(8, 4) - at(8) - .1], sneezeAt: at(8, 4) - at(8) + .25, snapAmp: .14 },
       { id: 'hand', type: 'hand', pos: [-.1, .74, .2], rotY: .5, popAt: at(8, 5) - at(8) }],
     camera: { pos: [.8, .8, 1.15], target: [0, .6, .05], orbit: -.15, to: { pos: [.66, .74, 1.0] }, fov: 44, handheld: .25, dof: { aperture: .008, maxblur: .008 } },
-    fx: { bloom: .25 }, ui: [{ type: 'label', text: '✓', world: [.27, .72, .2], size: .14, color: '#2fd25a', start: at(8, 4) - at(8) },
+    fx: RFX, ui: [{ type: 'label', text: '✓', world: [.27, .72, .2], size: .14, color: '#2fd25a', start: at(8, 4) - at(8) },
       { type: 'label', text: '✗', world: [-.1, .87, .2], size: .14, color: '#ff3347', start: at(8, 7) - at(8) }] },
   // 10 closing card: the glossy brain breathes softly, a heart (like) and a plus (follow) pop in, the brain glows on "thank you"
-  { t: at(9), set: SUNSET, props: [
-      { id: 'brain', type: 'brain', pos: [0, .075, 0], pulse: .012, flashAt: at(9, 11) - at(9), bob: .004 },
+  { t: at(9), set: REAL, props: [
+      { id: 'brain', type: 'brain', pos: [0, .075, 0], real: true, pulse: .012, flashAt: at(9, 11) - at(9), bob: .004 },
       { id: 'heart', type: 'heart', pos: [-.055, .25, .02], size: .08, popAt: at(9, 5) - at(9), bob: .006 },
       { id: 'plus', type: 'plus', pos: [.06, .25, .02], size: .06, popAt: at(9, 7) - at(9), bob: .006, bobPh: 1.5 },
       { id: 'motes', type: 'particles', count: 50, area: [.5, .3, .4], pos: [-.25, .05, -.2], size: .0011, color: '#fff1c9', glow: 1.2, drift: .5, shadow: false }],
-    camera: { pos: [.12, .3, .92], target: [0, .17, 0], orbit: .15, to: { pos: [.08, .27, .8] }, fov: 34, handheld: .2, dof: { aperture: .012, maxblur: .01 } }, fx: { bloom: .3 } },
+    camera: { pos: [.12, .3, .92], target: [0, .17, 0], orbit: .15, to: { pos: [.08, .27, .8] }, fov: 34, handheld: .2, dof: { aperture: .012, maxblur: .01 } }, fx: RFX },
 ].filter(s => s.t < D);
 
 const HL = { inside: CYAN, nose: CYAN, brain: CYAN, throat: CYAN, pollen: '#ffd84d', chest: CYAN, air: CYAN, droplets: CYAN, eyes: CYAN, 'elbow,': CYAN };

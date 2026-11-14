@@ -282,6 +282,11 @@ window.renderAt = (t, q = .9) => {
   cctx.filter = 'none';
   if (sh.s.flash && lt < .15) { cctx.fillStyle = `rgba(255,255,255,${.7 * (1 - lt / .15)})`; cctx.fillRect(0, 0, W, H); }
   const vg = cctx.createRadialGradient(W / 2, H / 2, H * .35, W / 2, H / 2, H * .8); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, `rgba(0,0,0,${sh.s.fx?.vignette ?? .28})`); cctx.fillStyle = vg; cctx.fillRect(0, 0, W, H);
+  if (sh.s.fx?.grain) { // subtle deterministic film grain (per-frame offset of a fixed noise tile)
+    if (!window.__grain) { const c = document.createElement('canvas'); c.width = c.height = 256; const g = c.getContext('2d'), d = g.createImageData(256, 256); let a = 12345;
+      for (let i = 0; i < d.data.length; i += 4) { a = (a * 1103515245 + 12345) & 0x7fffffff; const v = 128 + ((a >> 8) % 96) - 48; d.data[i] = d.data[i + 1] = d.data[i + 2] = v; d.data[i + 3] = 255; } g.putImageData(d, 0, 0); window.__grain = c; }
+    const fr = Math.floor(t * 30), ox = (fr * 97) % 256, oy = (fr * 61) % 256; cctx.save(); cctx.globalAlpha = sh.s.fx.grain; cctx.globalCompositeOperation = 'overlay';
+    for (let y = -oy; y < H; y += 256) for (let x = -ox; x < W; x += 256) cctx.drawImage(window.__grain, x, y); cctx.restore(); }
   drawUI(sh, lt); drawCaption(t);
   const fo = clamp((t - (plan.duration - .25)) / .25), fi = 1 - clamp(t / .15); if (Math.max(fo, fi) > 0) { cctx.fillStyle = `rgba(0,0,0,${Math.max(fo, fi)})`; cctx.fillRect(0, 0, W, H); }
   return comp.toDataURL('image/jpeg', q).slice(23);

@@ -17,6 +17,39 @@ export function gloss(color, o = {}) {
     side: o.side ?? THREE.FrontSide, transparent: o.opacity != null, opacity: o.opacity ?? 1 });
 }
 
+// ---------- realism layer (procedural detail maps, cached) ----------
+const _tex = {};
+function canvasTex(key, size, draw, srgb) { if (_tex[key]) return _tex[key];
+  const c = document.createElement('canvas'); c.width = c.height = size; draw(c.getContext('2d'), size, rnd(key.length * 977 + key.charCodeAt(0)));
+  const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; if (srgb) t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return _tex[key] = t; }
+const grey = (v, a) => `rgba(${v},${v},${v},${a})`;
+const poreBump = () => canvasTex('pores', 512, (g, S, r) => { g.fillStyle = '#808080'; g.fillRect(0, 0, S, S);
+  for (let i = 0; i < 9000; i++) { g.fillStyle = grey(40, .2 + r() * .35); g.beginPath(); g.arc(r() * S, r() * S, .6 + r() * 1.3, 0, 7); g.fill(); }
+  for (let i = 0; i < 5000; i++) { g.fillStyle = grey(210, r() * .18); g.fillRect(r() * S, r() * S, 2, 2); } });
+const fabricBump = () => canvasTex('fabric', 512, (g, S, r) => { g.fillStyle = '#808080'; g.fillRect(0, 0, S, S);
+  for (let y = 0; y < S; y += 4) { g.fillStyle = grey(y % 8 ? 70 : 185, .35); g.fillRect(0, y, S, 2); }
+  for (let x = 0; x < S; x += 4) { g.fillStyle = grey(x % 8 ? 185 : 70, .25); g.fillRect(x, 0, 2, S); }
+  for (let i = 0; i < 16; i++) { const x = r() * S, w = 18 + r() * 60, gr = g.createLinearGradient(x - w, 0, x + w, 0); // soft folds
+    gr.addColorStop(0, grey(128, 0)); gr.addColorStop(.5, grey(r() < .5 ? 25 : 230, .4)); gr.addColorStop(1, grey(128, 0));
+    g.save(); g.translate(S / 2, S / 2); g.rotate(-.35 + r() * .7); g.translate(-S / 2, -S / 2); g.fillStyle = gr; g.fillRect(x - w, -S, 2 * w, 3 * S); g.restore(); } });
+const veinMap = (base, vein) => canvasTex('vein' + base + vein, 1024, (g, S, r) => { g.fillStyle = base; g.fillRect(0, 0, S, S);
+  for (let i = 0; i < 700; i++) { g.fillStyle = r() < .5 ? `rgba(110,30,45,${r() * .09})` : `rgba(255,215,205,${r() * .08})`; g.beginPath(); g.arc(r() * S, r() * S, 4 + r() * 30, 0, 7); g.fill(); }
+  const br = (x, y, a, w, d) => { if (d > 6 || w < .35) return; const L = 30 + r() * 60; g.strokeStyle = vein; g.globalAlpha = .2 + .35 * w / 3; g.lineWidth = w; g.beginPath(); g.moveTo(x, y);
+    for (let s = 0; s < 6; s++) { a += (r() - .5) * .6; x += Math.cos(a) * L / 6; y += Math.sin(a) * L / 6; g.lineTo(x, y); } g.stroke(); br(x, y, a - .4 - r() * .4, w * .7, d + 1); br(x, y, a + .4 + r() * .4, w * .7, d + 1); };
+  for (let i = 0; i < 28; i++) br(r() * S, r() * S, r() * 6.28, 2.4 + r() * 1.6, 0); g.globalAlpha = 1; }, true);
+const rep = (t, n) => { const c = t.clone(); c.repeat.set(n, n); c.needsUpdate = true; return c; };
+// physical-but-still-toy materials: skin (pores + warm subsurface-like sheen), fabric (weave + folds), wet organ (veins + wet coat), bone
+export function realMat(kind, color, o = {}) {
+  if (kind === 'skin') return new THREE.MeshPhysicalMaterial({ color, roughness: .52, clearcoat: .1, clearcoatRoughness: .45, sheen: .7, sheenRoughness: .45, sheenColor: new THREE.Color('#ff8f70'),
+    emissive: new THREE.Color('#5a1408'), emissiveIntensity: .18, bumpMap: rep(poreBump(), o.rep || 5), bumpScale: o.bump ?? .6 });
+  if (kind === 'fabric') return new THREE.MeshPhysicalMaterial({ color, roughness: .86, sheen: .8, sheenRoughness: .6, sheenColor: new THREE.Color(o.sheen || '#a9c8ff'), bumpMap: rep(fabricBump(), o.rep || 3), bumpScale: o.bump ?? 1.2 });
+  if (kind === 'organ') { const m = veinMap(color, o.vein || '#6e1630');
+    return new THREE.MeshPhysicalMaterial({ map: rep(m, o.rep || 1.5), bumpMap: rep(m, o.rep || 1.5), bumpScale: o.bump ?? .5, roughness: .38, clearcoat: .75, clearcoatRoughness: .12, sheen: .3, sheenColor: new THREE.Color('#ffb0b8'),
+      emissive: new THREE.Color(o.emissive || '#000000'), emissiveIntensity: 0, transparent: o.opacity != null, opacity: o.opacity ?? 1 }); }
+  if (kind === 'bone') return new THREE.MeshPhysicalMaterial({ color, roughness: .5, clearcoat: .35, clearcoatRoughness: .3, bumpMap: rep(poreBump(), 3), bumpScale: .25 });
+  return gloss(color, o);
+}
+
 // ---------- sets ----------
 function skyDome(stops) { // stops: [[elevation (-1..1 of view dir y), colour], ...] ascending
   const n = stops.length, m = new THREE.ShaderMaterial({ side: THREE.BackSide, depthWrite: false,
@@ -26,7 +59,7 @@ function skyDome(stops) { // stops: [[elevation (-1..1 of view dir y), colour], 
       for (int i = 1; i < ${n}; i++) c = mix(c, cs[i], smoothstep(ks[i-1], ks[i], p.y)); gl_FragColor = vec4(c, 1.); }` });
   return new THREE.Mesh(new THREE.SphereGeometry(300, 48, 24), m);
 }
-function woodTexture(seed = 7) { // warm varnished planks, 8 rows per tile, staggered joints, grain lines
+function woodTexture(seed = 7, real = false) { // warm varnished planks, 8 rows per tile, staggered joints, grain lines (real: + fine grain and knots)
   const c = document.createElement('canvas'); c.width = c.height = 1024; const g = c.getContext('2d'), r = rnd(seed), rows = 8, rh = 1024 / rows;
   const tones = ['#c27a3e', '#b36c33', '#cf8a49', '#a9622d', '#bd7539', '#c98245'];
   for (let i = 0; i < rows; i++) {
@@ -37,6 +70,11 @@ function woodTexture(seed = 7) { // warm varnished planks, 8 rows per tile, stag
       g.fillStyle = 'rgba(60,30,12,.55)'; g.fillRect(x, i * rh, 3, rh); x += L; }
     g.fillStyle = 'rgba(55,28,10,.6)'; g.fillRect(0, i * rh, 1024, 3);
   }
+  if (real) { const q = rnd(seed + 101); // fine wavy grain lines + a few knots with grain flowing around them
+    for (let i = 0; i < 1400; i++) { const y0 = q() * 1024, x0 = q() * 1024, L = 80 + q() * 300; g.strokeStyle = `rgba(${q() < .6 ? '80,38,12' : '240,180,120'},${.05 + q() * .09})`; g.lineWidth = .5 + q() * 1.2;
+      g.beginPath(); g.moveTo(x0, y0); for (let s = 1; s <= 10; s++) g.lineTo(x0 + L * s / 10, y0 + Math.sin(s * .9 + i) * 1.6); g.stroke(); }
+    for (let i = 0; i < 9; i++) { const x = q() * 1024, y = q() * 1024; for (let k = 6; k > 0; k--) { g.strokeStyle = `rgba(70,32,10,${.12 + .05 * k})`; g.lineWidth = 1.2; g.beginPath(); g.ellipse(x, y, 4 + k * 5, 2 + k * 2, 0, 0, 7); g.stroke(); } }
+  }
   const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t;
 }
 export const SUNSET = [[-1, '#f2a46a'], [0, '#ffb070'], [.025, '#f06a45'], [.08, '#c23a5e'], [.18, '#6a2a78'], [.38, '#2a2560']];
@@ -44,8 +82,9 @@ export const SUNSET = [[-1, '#f2a46a'], [0, '#ffb070'], [.025, '#f06a45'], [.08,
 export function refSet(scene, s) {
   if (s.type === 'sunset') {
     scene.add(skyDome(s.sky || SUNSET));
-    const tex = woodTexture(s.seed || 7), rep = s.floorSize || 60; tex.repeat.set(rep / (s.tile || 1), rep / (s.tile || 1));
-    const floor = new THREE.Mesh(new THREE.PlaneGeometry(rep, rep), new THREE.MeshPhysicalMaterial({ map: tex, roughness: .42, clearcoat: .55, clearcoatRoughness: .25 }));
+    const tex = woodTexture(s.seed || 7, s.real), rep = s.floorSize || 60; tex.repeat.set(rep / (s.tile || 1), rep / (s.tile || 1));
+    const fm = s.real ? { map: tex, bumpMap: tex, bumpScale: 1.5, roughness: .38, clearcoat: .85, clearcoatRoughness: .1 } : { map: tex, roughness: .42, clearcoat: .55, clearcoatRoughness: .25 };
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(rep, rep), new THREE.MeshPhysicalMaterial(fm));
     floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
     scene.fog = new THREE.Fog(s.fogColor || '#f59a62', s.fogNear ?? 2.5, s.fogFar ?? 14);
     return true;
@@ -95,7 +134,7 @@ export const REF_PROPS = {
     g.userData.tick = lt => { base.forEach(([x, y, z, j], i) => { E.set(.45 * Math.sin(lt * 7 - x * 3 - z * 1.5) , j * 8, .1 * Math.cos(lt * 5 + z * 2)); Q.setFromEuler(E); P.set(x, y, z); M.compose(P, Q, Sc); im.setMatrixAt(i, M); }); im.instanceMatrix.needsUpdate = true; };
     g.userData.tick(0); g.add(im); return g; },
   // brain (real ~16.7 x 14 x 9.3 cm): hemispheres with a maze of folds, cerebellum, brain stem; flashes at p.flashAt
-  brain: p => { const g = new THREE.Group(), m = gloss(p.color || '#ea6a82', { rough: .3, emissive: '#ff3b5c' });
+  brain: p => { const g = new THREE.Group(), m = p.real ? realMat('organ', '#d68c90', { vein: '#8a2c42', emissive: '#ff3b5c', rep: 2 }) : gloss(p.color || '#ea6a82', { rough: .3, emissive: '#ff3b5c' });
     const L = .083, Wd = .07, Ht = .052, F = 26;
     const cortex = displace(new THREE.SphereGeometry(1, 160, 120), v => { const n = v.clone();
       const f = Math.sin(n.x * F * .55 + 1.6 * Math.sin(n.y * F * .5)) + Math.sin(n.y * F * .55 + 1.6 * Math.sin(n.z * F * .5)) + Math.sin(n.z * F * .55 + 1.6 * Math.sin(n.x * F * .5));
@@ -115,13 +154,13 @@ export const REF_PROPS = {
       const rk = clamp(u / .9); ring.scale.setScalar(.5 + rk * 2.2); ring.material.opacity = u >= 0 && u < .9 ? .9 * (1 - rk) : 0; };
     return g; },
   // lungs (real ~25 cm tall) + trachea with cartilage rings + larynx valve; inhale at p.inhale=[t0,t1], snap shut at p.shutAt
-  lungs: p => { const g = new THREE.Group(), m = gloss(p.color || '#e3566f', { rough: .3 }), lobes = [];
+  lungs: p => { const g = new THREE.Group(), m = p.real ? realMat('organ', '#cf6a72', { vein: '#7a1a35' }) : gloss(p.color || '#e3566f', { rough: .3 }), lobes = [];
     for (const side of [-1, 1]) { const geo = displace(new THREE.SphereGeometry(1, 96, 72), v => { const h = (v.y + 1) / 2; // 0 base .. 1 apex
         const w = .62 + .5 * (1 - h); v.x *= w; v.z *= w; // broad base on the diaphragm, narrow apex
         if (v.x * side < 0) v.x *= .42; if (v.y < -.75) v.y = -.75 + (v.y + .75) * .25;
         v.x += .06 * Math.sin(v.y * 9 + side) * Math.max(0, -v.y); v.x *= side > 0 ? .072 : .066; v.y *= .125; v.z *= .085; });
       const lobe = new THREE.Mesh(geo, m); lobe.position.set(side * .062, 0, 0); g.add(lobe); lobes.push(lobe); }
-    const ringM = gloss(p.ringColor || '#f7c6cf', { rough: .4 }), tube = gloss(p.tubeColor || '#e8a0ae', { rough: .4 });
+    const ringM = p.real ? realMat('bone', '#ecd2cf') : gloss(p.ringColor || '#f7c6cf', { rough: .4 }), tube = p.real ? realMat('organ', '#d99aa4', { rep: 3 }) : gloss(p.tubeColor || '#e8a0ae', { rough: .4 });
     const tr = new THREE.Mesh(new THREE.CylinderGeometry(.01, .01, .12, 28), tube); tr.position.y = .145; g.add(tr);
     for (let i = 0; i < 8; i++) { const rr = new THREE.Mesh(new THREE.TorusGeometry(.0105, .0022, 10, 32), ringM); rr.rotation.x = Math.PI / 2; rr.position.y = .1 + i * .012; g.add(rr); }
     for (const side of [-1, 1]) { const b = new THREE.Mesh(new THREE.CylinderGeometry(.0075, .0085, .07, 20), tube); b.position.set(side * .03, .075, 0); b.rotation.z = side * .9; g.add(b); }
@@ -147,7 +186,7 @@ export const REF_PROPS = {
     return g; },
 
   // rib cage (glossy ivory) around the lungs + glowing intercostal muscle bands; squeezes in at p.squeeze = [t0, t1...]
-  ribs: p => { const g = new THREE.Group(), bone = gloss(p.color || '#fff6ea', { rough: .3, opacity: .9 }), mus = gloss(p.muscle || '#d8344f', { rough: .3, emissive: '#ff2a4a' }), ribs = [];
+  ribs: p => { const g = new THREE.Group(), bone = p.real ? realMat('bone', '#e6d8bd') : gloss(p.color || '#fff6ea', { rough: .3, opacity: .9 }), mus = p.real ? realMat('organ', '#a8323f', { vein: '#560c1c', emissive: '#a0182c', rep: 4 }) : gloss(p.muscle || '#d8344f', { rough: .3, emissive: '#ff2a4a' }), ribs = [];
     for (let i = 0; i < 6; i++) { const y = -.07 + i * .034, w = .15 + .025 * Math.sin(i / 5 * Math.PI) - i * .004;
       const ring = (tube, gap, mt, yy, k) => { const r = new THREE.Mesh(new THREE.TorusGeometry(1, tube / w, 10, 64, Math.PI * 2 - gap), mt); r.rotation.set(Math.PI / 2, 0, Math.PI / 2 + gap / 2);
         const e = new THREE.Group(); e.scale.set(w * k, w * k, w * k * .72); e.add(r); const h = new THREE.Group(); h.position.y = yy; h.rotation.x = -.12; h.add(e); g.add(h); ribs.push(h); };
@@ -161,7 +200,7 @@ export const REF_PROPS = {
 
   // glossy toy person (waist up, real size: torso ~48 cm, head ~23 cm) facing +z.
   // p.tilt = [t0, t1] lean back (ah... ah...), p.sneezeAt snap forward, p.closeAt eyelids slam, p.halfLids = [t0, t1], p.raise = [t0, t1] right arm up to the elbow
-  person: p => { const g = new THREE.Group(), skin = gloss(p.skin || '#f3b48e', { rough: .34 }), shirt = gloss(p.shirt || '#2f7de1', { rough: .3 }), hair = gloss(p.hair || '#4a2816', { rough: .28 });
+  person: p => { const g = new THREE.Group(), skin = realMat('skin', p.skin || '#e0a081'), shirt = realMat('fabric', p.shirt || '#2c64b8'), hair = gloss(p.hair || '#3a2014', { rough: .45, coat: .3, coatRough: .3 });
     const torso = new THREE.Mesh(new THREE.SphereGeometry(1, 64, 48), shirt); torso.scale.set(.19, .25, .12); torso.position.y = .24; g.add(torso);
     const piv = new THREE.Group(); piv.position.y = .5; g.add(piv);
     const neck = new THREE.Mesh(new THREE.CylinderGeometry(.04, .045, .1, 24), skin); neck.position.y = .03; piv.add(neck);
@@ -198,44 +237,53 @@ export const REF_PROPS = {
     };
     return g; },
 
-  // air burst: translucent puffs + speed streaks + shock rings rocketing along p.dir for p.len metres
+  // sneeze jet: front-loaded burst of faint mist, motion-blurred water droplets of varied size (stretched along their velocity, falling under gravity)
+  // and a few dust specks, along p.dir for p.len metres.
   burst: p => { const g = new THREE.Group(), R = rnd(p.seed || 21), O = new THREE.Vector3(...(p.from || [0, 0, 0])), Dv = new THREE.Vector3(...(p.dir || [1, 0, 0])).normalize();
     const side = new THREE.Vector3().crossVectors(Dv, new THREE.Vector3(0, 1, 0)).normalize(), upv = new THREE.Vector3().crossVectors(side, Dv).normalize();
-    const n = p.count || 140, ns = p.streaks || 50, t0 = p.at || 0, dur = p.dur || 1.5, tr = p.travel || .45, L = p.len || 1;
-    const puffs = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 20, 14), gloss(p.color || '#fff6e6', { rough: .12, opacity: .82, emissive: '#ffe2b8', glow: .9 }), n);
-    const streaks = new THREE.InstancedMesh(new THREE.CylinderGeometry(1, 1, 1, 8), new THREE.MeshBasicMaterial({ color: '#fff3dc', transparent: true, opacity: .95 }), ns);
-    puffs.castShadow = streaks.castShadow = false; puffs.frustumCulled = streaks.frustumCulled = false; g.add(puffs, streaks);
-    const P = Array.from({ length: n }, (_, i) => ({ b: t0 + dur * (i / n) + R() * .03, a: R() * 6.28, sp: .05 + R() * .18, r: .012 + R() * .02, tr: tr * (.8 + R() * .4) }));
-    const S = Array.from({ length: ns }, (_, i) => ({ b: t0 + dur * (i / ns) + R() * .05, a: R() * 6.28, off: .02 + R() * .12, len: .08 + R() * .16 }));
-    const rings = Array.from({ length: p.rings ?? 5 }, () => { const m = new THREE.Mesh(new THREE.TorusGeometry(1, .06, 8, 64), new THREE.MeshBasicMaterial({ color: '#fff0d0', transparent: true, opacity: 0, depthWrite: false }));
-      m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), Dv); g.add(m); return m; });
-    const M = new THREE.Matrix4(), Q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), Dv), Pp = new THREE.Vector3(), Sc = new THREE.Vector3(), I = new THREE.Quaternion();
+    const n = p.count || 140, ns = p.streaks || 50, nd = p.dust ?? 30, t0 = p.at || 0, dur = p.dur || 1.5, tr = p.travel || .45, L = p.len || 1;
+    const mist = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 16, 12), new THREE.MeshPhysicalMaterial({ color: '#eef2f4', roughness: .85, transparent: true, opacity: .22, depthWrite: false }), n);
+    const drops = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 14, 10), new THREE.MeshPhysicalMaterial({ color: '#d8eef8', roughness: .04, clearcoat: 1, clearcoatRoughness: .02, transparent: true, opacity: .78, ior: 1.33 }), ns);
+    const dust = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 1), new THREE.MeshStandardMaterial({ color: '#7d6a58', roughness: .9 }), Math.max(1, nd));
+    [mist, drops, dust].forEach(m => { m.castShadow = false; m.frustumCulled = false; g.add(m); });
+    const front = i => Math.pow(i, 1.8); // most of the air leaves in the first moments
+    const P = Array.from({ length: n }, (_, i) => ({ b: t0 + dur * front(i / n) + R() * .03, a: R() * 6.28, sp: .03 + R() * .14, r: .01 + R() * .022, tr: tr * (.8 + R() * .4) }));
+    const S = Array.from({ length: ns }, (_, i) => ({ b: t0 + dur * front(i / ns) + R() * .04, a: R() * 6.28, off: .005 + R() * .07, r: .0006 + Math.pow(R(), 2.5) * .0035, tr: tr * (.7 + R() * .6), v: .8 + R() * .4 }));
+    const Dd = Array.from({ length: nd }, (_, i) => ({ b: t0 + dur * .5 * front(i / Math.max(1, nd)) + R() * .05, a: R() * 6.28, off: .01 + R() * .09, r: .0008 + R() * .0016, tr: tr * (1 + R() * .8), sp: R() * 9 }));
+    const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), Pp = new THREE.Vector3(), Sc = new THREE.Vector3(), I = new THREE.Quaternion(), Y = new THREE.Vector3(0, 1, 0), vel = new THREE.Vector3(), E = new THREE.Euler();
     const at = (u, a, off) => Pp.copy(O).addScaledVector(Dv, L * u).addScaledVector(side, Math.cos(a) * off).addScaledVector(upv, Math.sin(a) * off);
+    const hide = (im, i) => { M.makeScale(0, 0, 0); im.setMatrixAt(i, M); };
     g.userData.tick = lt => {
-      P.forEach((q, i) => { const u = (lt - q.b) / q.tr; if (u < 0 || u > 1) { M.makeScale(0, 0, 0); puffs.setMatrixAt(i, M); return; }
-        at(easeOut(u * .9 + .1 * u), q.a, q.sp * u); const s = q.r * (.5 + 2.2 * u) * (1 - u * u * u); M.compose(Pp, I, Sc.set(s, s, s)); puffs.setMatrixAt(i, M); });
-      S.forEach((q, i) => { const u = (lt - q.b) / (tr * .6); if (u < 0 || u > 1) { M.makeScale(0, 0, 0); streaks.setMatrixAt(i, M); return; }
-        at(u, q.a, q.off * (.3 + u)); M.compose(Pp, Q, Sc.set(.0035, q.len * (1 - u * .6), .0035)); streaks.setMatrixAt(i, M); });
-      puffs.instanceMatrix.needsUpdate = streaks.instanceMatrix.needsUpdate = true;
-      rings.forEach((m, j) => { const u = ((lt - t0 - j * dur / rings.length) / .5); m.visible = u > 0 && u < 1 && lt < t0 + dur + .5;
-        if (m.visible) { m.position.copy(at(u, 0, 0)); m.scale.setScalar(.03 + .1 * u); m.material.opacity = .95 * (1 - u); } }); };
+      P.forEach((q, i) => { const u = (lt - q.b) / q.tr; if (u < 0 || u > 1) return hide(mist, i);
+        at(easeOut(u), q.a, q.sp * u); const s = q.r * (.4 + 2.4 * u) * (1 - u * u * u); M.compose(Pp, I, Sc.set(s, s, s)); mist.setMatrixAt(i, M); });
+      S.forEach((q, i) => { const u = (lt - q.b) / q.tr; if (u < 0 || u > 1.05) return hide(drops, i);
+        const k = easeOut(Math.min(u, 1)) * q.v; at(k, q.a, q.off * (.2 + k)); const fall = .12 * u * u; Pp.y -= fall;
+        vel.copy(Dv).multiplyScalar(L * q.v * 3 * Math.pow(1 - Math.min(u, 1), 2) / q.tr).add(new THREE.Vector3(0, -.24 * u / q.tr, 0)); const sp = vel.length();
+        Q.setFromUnitVectors(Y, vel.normalize()); const blur = 1 + Math.min(10, sp * (1 / 30) / (2 * q.r)) * .6; // stretch by distance moved during a 1/30 s shutter
+        M.compose(Pp, Q, Sc.set(q.r, q.r * blur, q.r)); drops.setMatrixAt(i, M); });
+      Dd.forEach((q, i) => { const u = (lt - q.b) / q.tr; if (u < 0 || u > 1) return hide(dust, i);
+        at(easeOut(u) * .9, q.a, q.off * (.3 + u)); Q.setFromEuler(E.set(lt * q.sp, lt * q.sp * .7, 0)); M.compose(Pp, Q, Sc.set(q.r, q.r * .7, q.r)); dust.setMatrixAt(i, M); });
+      mist.instanceMatrix.needsUpdate = drops.instanceMatrix.needsUpdate = dust.instanceMatrix.needsUpdate = true; };
     return g; },
 
   // droplet spray: glossy water beads arc out from p.from along p.dir and land on the floor p.near..p.far metres away (splat flat)
   spray: p => { const g = new THREE.Group(), R = rnd(p.seed || 33), n = p.count || 60, O = new THREE.Vector3(...(p.from || [0, .6, 0])), yaw = Math.atan2(-(p.dir || [1, 0, 0])[2], (p.dir || [1, 0, 0])[0]);
-    const im = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 20, 14), gloss(p.color || '#a9e6ff', { rough: .05, opacity: .85, emissive: '#7fd8ff', glow: .15 }), n); im.castShadow = true; im.frustumCulled = false; g.add(im);
+    const im = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 20, 14), new THREE.MeshPhysicalMaterial({ color: p.color || '#d8eef8', roughness: .04, clearcoat: 1, clearcoatRoughness: .02, transparent: true, opacity: .8, ior: 1.33 }), n); im.castShadow = true; im.frustumCulled = false; g.add(im);
     const D = Array.from({ length: n }, (_, i) => { const d = (p.near || .4) + Math.pow(R(), .7) * ((p.far || 1.8) - (p.near || .4)), a = yaw + (R() - .5) * (p.spread || .7);
       return { b: (p.at || 0) + R() * (p.emit || .5), d, a, h: .05 + R() * .18, T: .7 + d * .35 + R() * .2, r: (p.rMin || .003) + R() * ((p.rMax || .008) - (p.rMin || .003)) }; });
-    const M = new THREE.Matrix4(), Pp = new THREE.Vector3(), Sc = new THREE.Vector3(), I = new THREE.Quaternion();
+    const M = new THREE.Matrix4(), Pp = new THREE.Vector3(), Sc = new THREE.Vector3(), Qd = new THREE.Quaternion(), Vd = new THREE.Vector3(), Yd = new THREE.Vector3(0, 1, 0);
     g.userData.tick = lt => { D.forEach((q, i) => { const u = (lt - q.b) / q.T; if (u < 0) { M.makeScale(0, 0, 0); im.setMatrixAt(i, M); return; }
         const k = Math.min(u, 1), x = q.d * easeOut(k * .6 + k * .4 * k) ; // fast out, slowing as it falls
         Pp.set(O.x + Math.cos(q.a) * x, Math.max(q.r * .25, O.y * (1 - k * k) + q.h * 4 * k * (1 - k)), O.z - Math.sin(q.a) * x);
-        if (u >= 1) { const sp = easeOut((u - 1) / .15 * q.T); Sc.set(q.r * (1 + 1.2 * sp), q.r * (1 - .7 * sp), q.r * (1 + 1.2 * sp)); } else Sc.set(q.r, q.r * (1 + .4 * (1 - k)), q.r);
-        M.compose(Pp, I, Sc); im.setMatrixAt(i, M); }); im.instanceMatrix.needsUpdate = true; };
+        if (u >= 1) { const sp = easeOut((u - 1) / .15 * q.T); Sc.set(q.r * (1 + 1.2 * sp), q.r * (1 - .7 * sp), q.r * (1 + 1.2 * sp)); Qd.identity(); } else { // motion blur: stretch along the velocity by the distance moved in a 1/30 s shutter
+          const k2 = Math.min(1, k + .01), x2 = q.d * easeOut(k2 * .6 + k2 * .4 * k2), y2 = O.y * (1 - k2 * k2) + q.h * 4 * k2 * (1 - k2);
+          Vd.set(Math.cos(q.a) * (x2 - x), y2 - Pp.y, -Math.sin(q.a) * (x2 - x)); const step = Vd.length() / (.01 * q.T) / 30; Qd.setFromUnitVectors(Yd, Vd.normalize());
+          Sc.set(q.r, q.r * (1 + Math.min(6, step / (2 * q.r)) * .6), q.r); }
+        M.compose(Pp, Qd, Sc); im.setMatrixAt(i, M); }); im.instanceMatrix.needsUpdate = true; };
     return g; },
 
   // open hand (real ~19 cm), glossy skin, pops in at p.popAt
-  hand: p => { const g = new THREE.Group(), inner = new THREE.Group(), m = gloss(p.skin || '#f3b48e', { rough: .34 }); g.add(inner);
+  hand: p => { const g = new THREE.Group(), inner = new THREE.Group(), m = realMat('skin', p.skin || '#e0a081'); g.add(inner);
     const palm = new THREE.Mesh(new RoundedBoxGeometry(.085, .095, .028, 4, .012), m); inner.add(palm);
     [[-.03, .085, .07], [-.01, .095, .08], [.011, .092, .076], [.031, .08, .062]].forEach(([x, y, L]) => { const f = new THREE.Mesh(new THREE.CapsuleGeometry(.0095, L - .019, 6, 12), m); f.position.set(x, y - .045 + L / 2, 0); inner.add(f); });
     const th = new THREE.Mesh(new THREE.CapsuleGeometry(.011, .04, 6, 12), m); th.position.set(-.055, -.005, .006); th.rotation.z = .75; inner.add(th);
