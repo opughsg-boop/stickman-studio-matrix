@@ -331,6 +331,10 @@ function anatTex(kind) {
       for (let k = 0; k < 6; k++) { const a = Math.PI / 3 * k; x.lineTo(cx + 15 * Math.cos(a), cy + 15 * Math.sin(a)); } x.closePath(); x.stroke(); } }
   else if (kind === 'leaves') { x.fillStyle = '#9d8560'; x.fillRect(0, 0, 256, 256); for (let i = 0; i < 40; i++) { x.strokeStyle = `rgba(${200 + Math.random() * 30},${180 + Math.random() * 30},${140},${.5 + Math.random() * .4})`; x.lineWidth = 2 + Math.random() * 4; const y = Math.random() * 256; x.beginPath(); x.moveTo(0, y); x.bezierCurveTo(80, y + (Math.random() - .5) * 40, 170, y + (Math.random() - .5) * 40, 256, y); x.stroke(); } }
   else if (kind === 'rugae') { x.fillStyle = '#c99e8e'; x.fillRect(0, 0, 256, 256); for (let i = 0; i < 26; i++) { x.strokeStyle = `rgba(120,70,60,${.25 + Math.random() * .3})`; x.lineWidth = 3 + Math.random() * 3; const y = i * 10 + Math.random() * 4; x.beginPath(); x.moveTo(0, y); x.bezierCurveTo(90, y + 8, 160, y - 8, 256, y + (Math.random() - .5) * 8); x.stroke(); } }
+  else if (kind === 'tissue') { x.fillStyle = '#e8b4a4'; x.fillRect(0, 0, 256, 256); // glossy organ wall: pink with soft blotches and fine veins
+    for (let i = 0; i < 160; i++) { x.fillStyle = `rgba(${200 + Math.random() * 40},${120 + Math.random() * 40},${110 + Math.random() * 30},.25)`; x.beginPath(); x.arc(Math.random() * 256, Math.random() * 256, 4 + Math.random() * 14, 0, 7); x.fill(); }
+    for (let i = 0; i < 14; i++) { x.strokeStyle = `rgba(170,60,60,${.25 + Math.random() * .25})`; x.lineWidth = .8 + Math.random() * 1.4; let px = Math.random() * 256, py = Math.random() * 256; x.beginPath(); x.moveTo(px, py);
+      for (let k = 0; k < 6; k++) { px += (Math.random() - .5) * 60; py += (Math.random() - .5) * 60; x.lineTo(px, py); } x.stroke(); } }
   else { x.fillStyle = '#6a5636'; x.fillRect(0, 0, 256, 256); for (let i = 0; i < 900; i++) { x.fillStyle = `rgba(${90 + Math.random() * 60},${70 + Math.random() * 50},${40 + Math.random() * 30},.6)`; x.fillRect(Math.random() * 256, Math.random() * 256, 2 + Math.random() * 3, 2 + Math.random() * 3); } }
   const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; return (ANAT[kind] = t);
 }
@@ -502,6 +506,7 @@ window.renderAt = (t, q = .9) => {
   drawCaption(t);
   return comp.toDataURL('image/jpeg', q).slice(23);
 };
+window.__scene = () => scene; // debug hook for review tools (bbox checks)
 window.__ready = true;
 
 // ================= v2: VFX, overlays, lift, bee-keeping asset pack =================
@@ -1168,7 +1173,15 @@ ASSETS.glb = (p = {}) => {
   o.scale.setScalar(s); o.position.y = -bb.min.y * s; o.position.x = -(bb.min.x + bb.max.x) / 2 * s; o.position.z = -(bb.min.z + bb.max.z) / 2 * s;
   const w = new THREE.Group(); w.add(o); shadowed(o); o.traverse(m => { if (m.isMesh) m.frustumCulled = false; });
   // x-ray / medical look: a see-through body. Materials are cloned so other copies of the same model stay opaque.
-  // cutaway (medical-diagram look): remove everything above y = cutY so the organs inside show, like an opened anatomy model
+  // anatomy window (medical-diagram look, like an opened cow model): the skin inside the world-space box
+  // cutBox = [x0, x1, y0, y1, z0, z1] is removed, so organs placed inside the body show through a window in the side.
+  // Materials are cloned so other copies of the same model stay whole; DoubleSide shows the inner skin at the cut edge.
+  if (p.cutBox) { const [x0, x1, y0, y1, z0, z1] = p.cutBox, V = (a, b, c) => new THREE.Vector3(a, b, c);
+    const planes = [new THREE.Plane(V(-1, 0, 0), x0), new THREE.Plane(V(1, 0, 0), -x1), new THREE.Plane(V(0, -1, 0), y0),
+      new THREE.Plane(V(0, 1, 0), -y1), new THREE.Plane(V(0, 0, -1), z0), new THREE.Plane(V(0, 0, 1), -z1)];
+    o.traverse(m => { if (!m.isMesh) return; const ms = [].concat(m.material).map(mt => { const c = mt.clone(); c.clippingPlanes = planes; c.clipIntersection = true; c.side = THREE.DoubleSide; c.needsUpdate = true; return c; });
+      m.material = ms.length === 1 ? ms[0] : ms; m.castShadow = false; }); }
+  // cutaway: remove everything above y = cutY
   if (p.cutY != null) { const pl = new THREE.Plane(new THREE.Vector3(0, -1, 0), p.cutY);
     o.traverse(m => { if (!m.isMesh) return; for (const mt of [].concat(m.material)) { mt.clippingPlanes = [pl]; mt.side = THREE.DoubleSide; mt.needsUpdate = true; } }); }
   const xr0 = p.xrayFrom ?? p.opacity; const xrMats = [];
