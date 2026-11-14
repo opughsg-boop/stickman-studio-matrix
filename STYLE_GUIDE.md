@@ -45,6 +45,8 @@ Target: the user's three reference reels (Spanish: rabbit hutch build-up, sugar-
   - `critters`: rats and snakes (`flee:true` makes them run).
   - `truck`: real size by default, `scale` 1.7. Options: `path`, `travel`, `color`.
 - **Critic:** the self-review knows the sky mode, so it does not ask for the blue room.
+- **Stickers instead of arrows:** 3D emoji stickers (`type:'sticker'`, `assets/stickers`, 65 names: pointing hands, arrows, circle ring, ✓ ✗, faces, microbe, organs, farm animals). They face the camera and pop in.
+- **Anatomy window:** `cutBox`/`cutOpen` opens a window in the flank, organs inside in real places with real textures (rumen with grass, honeycomb reticulum, leafy omasum, folded abomasum, intestines). Reference: `plans/rumen_window.mjs`.
 - **Learn from mistakes:** read `memory/visual_lessons.md` before every plan, and add each new mistake after every preview. Improve realism one step at a time and re-check.
 
 **Rules for every new plan:**

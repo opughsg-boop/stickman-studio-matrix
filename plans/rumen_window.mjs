@@ -34,7 +34,9 @@ const organs = [
 // microbes on the open face of the rumen
 const microbes = obj('microbes', Array.from({ length: 34 }, (_, i) => { const a = i * 2.4, r = Math.sqrt((i + .5) / 34);
   return part('sphere', [.035, .035, .035], [X - .07, RUM[1] + Math.sin(a) * r * .19, RUM[2] + Math.cos(a) * r * .3], ['#7be36b', '#b07bff', '#5fd0ff'][i % 3], { rough: .3 }); }));
-const AX = X - .3; // arrows float just in front of the organs
+const AX = X - .3; // stickers float just in front of the organs
+// 3D emoji stickers (assets/stickers): pointing hands, circles, faces instead of plain arrows
+const stk = (id, name, pos, size = .32, o = {}) => ({ id, type: 'sticker', pos, params: { name, size, ...o }, anim: 'none', delay: o.delay || 0, dust: false });
 const winCam = (o) => ({ preset: 'close', target: [CX, .85, .1], dist: 4.0, elev: .15, az: AZW, ...o });
 const grass = [[-2.8, 1.5], [-.4, 1.8], [-3, -1.2], [.2, -1.6], [3.2, -1.3], [-3.6, .2], [3.5, 1.7], [1, 2.4], [-1.8, -2.3], [2.4, -2.4]]
   .map(([x, z], i) => glb('g' + i, ['ph/grass_medium_01', 'ph/grass_medium_02'][i % 2], [x, 0, z], .45));
@@ -54,25 +56,25 @@ const beats = [
   { t: at(2), kind: 'problem', add: [{ id: 'dry', type: 'hay', pos: [.2, .04, 1.9], params: { w: 1.3, d: .9, count: 130, hgt: .16, color: '#b59a52' }, anim: 'grow', dust: false }],
     modes: { cow: { clip: 'Idle_Headlow' } }, camera: { preset: 'close', target: [-.3, .4, 1.9], dist: 5, elev: .35, az: .25, zoom: 'in' } },
   // fix: the camera swings to the cow's side, the window opens and the food goes to the rumen
-  { t: T3, kind: 'solution', add: [...organs, arrow('in', [AX, 1.0, 1.0], [AX, .95, -.05], '#7be36b', 1.4)],
+  { t: T3, kind: 'solution', add: [...organs, stk('in', 'point_down', [AX, 1.38, -.2], .34, { delay: 1.4 })],
     modes: { cow: { clip: 'Eating' } }, camera: winCam({ dist: 4.3, zoom: 'out' }) },
   // millions of microbes break the grass down and ferment it (closer on the open rumen)
-  { t: at(4), kind: 'info', remove: ['in'], add: [microbes], modes: { cow: { clip: 'Idle' } }, camera: winCam({ target: [X, .9, -.2], dist: 2.7, elev: .1, zoom: 'in' }) },
+  { t: at(4), kind: 'info', remove: ['in'], add: [microbes, stk('mic', 'microbe', [AX - .1, 1.12, -.42], .22, { delay: .3 }), stk('mag', 'magnifier', [AX - .1, .7, .05], .28, { delay: .6 })], modes: { cow: { clip: 'Idle' } }, camera: winCam({ target: [X, .9, -.2], dist: 2.7, elev: .1, zoom: 'in' }) },
   // it brings up a small bite (the cud) and chews it again, calmly
-  { t: at(5), kind: 'solution', add: [arrow('up1', [AX, 1.02, -.05], [AX, .92, .3], '#ffb547', .2), arrow('up2', [AX, .95, .38], [AX, 1.15, 1.15], '#ffb547', .8)],
+  { t: at(5), kind: 'solution', remove: ['mic', 'mag'], add: [stk('up1', 'arrows_cycle', [AX, .95, .12], .34, { delay: .2 }), stk('up2', 'face_yum', [AX, 1.55, 1.25], .3, { delay: .8 })],
     modes: { cow: { clip: 'Idle_2' } }, camera: winCam({ target: [CX, .95, .45], dist: 4.2, zoom: 'out' }) },
   // that can take about eight hours a day
-  { t: at(6), kind: 'info', remove: ['up1', 'up2'], add: [{ id: 'clock', type: 'clock24', pos: [-2.9, 0, 1.6], params: { r: .42 }, anim: 'grow', delay: .2 }],
+  { t: at(6), kind: 'info', remove: ['up1', 'up2'], add: [stk('zz', 'face_sleep', [-2.9, 1.25, 1.6], .26, { delay: .6 }), { id: 'clock', type: 'clock24', pos: [-2.9, 0, 1.6], params: { r: .42 }, anim: 'grow', delay: .2 }],
     modes: { cow: { clip: 'Idle' }, clock: { speed: 6 } }, camera: winCam({ target: [-2.1, .85, .7], dist: 5.2, az: -1.0, zoom: 'in' }) },
   // then the food passes the reticulum, omasum and finally the abomasum
-  { t: at(7), kind: 'info', remove: ['clock', 'microbes'], add: [arrow('a1', [AX, .8, .3], [AX, .98, .4], '#5fd0ff', .1),
-      arrow('a2', [AX, .97, .3], [AX, .76, .2], '#5fd0ff', .7), arrow('a3', [AX, .72, -.05], [AX, .98, -.48], '#5fd0ff', 1.3)],
+  { t: at(7), kind: 'info', remove: ['clock', 'zz', 'microbes'], add: [stk('c1', 'circle_ring', [AX, .8, .34], .36, { delay: .1, bob: 0 }),
+      stk('c2', 'circle_ring', [AX, .99, .4], .34, { delay: .8, bob: 0 }), stk('c3', 'circle_ring', [AX, .74, .1], .42, { delay: 1.5, bob: 0 })],
     camera: winCam({ target: [CX, .86, .05], dist: 3.4, elev: .12, zoom: 'out' }) },
   // careful: if the cow stops chewing its cud, it is one of the first signs it is sick
-  { t: at(8), kind: 'problem', remove: ['a1', 'a2', 'a3'], modes: { cow: { clip: 'Idle_Headlow' } },
+  { t: at(8), kind: 'problem', remove: ['c1', 'c2', 'c3'], add: [stk('sick', 'face_sick', [-1.6, 1.25, 1.6], .34, { delay: .3 }), stk('warn', 'warning', [-1.6, 1.75, .3], .3, { delay: .7, pulse: true })], modes: { cow: { clip: 'Idle_Headlow' } },
     camera: { preset: 'close', target: [-1.5, .8, .4], dist: 5.4, elev: .25, az: -.7, zoom: 'in' } },
   // CTA: wide orbit pull-out
-  { t: at(9), kind: 'info', modes: { cow: { clip: 'Eating' } }, camera: { preset: 'orbit', target: [0, 1, 0], dist: 13, elev: .35, az: -.3, zoom: 'out' } },
+  { t: at(9), kind: 'info', remove: ['sick', 'warn'], add: [stk('like', 'thumbs_up', [-1.5, 2.1, .2], .5, { delay: .3 })], modes: { cow: { clip: 'Eating' } }, camera: { preset: 'orbit', target: [0, 1, 0], dist: 13, elev: .35, az: -.3, zoom: 'out' } },
 ];
 const plan = {
   version: 2, planner: 'directed', duration: D, language: 'ar', prompt: 'ليه البقرة بتجتر (شباك تشريح)',

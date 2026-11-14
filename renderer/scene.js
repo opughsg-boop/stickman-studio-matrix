@@ -491,6 +491,10 @@ window.setup = async (p, opts = {}) => {
   makeTextures();
   if (p.env?.soil) { const L = new THREE.TextureLoader(), rs = {}; for (const k of ['diff', 'nor', 'rough']) { try { const t = await L.loadAsync(`/assets/ph_tex/${p.env.soil}/${k}.jpg`);
       t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(p.env.soilRepeat || 3, p.env.soilRepeat || 3); if (k === 'diff') t.colorSpace = THREE.SRGBColorSpace; rs[k] = t; } catch {} } if (rs.diff) TEX.realSoil = rs; }
+  // stickers (3D emoji, assets/stickers/<name>.webp): preload every sticker the plan uses
+  { const names = new Set(); for (const b of p.beats || []) for (const a of b.add || []) if (a.type === 'sticker') names.add(a.params?.name || 'arrow_right');
+    TEX.stickers = {}; const L = new THREE.TextureLoader();
+    await Promise.all([...names].map(async n => { try { const t = await L.loadAsync(`/assets/stickers/${n}.webp`); t.colorSpace = THREE.SRGBColorSpace; TEX.stickers[n] = t; } catch (e) { console.warn('sticker missing', n); } })); }
   // LOCKED (2026-11-14, user approved): the 3D sky is the default look. Name an HDRI in env.sky to use a photo sky; sky:false = blueprint room
   if (p.env?.sky === undefined) p.env = { ...(p.env || {}), sky: 'sky3d' };
   const skyName = (p.env?.sky === false || p.env?.sky === 'sky3d') ? null : (p.env?.sky || 'kloofendal_48d_partly_cloudy_puresky'); // LOCKED: realistic sky is the default; sky:false = old blueprint room
@@ -1169,6 +1173,18 @@ function berryBounce(p = {}) { // a fresh cranberry bouncing on a wooden board, 
     const f = 1 - y / (H * 1.4); sh.scale.setScalar(Math.max(.3, f)); sh.material.opacity = .35 * f; };
   return shadowed(g); }
 Object.assign(ASSETS, { bog, reel_harvester: reelHarvester, berry_cut: berryCut, berry_bounce: berryBounce });
+// sticker: a 3D emoji (arrow, pointing hand, circle, face...) that always faces the camera and points at things.
+// params: name (assets/stickers), size (m), rot (radians, turns arrows), bob (m), pulse. It pops in with squash & stretch.
+ASSETS.sticker = (p = {}) => {
+  const tex = TEX.stickers?.[p.name || 'arrow_right']; const g = new THREE.Group();
+  const mat = new THREE.SpriteMaterial({ map: tex || null, color: tex ? 0xffffff : 0xff00ff, rotation: p.rot || 0, depthTest: p.onTop ? false : true, toneMapped: false, fog: false });
+  const sp = new THREE.Sprite(mat), S = p.size || .5; sp.scale.set(S, S, 1); if (p.onTop) sp.renderOrder = 999; g.add(sp);
+  g.userData.tick = (t, age) => { const a = Math.max(0, age ?? 0), pop = a < .45 ? 1 + Math.sin(a / .45 * Math.PI) * .25 : 1; // overshoot on arrival
+    const sq = a < .45 ? 1 - Math.sin(a / .45 * Math.PI) * .12 : 1, pulse = p.pulse ? 1 + Math.sin(t * 5) * .06 : 1;
+    sp.scale.set(S * pop * pulse, S * sq * pulse, 1); sp.position.y = Math.sin(t * 3 + (p.phase || 0)) * (p.bob ?? .04);
+    if (p.nudge) { const d = Math.sin(t * 6) * .05; sp.position.x = Math.cos(p.rot || 0) * d; sp.position.z = 0; } };
+  return g;
+};
 ASSETS.glb = (p = {}) => {
   const g = GLB[p.model]; if (!g) return box(.5, .5, .5, std('#f0f'));
   const o = skClone(g.scene); o.updateMatrixWorld(true);

@@ -49,6 +49,8 @@ Keep creative work in the main conversation: scripts, plans and shot choices, vi
 - Transition sound: the soft low "whoom" (`soft_transition` in `pipeline/sfx.py`). The hissy noise whoosh ("تش تش") was rejected.
 - Hyper-realism: 3D sky (default `sky3d`: 3D atmosphere dome + 3D clouds, sky-matched light, sun behind the camera), natural colours, real models at real sizes (Renderpeople scanned people, smooth matte animals), everything alive. Photo HDRI sky only if asked; blueprint room only with `env.sky:false`.
 - Diorama: continuous camera (`camEase` 0.6, no punch cuts), 2-word Arabic captions per spoken line, ✓/✗ icons on fix/problem beats.
+- Pointers are 3D emoji stickers, not plain arrows (user decision 2026-11-14): `type:'sticker'` with a name from `assets/stickers/catalog.json` (point_down/right, arrow_*, circle_ring around a part, check/cross, faces, microbe, organs, animals). Pop-in with overshoot, gentle bob, `pulse:true` for warnings. MIT, Microsoft Fluent Emoji (`assets/stickers/LICENSE.md`). Never use stickers that contain letters or digits.
+- Anatomy shots: open a window in the animal's flank (`cutBox` + `cutOpen` on the glb) and place organs in their real places (`plans/rumen_window.mjs`); the camera stays outside.
 
 ## Extra tools (installed once, already in package.json and the skills folder; do not reinstall)
 - **HyperFrames** (`hyperframes`, HeyGen): HTML-to-video. Use it for titles, overlays, transitions and 2D motion graphics. Its skills are in `.claude/skills/hyperframes*`. Run it with `npx hyperframes ...`.
