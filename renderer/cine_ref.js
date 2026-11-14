@@ -110,7 +110,7 @@ export const REF_PROPS = {
     const fa = p.flashAt ?? 1e9;
     g.userData.tick = lt => { const u = lt - fa; // anticipation squash, then pop + glow + shock ring
       const pre = u > -.25 && u < 0 ? -.05 * Math.sin((u + .25) / .25 * Math.PI / 2) : 0, post = u >= 0 ? .09 * Math.exp(-u * 4) * Math.cos(u * 18) : 0;
-      const s = 1 + pre + post; cx.scale.set(1 - post * .5, s, 1 - post * .5);
+      const s = 1 + pre + post + (p.pulse || 0) * Math.sin(lt * 4.2); cx.scale.set(1 - post * .5 + (p.pulse || 0) * Math.sin(lt * 4.2), s, 1 - post * .5);
       m.emissiveIntensity = u >= 0 ? .9 * Math.exp(-u * 2.5) : 0;
       const rk = clamp(u / .9); ring.scale.setScalar(.5 + rk * 2.2); ring.material.opacity = u >= 0 && u < .9 ? .9 * (1 - rk) : 0; };
     return g; },
@@ -131,15 +131,134 @@ export const REF_PROPS = {
     const R = rnd(4), mols = [], om = gloss(p.airColor || '#38c8ff', { rough: .2 }), sg = new THREE.SphereGeometry(.0065, 20, 14);
     for (let i = 0; i < 16; i++) { const mg = new THREE.Group(); const a = new THREE.Mesh(sg, om), b = new THREE.Mesh(sg, om); a.position.x = -.0055; b.position.x = .0055; mg.add(a, b); g.add(mg);
       mols.push({ mg, ph: R(), sx: (R() - .5) * .22, sz: (R() - .5) * .16 + .03, rot: R() * 6 }); }
-    const [i0, i1] = p.inhale || [0, 1.6], sa = p.shutAt ?? 1e9;
-    g.userData.tick = lt => { const k = easeIO((lt - i0) / (i1 - i0)), s = .9 + .16 * k; lobes.forEach(l => l.scale.set(s, 1 + .1 * k, s));
+    const [i0, i1] = p.inhale || [0, 1.6], sa = p.shutAt ?? 1e9, sq = p.squeeze || [];
+    if (p.noAir) mols.forEach(q => q.mg.removeFromParent());
+    g.userData.tick = lt => { const k = easeIO((lt - i0) / (i1 - i0));
+      let c = 1; sq.forEach((t0, j) => { const u = lt - t0; if (u > -.15) c -= (j ? .09 : .13) * (u < 0 ? -.25 * Math.sin((u + .15) / .15 * Math.PI) : easeOut(u / .22) + .25 * Math.exp(-u * 5) * Math.sin(u * 22)); });
+      const s = (.9 + .16 * k) * c; lobes.forEach(l => l.scale.set(s, (1 + .1 * k) * (1 - (1 - c) * .5), s));
       const sk = easeOut((lt - sa) / .12); valve.scale.setScalar(Math.max(.001, sk)); lar.scale.setScalar(1 - .12 * sk + (lt > sa ? .05 * Math.exp(-(lt - sa) * 6) * Math.sin((lt - sa) * 30) : 0));
       const tt = Math.min(lt, sa);
-      mols.forEach(q => { let u = (tt * .55 + q.ph) % 1; const shut = lt > sa; // u 0 = far above, 1 = inside the throat
+      if (!p.noAir) mols.forEach(q => { let u = (tt * .55 + q.ph) % 1; const shut = lt > sa; // u 0 = far above, 1 = inside the throat
         if (shut && u > .82) { q.mg.visible = false; return; } q.mg.visible = u < .97;
         const e = easeIO(u), x = q.sx * (1 - e), z = q.sz * (1 - e), y = .42 - (.42 - .2) * e - (u > .85 ? (u - .85) * .4 : 0);
         const bounce = shut ? .012 * Math.exp(-(lt - sa) * 3) * Math.abs(Math.sin((lt - sa) * 12)) : 0;
         q.mg.position.set(x, y + bounce, z); q.mg.rotation.set(q.rot + lt * 1.5, q.rot, lt); });
     };
+    return g; },
+
+  // rib cage (glossy ivory) around the lungs + glowing intercostal muscle bands; squeezes in at p.squeeze = [t0, t1...]
+  ribs: p => { const g = new THREE.Group(), bone = gloss(p.color || '#fbefd9', { rough: .3 }), mus = gloss(p.muscle || '#d8344f', { rough: .3, emissive: '#ff2a4a' }), ribs = [];
+    for (let i = 0; i < 6; i++) { const y = -.07 + i * .034, w = .15 + .025 * Math.sin(i / 5 * Math.PI) - i * .004;
+      const ring = (tube, gap, mt, yy, k) => { const r = new THREE.Mesh(new THREE.TorusGeometry(1, tube / w, 10, 64, Math.PI * 2 - gap), mt); r.rotation.set(Math.PI / 2, 0, Math.PI / 2 + gap / 2);
+        const e = new THREE.Group(); e.scale.set(w * k, w * k, w * k * .72); e.add(r); const h = new THREE.Group(); h.position.y = yy; h.rotation.x = -.12; h.add(e); g.add(h); ribs.push(h); };
+      ring(.0075, .7, bone, y, 1); if (i < 5) ring(.0055, .9, mus, y + .017, .985); }
+    const st = new THREE.Mesh(new RoundedBoxGeometry(.022, .19, .01, 3, .004), bone); st.position.set(0, .015, .118); g.add(st);
+    const spine = new THREE.Mesh(new THREE.CylinderGeometry(.009, .009, .24, 16), bone); spine.position.set(0, .01, -.1); g.add(spine);
+    const sq = p.squeeze || [];
+    g.userData.tick = lt => { let c = 1; sq.forEach((t0, j) => { const u = lt - t0; if (u > -.15) c -= (j ? .07 : .1) * (u < 0 ? -.25 * Math.sin((u + .15) / .15 * Math.PI) : easeOut(u / .2) + .3 * Math.exp(-u * 5) * Math.sin(u * 24)); });
+      ribs.forEach(h => h.scale.set(c, 1, c)); mus.emissiveIntensity = clamp((1 - c) * 6) * .8; };
+    return g; },
+
+  // glossy toy person (waist up, real size: torso ~48 cm, head ~23 cm) facing +z.
+  // p.tilt = [t0, t1] lean back (ah... ah...), p.sneezeAt snap forward, p.closeAt eyelids slam, p.halfLids = [t0, t1], p.raise = [t0, t1] right arm up to the elbow
+  person: p => { const g = new THREE.Group(), skin = gloss(p.skin || '#f3b48e', { rough: .34 }), shirt = gloss(p.shirt || '#2f7de1', { rough: .3 }), hair = gloss(p.hair || '#4a2816', { rough: .28 });
+    const torso = new THREE.Mesh(new THREE.SphereGeometry(1, 64, 48), shirt); torso.scale.set(.19, .25, .12); torso.position.y = .24; g.add(torso);
+    const piv = new THREE.Group(); piv.position.y = .5; g.add(piv);
+    const neck = new THREE.Mesh(new THREE.CylinderGeometry(.04, .045, .1, 24), skin); neck.position.y = .03; piv.add(neck);
+    const H = new THREE.Group(); H.position.y = .16; piv.add(H);
+    const head = new THREE.Mesh(new THREE.SphereGeometry(1, 72, 54), skin); head.scale.set(.078, .112, .095); H.add(head);
+    const hr = new THREE.Mesh(new THREE.SphereGeometry(1, 64, 40, 0, Math.PI * 2, 0, Math.PI * .48), hair); hr.scale.set(.083, .118, .1); hr.rotation.x = -.42; hr.position.set(0, .006, -.006); H.add(hr);
+    for (const s of [-1, 1]) { const e = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 16), skin); e.scale.set(.012, .022, .016); e.position.set(s * .077, -.004, -.004); H.add(e); }
+    const nose = new THREE.Mesh(new THREE.SphereGeometry(1, 32, 24), skin); nose.scale.set(.014, .02, .02); nose.position.set(0, -.012, .095); H.add(nose);
+    const mouth = new THREE.Mesh(new THREE.TorusGeometry(.013, .0035, 10, 32, Math.PI), gloss('#9a2b3a', { rough: .3 })); mouth.position.set(0, -.048, .086); mouth.rotation.set(-.25, 0, Math.PI); H.add(mouth);
+    const lids = [];
+    for (const s of [-1, 1]) { const eg = new THREE.Group(); eg.position.set(s * .031, .022, .078); eg.rotation.y = s * .25; H.add(eg);
+      eg.add(new THREE.Mesh(new THREE.SphereGeometry(.0135, 32, 24), gloss('#ffffff', { rough: .15 })));
+      const iris = new THREE.Mesh(new THREE.SphereGeometry(.0072, 24, 16), gloss(p.eye || '#3b7bd6', { rough: .15 })); iris.position.z = .0085; iris.scale.z = .5; eg.add(iris);
+      const pup = new THREE.Mesh(new THREE.SphereGeometry(.0038, 16, 12), gloss('#0b0b10', { rough: .1 })); pup.position.z = .0118; pup.scale.z = .45; eg.add(pup);
+      const lid = new THREE.Mesh(new THREE.SphereGeometry(.0148, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2), skin); eg.add(lid); lids.push(lid);
+      const brow = new THREE.Mesh(new THREE.CapsuleGeometry(.0028, .016, 4, 10), hair); brow.rotation.z = Math.PI / 2 + s * .12; brow.position.set(s * .031, .045, .086); H.add(brow); }
+    // arms: cylinders between joints, rebuilt each tick
+    const unitC = new THREE.CylinderGeometry(1, 1, 1, 24), joint = new THREE.SphereGeometry(1, 24, 16), Y = new THREE.Vector3(0, 1, 0);
+    const seg = (a, b, r, m) => { const c = new THREE.Mesh(unitC, m), j = new THREE.Mesh(joint, m); g.add(c, j); return { c, j, r, set(A, B) { const d = B.clone().sub(A), L = d.length();
+      c.position.copy(A).addScaledVector(d, .5); c.quaternion.setFromUnitVectors(Y, d.normalize()); c.scale.set(r, L, r); j.position.copy(B); j.scale.setScalar(r); } }; };
+    const V3 = a => new THREE.Vector3(...a), arms = [-1, 1].map(s => ({ s, up: seg(0, 0, .046, shirt), lo: seg(0, 0, .04, shirt), hand: new THREE.Mesh(joint, skin) }));
+    arms.forEach(a => { a.hand.scale.set(.034, .04, .034); g.add(a.hand); const sh = new THREE.Mesh(joint, shirt); sh.scale.setScalar(.052); sh.position.set(a.s * .165, .42, 0); g.add(sh); });
+    const REST = s => [V3([s * .165, .42, 0]), V3([s * .215, .21, .02]), V3([s * .13, .08, .15])], UP = [V3([-.165, .42, 0]), V3([.05, .555, .21]), V3([.13, .68, .13])];
+    const [r0, r1] = p.raise || [1e9, 1e9], [t0, t1] = p.tilt || [1e9, 1e9], sa = p.sneezeAt ?? 1e9, ca = p.closeAt ?? 1e9, [h0, h1] = p.halfLids || [1e9, 1e9], amp = p.snapAmp ?? .32;
+    g.userData.tick = lt => {
+      arms.forEach(a => { const R = REST(a.s), k = a.s < 0 ? easeIO((lt - r0) / (r1 - r0)) : 0, P = R.map((v, i) => v.clone().lerp(UP[i], k));
+        if (k > 0 && k < 1) P[1].z += .08 * Math.sin(k * Math.PI); a.up.set(P[0], P[1]); a.lo.set(P[1], P[2]); a.hand.position.copy(P[2]); });
+      let rx = -.26 * easeIO((lt - t0) / (t1 - t0)), u = lt - sa;
+      if (u > -.12 && u < 0) rx -= .05 * Math.sin((u + .12) / .12 * Math.PI / 2);
+      else if (u >= 0) rx = u < .1 ? rx + (amp - rx) * easeOut(u / .1) : .08 + (amp - .08) * (1 - easeOut((u - .1) / 1.4)) + .05 * Math.exp(-u * 4) * Math.sin(u * 20);
+      piv.rotation.x = rx; H.rotation.x = rx * .3;
+      const half = .3 * easeIO((lt - h0) / (h1 - h0)) * (u > 0 ? 0 : 1), cl = lt >= ca ? easeOut((lt - ca) / .08) : 0, cl2 = u < 0 ? 0 : u < .08 ? easeOut(u / .08) : u < (p.reopen ?? .8) ? 1 : 1 - easeOut((u - (p.reopen ?? .8)) / .25);
+      const c = Math.max(half, cl, cl2); lids.forEach(l => l.rotation.x = -.75 + c * 2.25 - (lt >= ca ? .08 * Math.exp(-(lt - ca) * 9) * Math.sin((lt - ca) * 40) : 0));
+    };
+    return g; },
+
+  // air burst: translucent puffs + speed streaks + shock rings rocketing along p.dir for p.len metres
+  burst: p => { const g = new THREE.Group(), R = rnd(p.seed || 21), O = new THREE.Vector3(...(p.from || [0, 0, 0])), Dv = new THREE.Vector3(...(p.dir || [1, 0, 0])).normalize();
+    const side = new THREE.Vector3().crossVectors(Dv, new THREE.Vector3(0, 1, 0)).normalize(), upv = new THREE.Vector3().crossVectors(side, Dv).normalize();
+    const n = p.count || 140, ns = p.streaks || 50, t0 = p.at || 0, dur = p.dur || 1.5, tr = p.travel || .45, L = p.len || 1;
+    const puffs = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 20, 14), gloss(p.color || '#e6fbff', { rough: .12, opacity: .55, emissive: '#bdf3ff', glow: .25 }), n);
+    const streaks = new THREE.InstancedMesh(new THREE.CylinderGeometry(1, 1, 1, 8), new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: .75 }), ns);
+    puffs.castShadow = streaks.castShadow = false; g.add(puffs, streaks);
+    const P = Array.from({ length: n }, (_, i) => ({ b: t0 + dur * (i / n) + R() * .03, a: R() * 6.28, sp: .04 + R() * .16, r: .006 + R() * .012, tr: tr * (.8 + R() * .4) }));
+    const S = Array.from({ length: ns }, (_, i) => ({ b: t0 + dur * (i / ns) + R() * .05, a: R() * 6.28, off: .02 + R() * .12, len: .08 + R() * .16 }));
+    const rings = Array.from({ length: p.rings ?? 5 }, () => { const m = new THREE.Mesh(new THREE.TorusGeometry(1, .035, 8, 64), new THREE.MeshBasicMaterial({ color: '#dff8ff', transparent: true, opacity: 0, depthWrite: false }));
+      m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), Dv); g.add(m); return m; });
+    const M = new THREE.Matrix4(), Q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), Dv), Pp = new THREE.Vector3(), Sc = new THREE.Vector3(), I = new THREE.Quaternion();
+    const at = (u, a, off) => Pp.copy(O).addScaledVector(Dv, L * u).addScaledVector(side, Math.cos(a) * off).addScaledVector(upv, Math.sin(a) * off);
+    g.userData.tick = lt => {
+      P.forEach((q, i) => { const u = (lt - q.b) / q.tr; if (u < 0 || u > 1) { M.makeScale(0, 0, 0); puffs.setMatrixAt(i, M); return; }
+        at(easeOut(u * .9 + .1 * u), q.a, q.sp * u); const s = q.r * (.5 + 2.2 * u) * (1 - u * u * u); M.compose(Pp, I, Sc.set(s, s, s)); puffs.setMatrixAt(i, M); });
+      S.forEach((q, i) => { const u = (lt - q.b) / (tr * .6); if (u < 0 || u > 1) { M.makeScale(0, 0, 0); streaks.setMatrixAt(i, M); return; }
+        at(u, q.a, q.off * (.3 + u)); M.compose(Pp, Q, Sc.set(.0018, q.len * (1 - u * .6), .0018)); streaks.setMatrixAt(i, M); });
+      puffs.instanceMatrix.needsUpdate = streaks.instanceMatrix.needsUpdate = true;
+      rings.forEach((m, j) => { const u = ((lt - t0 - j * dur / rings.length) / .5); m.visible = u > 0 && u < 1 && lt < t0 + dur + .5;
+        if (m.visible) { m.position.copy(at(u, 0, 0)); m.scale.setScalar(.03 + .1 * u); m.material.opacity = .7 * (1 - u); } }); };
+    return g; },
+
+  // droplet spray: glossy water beads arc out from p.from along p.dir and land on the floor p.near..p.far metres away (splat flat)
+  spray: p => { const g = new THREE.Group(), R = rnd(p.seed || 33), n = p.count || 60, O = new THREE.Vector3(...(p.from || [0, .6, 0])), yaw = Math.atan2(-(p.dir || [1, 0, 0])[2], (p.dir || [1, 0, 0])[0]);
+    const im = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 20, 14), gloss(p.color || '#a9e6ff', { rough: .05, opacity: .85, emissive: '#7fd8ff', glow: .15 }), n); im.castShadow = true; g.add(im);
+    const D = Array.from({ length: n }, (_, i) => { const d = (p.near || .4) + Math.pow(R(), .7) * ((p.far || 1.8) - (p.near || .4)), a = yaw + (R() - .5) * (p.spread || .7);
+      return { b: (p.at || 0) + R() * (p.emit || .5), d, a, h: .05 + R() * .18, T: .7 + d * .35 + R() * .2, r: (p.rMin || .003) + R() * ((p.rMax || .008) - (p.rMin || .003)) }; });
+    const M = new THREE.Matrix4(), Pp = new THREE.Vector3(), Sc = new THREE.Vector3(), I = new THREE.Quaternion();
+    g.userData.tick = lt => { D.forEach((q, i) => { const u = (lt - q.b) / q.T; if (u < 0) { M.makeScale(0, 0, 0); im.setMatrixAt(i, M); return; }
+        const k = Math.min(u, 1), x = q.d * easeOut(k * .6 + k * .4 * k) ; // fast out, slowing as it falls
+        Pp.set(O.x + Math.cos(q.a) * x, Math.max(q.r * .25, O.y * (1 - k * k) + q.h * 4 * k * (1 - k)), O.z - Math.sin(q.a) * x);
+        if (u >= 1) { const sp = easeOut((u - 1) / .15 * q.T); Sc.set(q.r * (1 + 1.2 * sp), q.r * (1 - .7 * sp), q.r * (1 + 1.2 * sp)); } else Sc.set(q.r, q.r * (1 + .4 * (1 - k)), q.r);
+        M.compose(Pp, I, Sc); im.setMatrixAt(i, M); }); im.instanceMatrix.needsUpdate = true; };
+    return g; },
+
+  // open hand (real ~19 cm), glossy skin, pops in at p.popAt
+  hand: p => { const g = new THREE.Group(), inner = new THREE.Group(), m = gloss(p.skin || '#f3b48e', { rough: .34 }); g.add(inner);
+    const palm = new THREE.Mesh(new RoundedBoxGeometry(.085, .095, .028, 4, .012), m); inner.add(palm);
+    [[-.03, .085, .07], [-.01, .095, .08], [.011, .092, .076], [.031, .08, .062]].forEach(([x, y, L]) => { const f = new THREE.Mesh(new THREE.CapsuleGeometry(.0095, L - .019, 6, 12), m); f.position.set(x, y - .045 + L / 2, 0); inner.add(f); });
+    const th = new THREE.Mesh(new THREE.CapsuleGeometry(.011, .04, 6, 12), m); th.position.set(-.055, -.005, .006); th.rotation.z = .75; inner.add(th);
+    const pa = p.popAt ?? 0;
+    g.userData.tick = lt => { const u = lt - pa, s = u < 0 ? .001 : Math.max(.001, 1 + .25 * Math.exp(-u * 6) * Math.sin(u * 14) - (u < .3 ? 1 - easeOut(u / .3) : 0)); inner.scale.setScalar(s); inner.rotation.z = .12 * Math.sin(lt * 1.4); };
+    return g; },
+
+  // glossy toy heart (like) - pops in at p.popAt, then a soft heartbeat pulse
+  heart: p => { const g = new THREE.Group(), sh = new THREE.Shape(), s = (p.size || .1) / 2;
+    sh.moveTo(0, -s * .95); sh.bezierCurveTo(-s * .25, -s * .6, -s * 1.05, -s * .2, -s, s * .35); sh.bezierCurveTo(-s * .95, s * .95, -s * .25, s * 1.05, 0, s * .5);
+    sh.bezierCurveTo(s * .25, s * 1.05, s * .95, s * .95, s, s * .35); sh.bezierCurveTo(s * 1.05, -s * .2, s * .25, -s * .6, 0, -s * .95);
+    const geo = new THREE.ExtrudeGeometry(sh, { depth: s * .25, bevelEnabled: true, bevelThickness: s * .28, bevelSize: s * .22, bevelSegments: 8, curveSegments: 32 }); geo.center();
+    const mesh = new THREE.Mesh(geo, gloss(p.color || '#ff3b5f', { rough: .25, emissive: '#ff2a4a' })); const inner = new THREE.Group(); inner.add(mesh); g.add(inner);
+    const pa = p.popAt ?? 0;
+    g.userData.tick = lt => { const u = lt - pa; if (u < 0) { inner.scale.setScalar(.001); return; }
+      const pop = u < .35 ? easeOut(u / .35) + .3 * Math.sin(u / .35 * Math.PI) : 1, beat = .06 * Math.pow(Math.max(0, Math.sin(u * 5.5)), 6);
+      inner.scale.setScalar(pop * (1 + beat)); inner.rotation.y = .35 * Math.sin(u * 1.2); mesh.material.emissiveIntensity = beat * 3; };
+    return g; },
+
+  // glossy "+" (follow) - pops in at p.popAt
+  plus: p => { const g = new THREE.Group(), inner = new THREE.Group(), m = gloss(p.color || '#ffc22e', { rough: .25 }), s = p.size || .07; g.add(inner);
+    inner.add(new THREE.Mesh(new RoundedBoxGeometry(s, s * .3, s * .3, 4, s * .12), m), new THREE.Mesh(new RoundedBoxGeometry(s * .3, s, s * .3, 4, s * .12), m));
+    const pa = p.popAt ?? 0;
+    g.userData.tick = lt => { const u = lt - pa; inner.scale.setScalar(u < 0 ? .001 : u < .35 ? easeOut(u / .35) + .3 * Math.sin(u / .35 * Math.PI) : 1 + .03 * Math.sin(u * 4)); inner.rotation.y = u > 0 ? Math.sin(u * 1.5) * .4 : 0; };
     return g; },
 };
