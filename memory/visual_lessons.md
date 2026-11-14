@@ -4,7 +4,8 @@ Rule: when a preview or final video shows a mistake, add one entry here (what wa
 
 ## Sky
 - **Mistake (2026-11-14 test scene):** the sky looked like a flat blue gradient with a hard horizon line and no clouds.
-  - Possible cause: the HDRI in `renderer/scene.js` (line ~408) is wrapped in try/catch. If it fails, the scene silently falls back to the flat colour `#3d7fd0` (line ~368). **Verify first** that `sky failed` is not in the render log before blaming the look.
+  - Checked (iteration 1): the HDRI file is valid and has real clouds, and the render logged no `sky failed` warning. So the fallback is NOT the cause. The renderer now forwards browser warnings to the log, so this check is visible next time. Next suspect: the fog or the camera hides the sky.
+  - Earlier guess: the HDRI in `renderer/scene.js` (line ~408) is wrapped in try/catch. If it fails, the scene silently falls back to the flat colour `#3d7fd0` (line ~368). **Verify first** that `sky failed` is not in the render log before blaming the look.
   - Fix: a real sky has a deeper blue at the top, a paler haze at the horizon, soft clouds with flat bases, and a warm glow near the sun.
   - Sun: a small sun gives sharp shadows, a large one gives soft shadows. The sun must be high enough to light the foreground, or the scene looks dim.
   - Source: [Architizer, 6 tips for skies](https://architizer.com/blog/?p=14056), [Lumion real skies guide](https://lumion.com/tips-guides/real-skies-guide-2024), [Poliigon hazy sunset HDRI](https://www.poliigon.com/hu/hdri/hazy-sunset-outdoor-sky-hdri/3531).

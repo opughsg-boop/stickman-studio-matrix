@@ -24,6 +24,7 @@ export function startStatic() {
 async function openPage(browser, url, plan, w, h) {
   const page = await browser.newPage({ viewport: { width: w, height: h } });
   page.on('pageerror', e => console.error('[page]', e.message));
+  page.on('console', m => { if (m.type() === 'warning' || m.type() === 'error') console.error('[page-console]', m.text()); });
   await page.goto(url + (plan.engine === 'cine' ? 'cine.html' : 'index.html')); await page.waitForFunction(() => window.__ready === true, null, { timeout: 60000 });
   await page.evaluate(([p, o]) => window.setup(p, o), [plan, { width: w, height: h }]);
   page.setDefaultTimeout(120000);
