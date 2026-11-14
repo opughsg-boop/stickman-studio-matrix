@@ -23,17 +23,20 @@ python3 assets/fetch_polyhaven.py   # realistic grass, shrubs, rocks, props and 
 3. **Camera:** continuous and never still, with no hard cuts (`camEase` 0.6, `punch:false`). Zoom in and zoom out alternate between beats.
 4. **Captions:** 2 words at a time, never mixing two spoken lines. White bold Arabic, at 78 % of the frame height, aligned to the user's exact script.
 5. **Format:** 1080x1920, 30 fps, H.264 + AAC, -14 LUFS.
-6. **Hyper-realism (LOCKED):** a real sky, natural light, and every object with its natural shape, material and real size (see 2b). The old blue blueprint room is retired, so use it only if the user asks (`env.sky:false`).
+6. **Hyper-realism (LOCKED):** a real 3D sky, natural light, and every object with its natural shape, material and real size (see 2b). The old blue blueprint room is retired, so use it only if the user asks (`env.sky:false`).
 7. **Spoken language:** general Egyptian Arabic by default. Every script opens with a curiosity *question* hook plus a strong *visual* hook in the first second.
 
 ## 2b. THE LOCKED LOOK: hyper-realistic natural simulation
 Target: the user's three reference reels (Spanish: rabbit hutch build-up, sugar-cane burning, beehive build-up). Everything must look like it lives its real life.
 
 **Built into the engine (`renderer/scene.js`), on automatically:**
-- **Real sky (default):** an HDRI daylight sky with clouds (`kloofendal_48d_partly_cloudy_puresky`) gives image-based lighting and a warm sun. The island floats over open water and keeps its real soil cross-section.
-  - Other skies: `env.sky:'forest_slope'`. Tuning: `skyBlur`, `envLight`, `fog`, `water`.
-  - `env.sky:false` brings back the old blueprint room (only if asked).
-  - HDRIs are committed in `assets/hdri/`.
+- **3D sky (default, LOCKED 2026-11-14 after the user approved the cow test):** a real 3D atmosphere dome (three.js Sky addon, Preetham model) plus scattered 3D cumulus clouds that drift. No photo backdrop.
+  - The same sky lights the scene (image-based light with the same `skyGain`), so colours and shadows stay natural. Sun sits behind the camera and to the right (`sunAz` 35, `sunElev` 45).
+  - The island floats over a sea that is darker than the sky at the horizon.
+  - Tuning: `sunElev`, `sunAz`, `turbidity` (2.5), `rayleigh` (2), `skyGain` (.4), `skyTint`, `clouds` (9), `fog`, `water`.
+  - Photo HDRI sky only if asked: `env.sky:'kloofendal_48d_partly_cloudy_puresky'` or `'forest_slope'` (files in `assets/hdri/`). `env.sky:false` = old blueprint room.
+- **Animals in the 3D-sky look:** low-poly meshes are welded and smooth-shaded automatically, and their material is matte (roughness .92), so no flat triangles and no plastic shine (`env.smoothAnimals:false` turns it off).
+- **Real people:** a scanned human from Renderpeople, `model:'people_rp/rp_posed_00178_29', height:1.75` (static pose; fetched by `assets/fetch_people.sh`, which `fetch_library.sh` runs). Prefer it over the Quaternius people for close shots.
 - **Smoke:** soft billowing sprite puffs, dark at the bottom and grey higher up (`type:'smoke'`: `h`, `w`, `scale`, `color`, `top`, `opacity`, `drift`). Always place smoke **behind** the subject, never between it and the camera.
 - **Fire:** flickering flame sprites with rising embers and an orange glow light, sweeping across an area (`type:'fire'`: `w`, `d`, `count`, `sweep` seconds, `trail`).
 - **Sugar-cane pack:**
@@ -42,9 +45,10 @@ Target: the user's three reference reels (Spanish: rabbit hutch build-up, sugar-
   - `critters`: rats and snakes (`flee:true` makes them run).
   - `truck`: real size by default, `scale` 1.7. Options: `path`, `travel`, `color`.
 - **Critic:** the self-review knows the sky mode, so it does not ask for the blue room.
+- **Learn from mistakes:** read `memory/visual_lessons.md` before every plan, and add each new mistake after every preview. Improve realism one step at a time and re-check.
 
 **Rules for every new plan:**
-1. **Real models first:** Quaternius animals and people (`type:'glb'`), Poly Haven ground cover, rocks and props (`ph/<id>`), real soil. Hand-built primitives only when nothing real exists, and then give them textures or natural colour variation, never flat single colours.
+1. **Real models first:** Renderpeople scanned people, Quaternius animals (`type:'glb'`), Poly Haven ground cover, rocks and props (`ph/<id>`), real soil. Hand-built primitives only when nothing real exists, and then give them textures or natural colour variation, never flat single colours.
 2. **Real sizes, in metres:** person 1.75, cow 1.4, horse 1.9, donkey 1.3, fox 0.6, dog 0.7, sheep or goat 0.9, chicken 0.4, rat 0.25 long, sugar cane 3-3.5, maize 2.2, wheat or rice 1, palm 8-12, small tree 4-6, barrel 0.9-1.3, cart 1.4, cane truck 2.5. Magnify on purpose only for an "x-ray" explainer prop (like the giant cut stalk), and show it beside the real thing.
 3. **Alive:** animals always play a clip (Eating, Walk, Idle_2…) or walk a `path`. Plants sway. Smoke, fire, water and clocks move. Nothing is frozen.
 4. **Dense and natural:** fields of 120-200 stalks with varied heights. Scatter grass, shrubs and stones over the bare soil.

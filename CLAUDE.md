@@ -47,7 +47,7 @@ Keep creative work in the main conversation: scripts, plans and shot choices, vi
 ## STYLE LOCK (user decisions, never change without the user asking)
 - No words on screen except the spoken captions: no signs, labels, counters, pins or button text. The engines enforce this unless a plan sets `style.allowText: true`. Only wordless icons are allowed (✓ ✗ arrows).
 - Transition sound: the soft low "whoom" (`soft_transition` in `pipeline/sfx.py`). The hissy noise whoosh ("تش تش") was rejected.
-- Hyper-realism: real sky (default), natural light, real models at real sizes, everything alive. The blueprint room is retired (`env.sky:false` only if asked).
+- Hyper-realism: 3D sky (default `sky3d`: 3D atmosphere dome + 3D clouds, sky-matched light, sun behind the camera), natural colours, real models at real sizes (Renderpeople scanned people, smooth matte animals), everything alive. Photo HDRI sky only if asked; blueprint room only with `env.sky:false`.
 - Diorama: continuous camera (`camEase` 0.6, no punch cuts), 2-word Arabic captions per spoken line, ✓/✗ icons on fix/problem beats.
 
 ## Extra tools (installed once, already in package.json and the skills folder; do not reinstall)
