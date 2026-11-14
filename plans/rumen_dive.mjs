@@ -11,14 +11,15 @@ const arrow = (id, from, to, color, delay = 0) => ({ id, type: 'arrow', pos: [0,
 
 // real cow (1.4 m) on the left, facing +z; a magnified x-ray of its four stomachs on the right
 const COW = glb('cow', 'animals_pack/Cow', [-1.5, 0, .2], 1.4, { clip: 'Idle' });
-const MOUTH = [-1.45, 1.05, 1.2]; const ZB = .2; // cow body centre z
-const RX = -1.45, RY = .85; // rumen centre, inside the cow's abdomen (cow at x=-1.5)
+const MOUTH = [-1.5, 1.05, 1.2]; const ZB = .2; // cow body centre z
+const RX = -1.5, RY = .72; // rumen centre: inside the cow's belly, life-size (rumen ~0.5 m wide)
+const organ = (id, d, pos, o) => ({ id, type: 'custom', pos: [0, 0, 0], params: { parts: [{ shape: 'sphere', size: [d, d, d], pos, color: o.color, tex: o.tex, rough: .95, wobble: o.wobble }] }, anim: 'grow', delay: o.delay });
+// anatomy: one stomach, four chambers. Rumen = large fuzzy brown sac with papillae; reticulum = honeycomb; omasum = leaves; abomasum = folded pinkish-brown glandular lining
 const stomach = [
-  { id: 'stand', type: 'custom', pos: [0, 0, 0], params: { parts: [{ shape: 'cylinder', size: [.25, .35, .25], pos: [RX, .17, 0], color: '#8a8580' }] }, dust: false },
-  { id: 'rumen', type: 'custom', pos: [0, 0, 0], params: { parts: [sph(1.3, [RX, RY, 0], '#d9837a')] }, anim: 'grow', delay: .2 },
-  { id: 'retic', type: 'custom', pos: [0, 0, 0], params: { parts: [sph(.62, [RX - .95, RY + .35, .15], '#c0645c')] }, anim: 'grow', delay: .6 },
-  { id: 'omasum', type: 'custom', pos: [0, 0, 0], params: { parts: [sph(.55, [RX + .95, RY + .25, .35], '#a8524e')] }, anim: 'grow', delay: .9 },
-  { id: 'aboma', type: 'custom', pos: [0, 0, 0], params: { parts: [sph(.5, [RX + 1.05, RY - .4, .55], '#e8a28f')] }, anim: 'grow', delay: 1.2 }];
+  organ('rumen', .56, [RX, RY, .2], { color: '#7a6240', tex: 'papillae', wobble: .09, delay: .2 }),
+  organ('retic', .3, [RX - .18, RY - .05, .5], { color: '#8c6f4a', tex: 'honeycomb', wobble: .05, delay: .6 }),
+  organ('omasum', .26, [RX + .2, RY + .08, .35], { color: '#9d8560', tex: 'leaves', wobble: .04, delay: .9 }),
+  organ('aboma', .22, [RX + .12, RY - .2, .6], { color: '#c99e8e', tex: 'rugae', wobble: .05, delay: 1.2 })];
 const microbes = { id: 'microbes', type: 'custom', pos: [0, 0, 0], anim: 'grow', dust: false,
   params: { parts: Array.from({ length: 34 }, (_, i) => { const a = i * 2.4, r = .55 + (i % 4) * .06, y = Math.sin(i * 1.7) * .5;
     const rr = Math.sqrt(Math.max(.05, r * r - y * y)); return sph(.07 + (i % 3) * .02, [RX + Math.cos(a) * rr, RY + y, .3 + Math.abs(Math.sin(a)) * rr * .8], ['#7be36b', '#b07bff', '#5fd0ff'][i % 3]); }) } };
@@ -41,11 +42,14 @@ const beats = [
   // problem: dry grass is hard to digest
   { t: at(2), kind: 'problem', remove: ['swallow'], add: [{ id: 'dry', type: 'hay', pos: [.2, .04, 1.9], params: { w: 1.3, d: .9, count: 130, hgt: .16, color: '#b59a52' }, anim: 'grow', dust: false }],
     modes: { cow: { clip: 'Idle_Headlow' } }, camera: { preset: 'close', target: [-.3, .4, 1.9], dist: 5, elev: .35, az: .25, zoom: 'in' } },
-  // fix: the cow turns see-through (x-ray) and the camera dives in toward the rumen
-  { t: at(3), kind: 'solution', remove: ['cow'], add: [{ id: 'shell', type: 'glb', pos: [-1.5, 0, .2], params: { model: 'animals_pack/Cow', height: 1.4, clip: 'Idle', opacity: .2 }, anim: 'fade' }, ...stomach, arrow('in', MOUTH, [RX - .55, RY + .2, .3], '#ffd23f', .3)],
-    camera: { preset: 'close', target: [RX + .3, RY, .2], dist: 3.6, elev: .2, az: .35, zoom: 'in' } },
-  // deeper: the camera goes inside, the stomachs are life-size in the frame
-  { t: at(4), kind: 'info', remove: ['in'], add: [microbes], camera: { preset: 'inside', target: [RX + .15, RY, .2], dist: 1.9, elev: .12, az: .2, zoom: 'in' } },
+  // 1) zoom in on the real cow from the side (opaque, the stomachs are hidden inside it)
+  { t: at(3, 0), kind: 'solution', add: [...stomach],
+    camera: { preset: 'close', target: [-1.5, .75, .2], dist: 4.2, elev: .15, az: .9, zoom: 'in' } },
+  // 2) the body turns see-through (x-ray) and the camera moves closer to the belly
+  { t: at(3, 5), kind: 'solution', remove: ['cow'], add: [{ id: 'shell', type: 'glb', pos: [-1.5, 0, .2], params: { model: 'animals_pack/Cow', height: 1.4, clip: 'Idle', opacity: .45 }, anim: 'grow' }, arrow('in', MOUTH, [RX - .55, RY + .2, .3], '#ffd23f', .3)],
+    camera: { preset: 'close', target: [-1.5, .75, .2], dist: 2.6, elev: .15, az: .6, zoom: 'in' } },
+  // 3) the camera goes INSIDE the body, towards the rumen
+  { t: at(4, 0), kind: 'info', remove: ['in'], add: [microbes], camera: { preset: 'inside', target: [RX + .1, RY, .2], dist: .55, elev: .1, az: .3, zoom: 'in' } },
   // it brings up a small bite (the cud) and chews it again, calmly
   { t: at(5), kind: 'solution', remove: ['microbes'], add: [arrow('up', [RX - .55, RY + .55, .5], MOUTH, '#7be36b', .3)],
     modes: { shell: { clip: 'Idle_2' } }, camera: { preset: 'close', target: [0, 1.1, .7], dist: 6.8, elev: .25, az: .4, zoom: 'out' } },

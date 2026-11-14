@@ -39,6 +39,9 @@ Rule: when a preview or final video shows a mistake, add one entry here (what wa
 - **Works:** `glb` with `opacity:.2` gives a see-through body, and a camera dive in 2 steps (dist 3.6 then 1.9) reads as "going inside".
 - **Mistake 1:** at dist 1.9 the view is only the stomach surface, so the viewer cannot tell where they are. Fix: stop at dist 3.2-3.6 with the body outline visible, and add a short cut-in only for the last step.
 - **Mistake 2:** the stomachs are flat pink spheres, which is not medical. Fix: use textured, glossy tissue with folds (rumen papillae), translucent when inside. Still open.
+- **Researched (2026-11-14, extension sources):** rumen inside = brown, fuzzy papillae (like shag carpet); reticulum = honeycomb; omasum = stacked leaves/folds; abomasum = folded light brown-pink glandular lining. The stomach is one organ with four chambers. Now used as canvas textures in `custom` parts (`tex`, `wobble`).
+- **Fixed:** camera now stops inside the body (dist .55 from the rumen) and the x-ray body is visible (opacity .45).
+- **Still open:** papillae read as a dark wood-grain sphere, and the stomachs still poke through the belly on the zoom beat.
 - **Mistake 3:** the x-ray body is faint. Fix: opacity .3 and a thin darker outline.
 
 ## Process
