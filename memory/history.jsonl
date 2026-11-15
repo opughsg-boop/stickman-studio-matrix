@@ -38,3 +38,4 @@
 {"run": "washer", "time": "2026-11-15 23:17", "score": 90, "issues": 2, "codes": ["ref_slow_cuts", "ref_static"]}
 {"run": "horse_sleep", "time": "2026-11-15 23:18", "score": 100, "issues": 0, "codes": []}
 {"run": "horse_stable", "time": "2026-11-15 23:34", "score": 100, "issues": 0, "codes": []}
+{"run": "island_birds", "time": "2026-11-15 23:47", "score": 100, "issues": 0, "codes": []}
