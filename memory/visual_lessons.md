@@ -80,3 +80,8 @@ Rule: when a preview or final video shows a mistake, add one entry here (what wa
 - Mistake: I mapped each voice-over line to a generic template (sky, twist, dive, orbit, cta). The result had a mannequin standing in the sky, leg close-ups and a robot, and none of it showed tapping resin, bamboo, a pot, heat or pouring. Score 85 hid this.
 - Fix: before rendering, every line must show its own literal object or action. Build the scene with real props (Poly Haven fire pit, stumps, barrel, tools, nature_pack trees, bamboo) and never rely on generic templates to carry a process video.
 - Source: user review of runs/candle/final.mp4 (contact sheet frames 1-13).
+
+## Candle v2 (runs/candle_v2, score 90): the shots show the process now, but the look is still weak
+- Mistake: the pine is a low-poly cone (PineTree_1 from the nature pack), the man is the Xbot mannequin, the pot is a flat black cylinder and the fire is a faint particle cloud. The pour (line 9) is barely visible and line 6 is blurred.
+- Fix (next): use a realistic person and a real pine (Poly Haven or a scanned model under the size limit), a real fire pit with a bright flame, and a clear amber stream into the bamboo. Keep the handheld shake low.
+- Source: contact sheet of runs/candle_v2/final.mp4 (2026-11-15).

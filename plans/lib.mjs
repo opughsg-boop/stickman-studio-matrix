@@ -21,6 +21,9 @@ function attach(H, id, o = {}) { return H.attach ? [{ ...H.attach, id: 'att_' + 
 const glowAttach = (H, id, c) => attach(H, id, c ? { holo: c } : {});
 
 export const T = {
+  // custom real-process shot: the story line gives its own set, actors, props and camera (no words on screen)
+  scene: (H, o) => ({ set: set(o, 'forest'), actors: o.actors || [], props: o.props || [],
+    camera: o.camera || { pos: [1.6, 1.5, 3.2], target: [0, 1.2, 0], fov: 40, ease: 'linear' }, ui: ui(o) }),
   // subject crossing the sky / a place, camera tracking it
   sky: (H, o) => ({ set: set(o, 'sky'), actors: [heroActor(H, 'h', { pos: [-4, 2.2, -1], to: [1.5, 2, .6], faceMove: true, ...(o.actor || {}) })], props: attach(H, 'h'),
     camera: { pos: [2.2, 1.7, 3], target: 'h', fov: 42, ease: 'linear' }, ui: ui(o) }),
