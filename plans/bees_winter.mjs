@@ -15,7 +15,7 @@ const scenery = [
 const ENTRANCE = [.95, .15, 0]; // entrance slot on the +x side of the hive
 const beats = [
   // 0: question hook: bees around the hive
-  { t: 0, kind: 'intro', add: [{ ...HIVE, delay: .1 }, { id: 'bees', type: 'bees', pos: [0, 0, 0], params: { count: 16, scale: .16 }, anim: 'grow' }, ...scenery],
+  { t: 0, kind: 'intro', add: [{ ...HIVE, delay: .1 }, { id: 'bees', type: 'bees', pos: [0, 0, 0], params: { count: 16, scale: .3 }, anim: 'grow' }, ...scenery],
     modes: { bees: { mode: 'swarm', c: [0, 1.8, 0], r: 1.8, h: .6 } }, camera: { preset: 'hero', target: [0, .7, 0], dist: 8, elev: .22, az: .6, zoom: 'in' } },
   // 1: moisture drips inside the hive; rain outside
   { t: at(1), kind: 'problem', effects: ['rain'], add: [stk('w1', 'warning', [0, 1.7, .9], .3, { pulse: true })],
