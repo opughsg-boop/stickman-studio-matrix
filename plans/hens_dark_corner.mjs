@@ -45,7 +45,10 @@ const beats = [
 const plan = {
   version: 2, planner: 'directed', duration: D, language: 'en', prompt: 'Why hens pick the dark corner',
   captions: S.flatMap((seg, si) => buildCaptions({ segments: [seg] }, 2).map(c => ({ ...c, end: Math.min(c.end + .25, si + 1 < S.length ? S[si + 1].start : D) }))),
-  fades: [], env: { soil: 'forrest_ground_01', soilRepeat: 2 }, style: { camEase: .6, captionY: .78 },
+  fades: [], env: {
+    // v3 (realism step 1): dense natural lawn over the whole island top, one even pale sky with light clouds, no hard sea/sky split
+    soil: 'forrest_ground_01', soilRepeat: 2, cover: 'high', coverGain: 1.5, coverTint: 'lawn',
+    clouds: 16, skyGain: .45, water: '#9cb9cc', fog: '#c9dce8', haze: .8, horizon: 'hills', horizonDist: 260, waves: 0, foam: false, birds: 3, motes: 1 }, style: { camEase: .6, captionY: .78 },
   beats: beats.map((b, i) => ({ start: b.t, end: i + 1 < beats.length ? beats[i + 1].t : D, text: '', remove: [], modes: {}, effects: [], add: [], ...b, camera: { punch: false, ...b.camera } })),
 };
 plan.beats.forEach(b => { delete b.t; b.text = S.flatMap(s => s.words).filter(x => x.start >= b.start - .01 && x.start < b.end - .01).map(x => x.w).join(' '); });

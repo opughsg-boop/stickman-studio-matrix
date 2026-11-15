@@ -97,3 +97,9 @@ Rule: when a preview or final video shows a mistake, add one entry here (what wa
 - **Mistake:** earth dykes made with `mudTex` read as wooden planks, and small `vapour` puffs read as floating snowballs. **Fix:** a dotted sandy `dykeTex`; vapour sprites 2-3x larger at opacity ~.1.
 - **Mistake:** pink brine (#e08aa3) looked lavender under the blue sky reflection. **Fix:** a stronger rose (#ff6f93) and tint the pond floor pink too.
 - **Mistake:** `coast_sand_rocks_02` looks grey-green on a salt farm. **Fix:** `env.soilTint: [1.18, 1.08, .9]` warms it toward pale sand.
+
+## Hens dark corner, v2 → v3 (2026-11-15, user feedback)
+- **Mistake:** the sky was split in half: a dark blue sea band under a pale sky, with a hard horizon line. **Fix:** `env.water` pale (#9cb9cc), `env.fog` pale, `haze` .8, `horizon:'hills'` at 260 m, `waves:0`, `foam:false`, `clouds:16`. The sky reads as one even blue with light clouds.
+- **Mistake:** the lawn was patchy: bare soil and grey pebble spots showed through. **Fix (partial):** `cover:'high'`, `coverGain:1.5`. Still open: use a denser cover count (a number, e.g. 4000) or a true grass ground texture.
+- **Mistake:** the chicken coop roof and walls looked like flat boxes. **Open.**
+- **Rule (user, 2026-11-15):** each video gets ONE realism step. When a step is judged best by the user, lock it in STYLE_GUIDE.md and stop changing it.
