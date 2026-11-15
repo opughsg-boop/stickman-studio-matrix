@@ -14,6 +14,7 @@ import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { REF_PROPS, refSet, gloss } from './cine_ref.js';
+import { WASHER_PROPS } from './cine_washer.js';
 
 const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -124,7 +125,7 @@ const PROP = {
     if (p.height) { const b = new THREE.Box3().setFromObject(o), s = p.height / (b.max.y - b.min.y); o.scale.multiplyScalar(s); const c = b.getCenter(new THREE.Vector3()).multiplyScalar(s); o.position.sub(c); }
     const w = new THREE.Group(); w.add(o); return w; },
 };
-Object.assign(PROP, REF_PROPS);
+Object.assign(PROP, REF_PROPS, WASHER_PROPS);
 function mat(p) { if (p.gloss) return gloss(p.color || '#cccccc', { rough: p.rough, glow: p.glow, emissive: p.glow ? p.color : undefined }); const o = { color: p.color || '#cccccc', roughness: p.rough ?? .5, metalness: p.metal ?? 0 };
   if (p.glow) { o.emissive = p.color; o.emissiveIntensity = p.glow; }
   if (p.opacity != null) { o.transparent = true; o.opacity = p.opacity; }
@@ -227,10 +228,11 @@ function drawUI(sh, lt) {
   }
 }
 function drawCaptionRef(c) { // reference look: rounded heavy font, white, key words coloured + underlined
-  const size = H * style.captionSize, font = s => `900 ${s}px ${style.captionFont}, CapEn`; let fs = size; cctx.save(); cctx.font = font(fs);
+  const ar = /[؀-ۿ]/.test(c.text), size = H * style.captionSize, font = s => `900 ${s}px ${style.captionFont}, ${ar ? 'CapAr2, ' : ''}CapEn`; let fs = size; // Arabic: Cairo glyphs, words laid right to left
+  cctx.save(); cctx.font = font(fs);
   const words = c.text.split(' '), sp = () => cctx.measureText(' ').width; let tw = () => words.reduce((a, w) => a + cctx.measureText(w).width, 0) + sp() * (words.length - 1);
   while (tw() > W * .8) { fs *= .93; cctx.font = font(fs); }
-  let x = W / 2 - tw() / 2; const y = H * style.captionY; cctx.textBaseline = 'middle'; cctx.textAlign = 'left';
+  let x = W / 2 - tw() / 2; const y = H * style.captionY; cctx.textBaseline = 'middle'; cctx.textAlign = 'left'; if (ar) cctx.direction = 'rtl';
   for (const w of words) { const ww = cctx.measureText(w).width, hc = c.hl && c.hl[w.toLowerCase()];
     cctx.shadowColor = 'rgba(20,0,20,.75)'; cctx.shadowBlur = fs * .3; cctx.shadowOffsetY = fs * .06; cctx.fillStyle = hc || '#ffffff'; cctx.fillText(w, x, y);
     cctx.shadowBlur = 0; cctx.shadowOffsetY = 0; cctx.fillText(w, x, y);
