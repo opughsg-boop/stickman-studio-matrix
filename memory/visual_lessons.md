@@ -103,3 +103,7 @@ Rule: when a preview or final video shows a mistake, add one entry here (what wa
 - **Mistake:** the lawn was patchy: bare soil and grey pebble spots showed through. **Fix (partial):** `cover:'high'`, `coverGain:1.5`. Still open: use a denser cover count (a number, e.g. 4000) or a true grass ground texture.
 - **Mistake:** the chicken coop roof and walls looked like flat boxes. **Open.**
 - **Rule (user, 2026-11-15):** each video gets ONE realism step. When a step is judged best by the user, lock it in STYLE_GUIDE.md and stop changing it.
+## Horse sleeps standing (preview 2026-11-15, plans/horse_sleep.mjs)
+- **Works:** real horse model (animals_pack/Horse, 1.9 m) on real grass, captions and stickers in sync.
+- **Mistake:** the 'lie down to sleep' beat shows the horse still standing, because the library has no lying-down clip (Death is not a sleep). Fix needed: a lying-down pose, or a proper cut to a side view of a lying horse.
+- **Mistake:** the stay-apparatus rings are hidden behind the leg and too small. Fix: place them outside the leg, larger (.5) and at the knee and hip height.
