@@ -100,9 +100,9 @@
  {
   "code": "dead_beat",
   "rule": "Each beat must add an object, change a character mode, add an effect or change the camera.",
-  "count": 3,
-  "last_seen": "2026-11-13",
-  "example": "beat 11 adds nothing new visually"
+  "count": 5,
+  "last_seen": "2026-11-15",
+  "example": "beat 9 adds nothing new visually"
  },
  {
   "code": "flat_primitive_water",
