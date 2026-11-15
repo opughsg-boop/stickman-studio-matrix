@@ -56,12 +56,12 @@ const shots = [
   { t: at(6), set: REAL, props: [
       { id: 'drum', type: 'drum', pos: [0, .3, 0], load: 24, loadSize: 1.45, pressMax: .25, wobble: 1, omega: [[0, 1], [1.2, 2.6], [9, 2.6]], drainAt: 99, drops: 0, seed: 2 }],
     camera: { pos: [.5, .58, 2.0], target: [0, .3, 0], to: { pos: [.36, .52, 1.82] }, fov: 36, dof: { aperture: .008, maxblur: .008 } },
-    fx: FX, ui: [{ type: 'label', text: '✗', world: [.0, .66, .15], size: .16, color: '#ff3347', start: rel(6, 6) }] },
+    fx: FX, ui: [{ type: 'counter', text: '✗', at: [.5, .3], size: .14, color: '#ff3347', start: rel(6, 6) }] },
   // 7b a good load spins smoothly and wrings the water out (green check)
   { t: at(6, 9), set: REAL, props: [
       { id: 'drum', type: 'drum', pos: [0, .3, 0], load: 8, omega: [[0, 9.5], [9, 9.5]], drainAt: -9, seed: 4 }],
     camera: { pos: [-.38, .55, 2.0], target: [0, .3, 0], to: { pos: [-.26, .5, 1.82] }, fov: 36, dof: { aperture: .008, maxblur: .008 } },
-    fx: FX, ui: [{ type: 'label', text: '✓', world: [.0, .66, .15], size: .16, color: '#2fd25a', start: .25 }] },
+    fx: FX, ui: [{ type: 'counter', text: '✓', at: [.5, .3], size: .14, color: '#2fd25a', start: .25 }] },
 ];
 
 const HL = { 'الغسيل؟': CYAN, 'لوح': CYAN, '1908،': GOLD, 'كهربا': CYAN, 'الطبلة': CYAN, 'الطبلة،': CYAN, 'spin،': GOLD, 'فيزياء': CYAN, 'السلطة': CYAN, 'كتير': '#ff5a5a' };
