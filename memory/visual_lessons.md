@@ -107,3 +107,5 @@ Rule: when a preview or final video shows a mistake, add one entry here (what wa
 - **Works:** real horse model (animals_pack/Horse, 1.9 m) on real grass, captions and stickers in sync.
 - **Mistake:** the 'lie down to sleep' beat shows the horse still standing, because the library has no lying-down clip (Death is not a sleep). Fix needed: a lying-down pose, or a proper cut to a side view of a lying horse.
 - **Mistake:** the stay-apparatus rings are hidden behind the leg and too small. Fix: place them outside the leg, larger (.5) and at the knee and hip height.
+
+- **Fixed (horse video):** no lying-down clip exists, so `glb` now has `lie:1`, which tips the model 90 degrees onto its side and lifts it by half its width. Works for any library animal. Rings: place stickers outside the leg with `onTop:true`.

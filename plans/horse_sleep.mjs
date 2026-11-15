@@ -25,11 +25,11 @@ const beats = [
   { t: at(3), kind: 'solution', remove: ['w1'], add: [stk('chk', 'check', [1.2, 1.9, 0], .3, { delay: .3 })],
     modes: { horse: { clip: 'Idle' } }, camera: { preset: 'close', target: [0, 1.0, 0], dist: 6.5, elev: .2, az: .3, zoom: 'in' } },
   // then it lies down on its side and rests deeply
-  { t: at(4), kind: 'solution', remove: ['chk'], modes: { horse: { clip: 'Idle_2' } }, camera: { preset: 'close', target: [0, .8, 0], dist: 6.5, elev: .15, az: 1.3, zoom: 'out' } },
+  { t: at(4), kind: 'solution', remove: ['chk', 'horse'], add: [{ id: 'lying', type: 'glb', pos: [0, 0, 0], params: { model: 'animals_pack/Horse', height: 1.9, clip: 'Idle_Headlow', lie: 1 }, anim: 'grow' }, stk('zz', 'face_sleep', [.2, 1.2, .8], .36, { delay: .5 })], camera: { preset: 'close', target: [0, .8, 0], dist: 6.5, elev: .15, az: 1.3, zoom: 'out' } },
   // tip: a horse that never lies down may be sick
-  { t: at(5), kind: 'problem', add: [stk('idea', 'idea', [1.3, 2.0, 0], .32, { delay: .2 })], modes: { horse: { clip: 'Idle_Headlow' } }, camera: { preset: 'close', target: [0, 1.0, 0], dist: 6, elev: .25, az: -.8, zoom: 'in' } },
+  { t: at(5), kind: 'problem', remove: ['lying', 'zz'], add: [{ ...HORSE('Idle_Headlow'), id: 'horse2', delay: .1 }, stk('idea', 'idea', [1.3, 2.0, 0], .32, { delay: .2 })], modes: { horse2: { clip: 'Idle_Headlow' } }, camera: { preset: 'close', target: [0, 1.0, 0], dist: 6, elev: .25, az: -.8, zoom: 'in' } },
   // CTA: wide orbit with a like
-  { t: at(6), kind: 'info', remove: ['idea'], add: [stk('like', 'thumbs_up', [-1.5, 2.4, .2], .5, { delay: .3 })], modes: { horse: { clip: 'Idle' } }, camera: { preset: 'orbit', target: [0, 1, 0], dist: 9, elev: .3, az: .3, zoom: 'out' } },
+  { t: at(6), kind: 'info', remove: ['idea'], add: [stk('like', 'thumbs_up', [-1.5, 2.4, .2], .5, { delay: .3 })], modes: { horse2: { clip: 'Idle' } }, camera: { preset: 'orbit', target: [0, 1, 0], dist: 9, elev: .3, az: .3, zoom: 'out' } },
 ];
 const plan = {
   version: 2, planner: 'directed', duration: D, language: 'ar', prompt: 'الحصان بينام واقف',

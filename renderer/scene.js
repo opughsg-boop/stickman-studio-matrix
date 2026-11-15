@@ -1250,6 +1250,8 @@ ASSETS.glb = (p = {}) => {
   const bb = new THREE.Box3().setFromObject(o, true), s = (p.height || 1) / Math.max(.001, bb.max.y - bb.min.y);
   o.scale.setScalar(s); o.position.y = -bb.min.y * s; o.position.x = -(bb.min.x + bb.max.x) / 2 * s; o.position.z = -(bb.min.z + bb.max.z) / 2 * s;
   const w = new THREE.Group(); w.add(o); shadowed(o); o.traverse(m => { if (m.isMesh) m.frustumCulled = false; });
+  // lying on its side (an animal resting): tip the whole body 90 degrees around its length axis, lifted by half its width
+  if (p.lie) { const bw = new THREE.Box3().setFromObject(o, true); o.rotation.z = (p.lie === -1 ? -1 : 1) * Math.PI / 2; o.position.y += (bw.max.x - bw.min.x) / 2; }
   // x-ray / medical look: a see-through body. Materials are cloned so other copies of the same model stay opaque.
   // anatomy window (medical-diagram look, like an opened cow model): the skin inside the world-space box
   // cutBox = [x0, x1, y0, y1, z0, z1] is removed, so organs placed inside the body show through a window in the side.
