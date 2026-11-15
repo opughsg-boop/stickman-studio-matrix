@@ -16,7 +16,7 @@ const beats = [
   // hook: the horse stands still
   { t: 0, kind: 'intro', add: [{ ...HORSE('Idle'), delay: .1 }, ...scenery], camera: { preset: 'hero', target: [0, 1.1, 0], dist: 8, elev: .2, az: .6, zoom: 'in' } },
   // the stay apparatus in the legs: a ring around the knee and hip
-  { t: at(1), kind: 'info', add: [stk('ring1', 'circle_ring', [-.25, .6, .25], .42, { delay: .2, bob: 0 }), stk('ring2', 'circle_ring', [-.25, 1.2, -.1], .42, { delay: .6, bob: 0 })],
+  { t: at(1), kind: 'info', add: [stk('ring1', 'circle_ring', [.55, .62, .5], .55, { delay: .2, bob: 0, onTop: true }), stk('ring2', 'circle_ring', [.55, 1.2, -.55], .55, { delay: .6, bob: 0, onTop: true })],
     modes: { horse: { clip: 'Idle' } }, camera: { preset: 'close', target: [0, .9, 0], dist: 5.2, elev: .25, az: .8, zoom: 'in' } },
   // the sleep is light: a short lying-down nap
   { t: at(2), kind: 'problem', remove: ['ring1', 'ring2'], add: [stk('w1', 'warning', [1.2, 1.9, 0], .3, { pulse: true })],
