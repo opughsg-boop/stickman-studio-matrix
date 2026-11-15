@@ -35,3 +35,4 @@
 {"run": "hens_dark_corner", "time": "2026-11-15 22:22", "score": 100, "issues": 0, "codes": []}
 {"run": "horse_stable", "time": "2026-11-15 22:45", "score": 100, "issues": 0, "codes": []}
 {"run": "horse_stable", "time": "2026-11-15 23:00", "score": 100, "issues": 0, "codes": []}
+{"run": "washer", "time": "2026-11-15 23:17", "score": 90, "issues": 2, "codes": ["ref_slow_cuts", "ref_static"]}

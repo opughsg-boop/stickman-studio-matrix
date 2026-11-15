@@ -58,9 +58,9 @@
  {
   "code": "ref_static",
   "rule": "Keep the camera always moving (push/orbit/handheld) like the reference.",
-  "count": 5,
+  "count": 6,
   "last_seen": "2026-11-15",
-  "example": "less motion than reference (5.8 vs 22.1)"
+  "example": "less motion than reference (5.0 vs 22.1)"
  },
  {
   "code": "subject_lost",
@@ -86,9 +86,9 @@
  {
   "code": "ref_slow_cuts",
   "rule": "Cut every 1-2 seconds; one visual per phrase.",
-  "count": 4,
+  "count": 5,
   "last_seen": "2026-11-15",
-  "example": "cuts slower than reference (2.51s vs 1.10s)"
+  "example": "cuts slower than reference (1.97s vs 1.10s)"
  },
  {
   "code": "no_context",
