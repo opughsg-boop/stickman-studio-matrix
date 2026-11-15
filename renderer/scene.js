@@ -152,6 +152,7 @@ function buildIsland(env, real) {
   for (let i = 0; i < p.count; i++) if (p.getY(i) > 0) p.setY(i, p.getY(i) + Math.sin(p.getX(i) * 1.3) * .05 + Math.cos(p.getZ(i) * 1.7) * .05);
   geo.computeVertexNormals();
   const side = new THREE.MeshStandardMaterial({ map: TEX.soilSide, roughness: 1 }), top = new THREE.MeshStandardMaterial({ map: TEX.soilTop, roughness: 1 });
+  if (env.soilTint) top.color.setRGB(...env.soilTint); // e.g. [1.15, 1.05, .85] warms a grey soil toward pale sand
   if (TEX.realSoil) { top.map = TEX.realSoil.diff; if (TEX.realSoil.nor) top.normalMap = TEX.realSoil.nor; if (TEX.realSoil.rough) top.roughnessMap = TEX.realSoil.rough; }
   const island = new THREE.Mesh(geo, [side, side, top, side, side, side]);
   island.position.y = -I.depth / 2; island.receiveShadow = true; island.castShadow = true; scene.add(island);
@@ -928,7 +929,7 @@ Object.assign(ASSETS, { ant_farm: antFarm, clock24, film_cam: filmCam, sleeper }
 // modes on the object may switch the clip: modes: { cow: { clip: 'Walk' } }
 const GLB = {};
 async function preloadGLB(p) {
-  const names = new Set(); for (const b of p.beats || []) for (const a of b.add || []) { if (a.type === 'glb') names.add(a.params.model); if (a.params?.rider) names.add(a.params.rider); }
+  const names = new Set(); for (const b of p.beats || []) for (const a of b.add || []) { if (a.type === 'glb') names.add(a.params.model); if (a.params?.rider) names.add(a.params.rider); if (a.type === 'raker') names.add(a.params?.man || 'modular_men/Worker'); }
   const l = new GLTFLoader();
   await Promise.all([...names].map(async n => { GLB[n] = await l.loadAsync(n.startsWith('ph/') ? `/assets/${n}/${n.slice(3)}.gltf` : n.startsWith('models/') ? `/assets/${n}.glb` : `/assets/lib/${n}.glb`); }));
   // 3D-sky (realistic) plans: smooth the low-poly animal meshes so facets do not show as flat triangles.
@@ -1516,3 +1517,124 @@ function coins(p = {}) { const g = new THREE.Group(), r = rng(p.seed || 81), n =
   g.userData.tick = (t, age) => { const k = easeIO(clamp((age - .4) / (p.dur || 3))); ims.forEach((im, s) => { im.count = Math.floor(n * k * (1 - s * .18)); }); };
   return shadowed(g); }
 Object.assign(ASSETS, { flood, cracked, mudhouse, cloud, dam, nilometer, coins });
+
+// ---------- salt pack (2026-11-15): salt pans (ponds with per-beat level / pink / crust via modes), salt mounds (grow, rain melt), raker (worker + wooden rake),
+// sluice with sea pipe and pump, vapour (evaporation / heat shimmer), brine glass (salt dissolving in sea water). Real sizes in metres.
+function saltTex() { return SPR.salt ||= canvasT(256, 256, (g, w, h) => { const r = rng(91); g.fillStyle = '#e9e8e3'; g.fillRect(0, 0, w, h);
+  for (let i = 0; i < 6000; i++) { const v = 205 + r() * 50 | 0; g.fillStyle = `rgba(${v},${v},${v + 2},${.3 + r() * .5})`; g.fillRect(r() * w, r() * h, 1 + r() * 2, 1 + r() * 2); }
+  for (let i = 0; i < 700; i++) { g.fillStyle = `rgba(140,140,146,${r() * .22})`; g.fillRect(r() * w, r() * h, 1 + r() * 2, 1); } }, [3, 3]); }
+function pondFloorTex() { return SPR.pondFloor ||= canvasT(256, 256, (g, w, h) => { const r = rng(93); g.fillStyle = '#d8d4cc'; g.fillRect(0, 0, w, h);
+  for (let i = 0; i < 3500; i++) { g.fillStyle = `rgba(${r() > .5 ? '255,255,250' : '90,80,70'},${r() * .18})`; g.fillRect(r() * w, r() * h, 1 + r() * 3, 1 + r() * 3); } }, [2, 2]); }
+function dykeTex() { return SPR.dyke ||= canvasT(256, 256, (g, w, h) => { const r = rng(97); g.fillStyle = '#c7b08a'; g.fillRect(0, 0, w, h);
+  for (let i = 0; i < 4000; i++) { g.fillStyle = `rgba(${r() > .5 ? '238,225,200' : '110,90,62'},${r() * .22})`; g.beginPath(); g.arc(r() * w, r() * h, .5 + r() * 2.2, 0, 7); g.fill(); } }, [2, 1]); }
+const arrLerp = (o, p, k, i, def = 0) => { const m = o.userData.mode, pr = o.userData.prevMode, base = p[k]?.[i] ?? def, from = pr?.[k]?.[i] ?? base; if (!m) return base;
+  const to = m[k]?.[i] ?? from; return lerp(from, to, easeIO(clamp((o.userData.modeAge ?? 0) / (m.dur ?? 2.5)))); };
+const PANS = [[-3.9, -3.2, 5.6, 4], [1.7, -3.2, 4.8, 3.6], [5.85, -3.2, 2.7, 3], [3.4, 1.3, 3.4, 2.6], [-.6, 1.3, 3, 2.4]];
+const PAN_LINKS = [[-.9, -3.2, 0, .7], [4.3, -2.4, 0, .7], [4.8, -.85, Math.PI / 2, 1.9], [1.3, 1.3, 0, .7]];
+function saltPans(p = {}) { // modes: { level:[0..1 per pond], pink:[..], crust:[..], flow:0|1, dur }
+  const g = new THREE.Group(), r = rng(p.seed || 17), ponds = p.ponds || PANS, links = p.links || PAN_LINKS, FY = p.floorY ?? .11, DEP = p.depth ?? .2, DH = FY + DEP + .1, DW = .4;
+  const dm = new THREE.MeshStandardMaterial({ map: dykeTex(), roughness: 1 });
+  const BLUE = col('#4f9aa3'), PINK = col('#ff6f93'), BROWN = col('#9a8468'), WHITE = col('#f2f1ec'), m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), v = new THREE.Vector3(), sc = new THREE.Vector3();
+  const P = ponds.map(([cx, cz, w, d], pi) => {
+    for (const [x, z, sw, sd] of [[cx, cz - d / 2 - DW / 2, w + DW * 2, DW], [cx, cz + d / 2 + DW / 2, w + DW * 2, DW], [cx - w / 2 - DW / 2, cz, DW, d], [cx + w / 2 + DW / 2, cz, DW, d]]) {
+      const b = box(sw, DH + .1, sd, dm); b.position.set(x, DH / 2 - .05, z); b.castShadow = b.receiveShadow = true; g.add(b); }
+    const fm = new THREE.MeshStandardMaterial({ map: pondFloorTex(), color: BROWN.clone(), roughness: .95 }), floor = new THREE.Mesh(new THREE.PlaneGeometry(w, d), fm);
+    floor.rotation.x = -Math.PI / 2; floor.position.set(cx, FY, cz); floor.receiveShadow = true; g.add(floor);
+    const tex = waterTex([w / 3, d / 3], '#9ab8bc'), wm = new THREE.MeshStandardMaterial({ map: tex, color: BLUE.clone(), roughness: .08, metalness: .1, transparent: true, opacity: .8, depthWrite: false });
+    const water = new THREE.Mesh(new THREE.PlaneGeometry(w, d), wm); water.rotation.x = -Math.PI / 2; water.position.set(cx, FY + .05, cz); water.receiveShadow = true; g.add(water);
+    const n = p.crystals || Math.round(w * d * 60), cm = std('#e9e7e1', { r: .45 }), cr = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), cm, n), cd = [];
+    for (let i = 0; i < n; i++) { const cl = r() < .6, x = cx + (r() - .5) * (w - .1), z = cz + (r() - .5) * (d - .1); cd.push({ x, z, s: .012 + r() * r() * .04, ph: r(), ry: r() * 6.3, tx: (r() - .5) * .5, tz: (r() - .5) * .5, cl }); }
+    cr.castShadow = false; cr.receiveShadow = true; cr.frustumCulled = false; cr.count = 0; g.add(cr);
+    const sm = new THREE.MeshBasicMaterial({ color: new THREE.Color(1.7, 1.7, 1.75) }), sp = new THREE.InstancedMesh(new THREE.OctahedronGeometry(1, 0), sm, 40), sd = [];
+    for (let i = 0; i < 40; i++) sd.push([cx + (r() - .5) * (w - .2), cz + (r() - .5) * (d - .2), r() * 40, 2 + r() * 3]); sp.frustumCulled = false; g.add(sp);
+    return { pi, w, d, floor, fm, water, wm, tex, cr, cd, sp, sd, lastC: -1 };
+  });
+  const L = links.map(([x, z, ry, len]) => { const tex = waterTex([1, len], '#a9c8cc'), m = new THREE.MeshStandardMaterial({ map: tex, color: BLUE.clone(), roughness: .1, transparent: true, opacity: 0, depthWrite: false });
+    const s = new THREE.Mesh(new THREE.PlaneGeometry(.32, len), m); s.rotation.set(-Math.PI / 2, 0, ry + Math.PI / 2); s.position.set(x, DH - .02, z); g.add(s);
+    const cut = box(.34, .04, len, std('#a08c6c')); cut.rotation.y = ry + Math.PI / 2; cut.position.set(x, DH - .05, z); g.add(cut); return { s, m, tex }; });
+  g.userData.tick = (t) => {
+    const fl = modeLerp(g, p, 'flow');
+    for (const o of P) { const lv = arrLerp(g, p, 'level', o.pi), pk = arrLerp(g, p, 'pink', o.pi), cu = arrLerp(g, p, 'crust', o.pi);
+      o.water.visible = lv > .01; o.water.position.y = FY + .006 + lv * DEP; o.tex.offset.set(t * .012 + o.pi, t * .006);
+      o.wm.color.copy(BLUE).lerp(PINK, pk).lerp(WHITE, cu * .15); o.wm.opacity = .55 + .3 * lv;
+      o.fm.color.copy(BROWN).lerp(PINK, pk * .45).lerp(WHITE, clamp(cu * 1.2) * .85);
+      if (Math.abs(cu - o.lastC) > .004) { o.lastC = cu; let k = 0;
+        o.cd.forEach((c, i) => { const u = clamp((cu - c.ph * .75) / .25); if (u <= 0) return; const s = c.s * easeIO(u);
+          m4.compose(v.set(c.x, FY + s * .35, c.z), q.setFromEuler(e.set(c.tx * u, c.ry, c.tz * u)), sc.set(s, s * (c.cl ? .8 : .5), s)); o.cr.setMatrixAt(k++, m4); });
+        o.cr.count = k; o.cr.instanceMatrix.needsUpdate = true; }
+      o.sp.visible = cu > .05; if (o.sp.visible) { o.sd.forEach(([x, z, ph, f], i) => { const s = .012 * cu * Math.pow(Math.max(0, Math.sin(t * f + ph)), 14); m4.compose(v.set(x, FY + .03, z), q.identity(), sc.setScalar(s + 1e-5)); o.sp.setMatrixAt(i, m4); }); o.sp.instanceMatrix.needsUpdate = true; } }
+    L.forEach(l => { l.m.opacity = .85 * fl; l.s.visible = fl > .02; l.tex.offset.y = -t * .6; });
+  };
+  return g; }
+function saltMound(p = {}) { // modes: { size (0..1), melt (0..1), dur }
+  const g = new THREE.Group(), r = rng(p.seed || 19), H = p.h || 1.8, R = p.r || H * 1.1, pts = [];
+  for (let i = 0; i <= 14; i++) { const u = i / 14; pts.push(new THREE.Vector2(Math.max(.001, R * (1 - Math.pow(u, .95)) * (1 - .12 * Math.sin(u * Math.PI))), H * (u < .9 ? u : .9 + (u - .9) * .6))); }
+  pts.push(new THREE.Vector2(0, H * .96));
+  const geo = new THREE.LatheGeometry(pts, 48), ps = geo.attributes.position, ph = r() * 6;
+  for (let i = 0; i < ps.count; i++) { const x = ps.getX(i), y = ps.getY(i), z = ps.getZ(i), a = Math.atan2(z, x), rr = Math.hypot(x, z);
+    const k = 1 + .06 * Math.sin(a * 3 + ph) + .035 * Math.sin(a * 7 + y * 3 + ph) + .02 * Math.sin(a * 13 - y * 5); if (rr > .01) { ps.setX(i, x * k); ps.setZ(i, z * k); } }
+  geo.computeVertexNormals();
+  const m = new THREE.MeshStandardMaterial({ map: saltTex(), color: col('#ebe9e3'), roughness: .9 }), mesh = new THREE.Mesh(geo, m); mesh.castShadow = mesh.receiveShadow = true; g.add(mesh);
+  const pm = new THREE.MeshStandardMaterial({ color: col('#a7bcc4'), roughness: .05, metalness: .1, transparent: true, opacity: 0, depthWrite: false }), pud = new THREE.Mesh(new THREE.CircleGeometry(R * 1.25, 40), pm);
+  pud.rotation.x = -Math.PI / 2; pud.position.y = .12; g.add(pud);
+  const sm = new THREE.MeshBasicMaterial({ color: new THREE.Color(1.7, 1.7, 1.75) }), sp = new THREE.InstancedMesh(new THREE.OctahedronGeometry(1, 0), sm, 36), sd = [];
+  for (let i = 0; i < 36; i++) { const u = .1 + r() * .75, a = r() * 6.283; sd.push([Math.cos(a) * R * (1 - u) * 1.02, H * u, Math.sin(a) * R * (1 - u) * 1.02, r() * 40, 2 + r() * 3]); } sp.frustumCulled = false; g.add(sp);
+  const DRY = col('#ebe9e3'), WET = col('#b7bcc0'), m4 = new THREE.Matrix4(), v = new THREE.Vector3(), q = new THREE.Quaternion(), sc = new THREE.Vector3();
+  g.userData.tick = (t, age) => { const sz = p.growTime ? lerp(p.from ?? .25, 1, easeIO(clamp(age / p.growTime))) : 1, size = Math.max(.001, sz * (modeLerp(g, { size: 1, ...p }, 'size') || .001)), me = modeLerp(g, p, 'melt');
+    mesh.scale.set(size * (1 + .25 * me), size * (1 - .6 * me), size * (1 + .25 * me)); m.color.copy(DRY).lerp(WET, clamp(me * 1.8)); m.roughness = lerp(.9, .4, clamp(me * 1.8));
+    pm.opacity = .75 * clamp(me * 2); pud.visible = me > .01; pud.scale.setScalar(size * (.7 + .5 * me));
+    sd.forEach(([x, y, z, ph2, f], i) => { const s = .02 * (1 - me) * Math.pow(Math.max(0, Math.sin(t * f + ph2)), 14); m4.compose(v.set(x * size * (1 + .25 * me), y * size * (1 - .6 * me), z * size * (1 + .25 * me)), q, sc.setScalar(s + 1e-5)); sp.setMatrixAt(i, m4); });
+    sp.instanceMatrix.needsUpdate = true; };
+  return g; }
+function rakeMesh(p = {}) { const g = new THREE.Group(), wm = woodMat(), V3 = (x, y, z) => new THREE.Vector3(x, y, z);
+  const A = V3(.12, .95, .3), B = V3(0, .14, p.reach || 1.85); g.add(rod(A, B, .018, wm)); // handle from the hands to the blade
+  const blade = box(p.bw || .8, .13, .03, wm); blade.position.copy(B); g.add(blade);
+  return shadowed(g); }
+function raker(p = {}) { // worker + wooden rake pushing salt: push-pull cycle with a forward lean. p.amp (.25 m), p.rate (1.5)
+  const g = new THREE.Group(), body = new THREE.Group(); g.add(body);
+  const man = ASSETS.glb({ model: p.man || 'modular_men/Worker', height: p.height || 1.75, arms: p.arms ?? .95, seed: p.seed }); body.add(man);
+  const rk = rakeMesh(p); body.add(rk);
+  g.userData.tick = (t) => { const s = Math.sin(t * (p.rate || 1.5) + (p.ph || 0)), a = p.amp ?? .25; body.position.z = s * a; body.rotation.x = .1 + s * (a ? .08 : .02); rk.position.z = s * a * .6; };
+  return g; }
+function sluice(p = {}) { // sea pipe + pump at local x = 0 (island edge), concrete channel along +x, lifting wooden gate. modes: { on 0..1 }
+  const g = new THREE.Group(), len = p.len || 1.1, drop = p.drop ?? 3.9, cm = new THREE.MeshStandardMaterial({ map: concreteTex(), color: col('#cfc8ba'), roughness: .9 });
+  const bot = box(len, .08, .55, cm); bot.position.set(len / 2, .06, 0); g.add(bot);
+  for (const z of [-.3, .3]) { const w = box(len, .42, .1, cm); w.position.set(len / 2, .21, z); g.add(w); }
+  const tex = waterTex([len, 1], '#a9c8cc'), wmat = new THREE.MeshStandardMaterial({ map: tex, color: col('#4f9aa3'), roughness: .08, transparent: true, opacity: 0, depthWrite: false });
+  const wat = new THREE.Mesh(new THREE.PlaneGeometry(len + .3, .5), wmat); wat.rotation.x = -Math.PI / 2; wat.position.set(len / 2 + .15, .26, 0); g.add(wat);
+  const gate = box(.06, .5, .52, woodMat()); gate.position.set(len - .12, .27, 0); g.add(gate);
+  for (const z of [-.33, .33]) { const post2 = box(.08, .9, .08, woodMat()); post2.position.set(len - .12, .45, z); g.add(post2); }
+  const pipeM = std('#5d646b', { r: .45, m: .6 }), pv = cyl(.11, .11, drop + .5, pipeM, 14); pv.position.set(-.35, .45 - (drop + .5) / 2, 0); g.add(pv);
+  const ph2 = cyl(.11, .11, .55, pipeM, 14); ph2.rotation.z = Math.PI / 2; ph2.position.set(-.1, .45, 0); g.add(ph2);
+  const pump = new THREE.Group(), mot = box(.45, .34, .34, std('#3f6b4a', { r: .5, m: .3 })); mot.position.y = .17; pump.add(mot); const fly = cyl(.13, .13, .08, std('#2a2d30', { m: .6, r: .4 }), 16); fly.rotation.z = Math.PI / 2; fly.position.set(.27, .2, 0); pump.add(fly);
+  pump.position.set(.2, .1, -.62); g.add(pump); const hose = cyl(.05, .05, .5, pipeM, 8); hose.rotation.x = Math.PI / 2; hose.position.set(.2, .25, -.36); g.add(hose);
+  const splash = [], rr = rng(p.seed || 5); for (let i = 0; i < 16; i++) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: puffTex(), color: '#ffffff', transparent: true, depthWrite: false, opacity: 0 })); g.add(s); splash.push({ s, ph: rr(), z: (rr() - .5) * .4 }); }
+  const ring = new THREE.Mesh(new THREE.RingGeometry(.2, .3, 32), new THREE.MeshBasicMaterial({ color: '#e9f3f5', transparent: true, opacity: 0, depthWrite: false })); ring.rotation.x = -Math.PI / 2; ring.position.set(-.35, -drop + .03, 0); g.add(ring);
+  g.userData.tick = (t) => { const on = modeLerp(g, p, 'on'); wmat.opacity = .85 * on; wat.visible = on > .02; tex.offset.x = -t * .9 * on; gate.position.y = .27 + on * .45;
+    pump.position.x = .2 + Math.sin(t * 61) * .004 * on; fly.rotation.x = t * 30 * on;
+    splash.forEach(o => { const u = (t * 1.3 + o.ph) % 1; o.s.position.set(len + .1 + u * .5, .3 + Math.sin(u * Math.PI) * .25, o.z); o.s.scale.setScalar(.12 + u * .3); o.s.material.opacity = .6 * on * (1 - u); });
+    const u = (t * .7) % 1; ring.scale.setScalar(1 + u * 3); ring.material.opacity = .5 * on * (1 - u); };
+  return shadowed(g); }
+function vapour(p = {}) { // rising evaporation wisps / heat shimmer over an area. modes: { s 0..1 }
+  const g = new THREE.Group(), r = rng(p.seed || 7), W = p.w || 6, D = p.d || 4, H = p.h || 1.8, list = [];
+  for (let i = 0; i < (p.count || 40); i++) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: puffTex(), color: '#ffffff', transparent: true, depthWrite: false, opacity: 0 })); s.material.rotation = r() * 6; g.add(s);
+    list.push({ s, x: (r() - .5) * W, z: (r() - .5) * D, ph: r(), k: .6 + r() * .6, sz: .5 + r() * .7 }); }
+  g.userData.tick = (t, age) => { const S = modeLerp(g, { s: 1, ...p }, 's') * clamp(age / 1.2);
+    list.forEach(o => { const u = (t * .12 * o.k + o.ph) % 1; o.s.position.set(o.x + Math.sin(t * .8 + o.ph * 9) * .15, .2 + u * H, o.z); o.s.scale.setScalar(o.sz * (1.2 + u * 2.2)); o.s.material.opacity = (p.opacity ?? .1) * S * Math.sin(Math.PI * u); }); };
+  return g; }
+function brineGlass(p = {}) { // ~12 cm glass of sea water: salt grains drop in and dissolve, faint dissolved specks drift inside
+  const g = new THREE.Group(), r = rng(p.seed || 3), R = p.r || .045, H = p.h || .12;
+  const gm = new THREE.MeshStandardMaterial({ color: col('#ffffff'), roughness: .05, metalness: .1, transparent: true, opacity: .22, side: THREE.DoubleSide, depthWrite: false });
+  const glass = new THREE.Mesh(new THREE.CylinderGeometry(R, R * .88, H, 32, 1, true), gm); glass.position.y = H / 2; g.add(glass);
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(R * .88, R * .88, .008, 32), gm); base.position.y = .004; g.add(base);
+  const wm = new THREE.MeshStandardMaterial({ color: col('#6fb2c0'), roughness: .1, transparent: true, opacity: .55, depthWrite: false }), wat = new THREE.Mesh(new THREE.CylinderGeometry(R * .96, R * .86, H * .78, 32), wm); wat.position.y = .008 + H * .39; g.add(wat);
+  const grains = [], cm = std('#fbfaf6', { r: .3 }); for (let i = 0; i < 12; i++) { const c = box(.007, .007, .007, cm); g.add(c); grains.push({ c, ph: i / 12 + r() * .05, x: (r() - .5) * R, z: (r() - .5) * R, ry: r() * 6 }); }
+  const N = 70, spk = new THREE.InstancedMesh(new THREE.SphereGeometry(.0012, 5, 4), new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: .7 }), N), sd = []; spk.frustumCulled = false; g.add(spk);
+  for (let i = 0; i < N; i++) sd.push([r() * 6.28, Math.sqrt(r()) * R * .8, .015 + r() * H * .7, r() * 6]);
+  const m4 = new THREE.Matrix4();
+  g.userData.tick = (t) => { const top = .008 + H * .78;
+    grains.forEach(o => { const u = (t * .45 + o.ph) % 1, y = u < .35 ? lerp(H + .09, top, u / .35) : lerp(top, .02, (u - .35) / .65), s = u < .35 ? 1 : Math.max(.001, 1 - (u - .35) / .5);
+      o.c.position.set(o.x * .7, y, o.z * .7); o.c.rotation.set(t * 2 + o.ry, o.ry, t); o.c.scale.setScalar(s); o.c.visible = s > .01; });
+    sd.forEach(([a, rr, y, ph], i) => { const aa = a + t * .3; m4.makeTranslation(Math.cos(aa) * rr, y + Math.sin(t + ph) * .004, Math.sin(aa) * rr); spk.setMatrixAt(i, m4); }); spk.instanceMatrix.needsUpdate = true; };
+  return g; }
+Object.assign(ASSETS, { salt_pans: saltPans, salt_mound: saltMound, raker, sluice, vapour, brine_glass: brineGlass });

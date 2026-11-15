@@ -44,6 +44,13 @@ Target: the user's three reference reels (Spanish: rabbit hutch build-up, sugar-
   - `cane_cut`: a giant cut stalk with juice drips (`burnt:true` blackens the skin).
   - `critters`: rats and snakes (`flee:true` makes them run).
   - `truck`: real size by default, `scale` 1.7. Options: `path`, `travel`, `color`.
+- **Salt pack (2026-11-15, `plans/salt.mjs`):**
+  - `salt_pans`: 5 shallow ponds (reservoir 5.6x4 m down to a 3x2.4 m crystallizer) with earth dykes and spill notches. Per-beat state through modes: `{ level:[5], pink:[5], crust:[5], flow:0|1, dur }` (water height, blue-green to pink brine, white floor crust with instanced cubic crystals and sparkles). Pass the full state on every beat.
+  - `salt_mound`: white lumpy conical pile with glints (`h`, `r`, `growTime`, `from`); modes `{ size, melt, dur }`, where melt slumps it, darkens it wet and spreads a puddle (rain beat).
+  - `raker`: a Quaternius worker plus a wooden rake in a push-pull cycle (`man`, `amp`, `rate`, `reach`, `ph`).
+  - `sluice`: sea pipe down the island side, a vibrating pump, a concrete channel and a lifting gate (modes `{ on }`).
+  - `vapour`: rising evaporation wisps (modes `{ s }`). `brine_glass`: a 12 cm glass of sea water where salt grains drop in and dissolve.
+  - New env knob `soilTint: [r, g, b]` multiplies the soil colour (salt farm: `[1.18, 1.08, .9]` with `coast_sand_rocks_02`, `horizon:'desert'`, `cover:false`, `birdModel:'Flamingo'`).
 - **Critic:** the self-review knows the sky mode, so it does not ask for the blue room.
 - **Stickers instead of arrows:** 3D emoji stickers (`type:'sticker'`, `assets/stickers`, 65 names: pointing hands, arrows, circle ring, ✓ ✗, faces, microbe, organs, farm animals). They face the camera and pop in.
 - **Anatomy window:** `cutBox`/`cutOpen` opens a window in the flank, organs inside in real places with real textures (rumen with grass, honeycomb reticulum, leafy omasum, folded abomasum, intestines). Reference: `plans/rumen_window.mjs`.

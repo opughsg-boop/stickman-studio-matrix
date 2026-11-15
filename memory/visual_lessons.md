@@ -90,3 +90,10 @@ Rule: when a preview or final video shows a mistake, add one entry here (what wa
 - **Mistake:** bee bodies were about 20 cm long (radius .1 m), far too big next to a hive. Fix: `bees` params `scale` (set .16 for ~3 cm bees). Still a bit small: .3 is the next try.
 - **Mistake:** the `drips` asset rendered as a yellow ellipse, not drips. Fix: left out. Use the `rain` effect for moisture instead.
 - **Open:** the hive is a plain wooden box with comb faces; it needs a stand, an entrance board and a lid edge for realism.
+
+## Salt (preview 2026-11-15, plans/salt.mjs)
+- **Mistake:** `ph/Barrel_01` is a red oil drum with a yellow hazard sign, which breaks the no-signs lock and looks industrial. **Fix:** a wooden `crate` (or stump) as a small table.
+- **Mistake:** a person standing 1 m from a 0.6 m macro shot showed up as a giant hand beside the glass. **Fix:** keep people at least 3 m from macro targets.
+- **Mistake:** earth dykes made with `mudTex` read as wooden planks, and small `vapour` puffs read as floating snowballs. **Fix:** a dotted sandy `dykeTex`; vapour sprites 2-3x larger at opacity ~.1.
+- **Mistake:** pink brine (#e08aa3) looked lavender under the blue sky reflection. **Fix:** a stronger rose (#ff6f93) and tint the pond floor pink too.
+- **Mistake:** `coast_sand_rocks_02` looks grey-green on a salt farm. **Fix:** `env.soilTint: [1.18, 1.08, .9]` warms it toward pale sand.
