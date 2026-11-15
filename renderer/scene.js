@@ -6,10 +6,11 @@ import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 import { clone as skClone } from 'three/addons/utils/SkeletonUtils.js';
 import { Sky } from 'three/addons/objects/Sky.js';
 import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
+import { makePost, buildHorizon, buildCover, upgradeWater, buildMotes, buildBirds, handheld, sharpenTextures, realismTick, resetRealism } from './realism.js';
 
 const R = { W: 540, H: 960 };
-let renderer, scene, camera, comp, cctx, plan, objects = [], lights = {}, fx = {};
-const style = { exposure: 1.0, captionY: 0.74, captionSize: 0.085, shadowRes: 1024, camEase: 0.7, drift: 0.08 };
+let renderer, scene, camera, comp, cctx, plan, objects = [], lights = {}, fx = {}, postFx = null;
+const style = { exposure: 1.0, captionY: 0.74, captionSize: 0.085, shadowRes: 2048, camEase: 0.7, drift: 0.08 };
 
 // ---------- helpers ----------
 const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
@@ -72,7 +73,7 @@ function makeTextures() {
 // plus 3D cumulus clouds built from spheres that drift slowly with time t.
 function buildSky3D(env = {}) {
   // sky box must stay inside the camera far plane (400); the shader itself draws it at the far plane
-  const sky = new Sky(); sky.scale.setScalar(380); sky.frustumCulled = false; scene.add(sky);
+  const sky = new Sky(); sky.scale.setScalar(950); // v2: camera far plane is 1000 so the distant horizon fits sky.frustumCulled = false; scene.add(sky);
   // the Preetham sky outputs very bright HDR values (three's own example lowers the whole exposure to 0.5);
   // we dim only the sky with a gain, so the island keeps its normal exposure and the sky keeps its blue
   // skyTint: the raw model is neutral white near the horizon; a camera-like cool balance gives the pale-blue haze of real photos
@@ -123,7 +124,7 @@ function buildEnvironment(env = {}) {
     scene.background = TEX.sky.tex; scene.backgroundBlurriness = env.skyBlur ?? .02; scene.environment = TEX.sky.env; scene.environmentIntensity = env.envLight ?? .9;
     scene.fog = new THREE.Fog(col(env.fog || '#c8d8e6'), 45, 170);
     const wm = new THREE.MeshStandardMaterial({ color: col(env.water || '#3f6f8f'), roughness: .12, metalness: .35 });
-    const water = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), wm); water.rotation.x = -Math.PI / 2; water.position.y = -(env.island?.depth || 3.2) - .6; water.receiveShadow = true; scene.add(water);
+    const water = new THREE.Mesh(new THREE.PlaneGeometry(2400, 2400), wm); water.rotation.x = -Math.PI / 2; water.position.y = -(env.island?.depth || 3.2) - .6; water.receiveShadow = true; scene.add(water);
     fx.water = water; fx.rays = new THREE.Group(); buildIsland(env, true); return; }
   scene.background = col(env.bg || '#3d7fd0');
   scene.fog = new THREE.Fog(col(env.bg || '#3d7fd0'), 40, 110);
@@ -158,7 +159,9 @@ function buildIsland(env, real) {
   lights.hemi = new THREE.HemisphereLight(0xcfe3ff, 0x5a4636, real ? .55 : 1.25); scene.add(lights.hemi); lights.hemiBase = real ? .55 : 1.25;
   lights.sun = new THREE.DirectionalLight(real ? 0xffe6c4 : 0xfff4e0, 2.6); lights.sun.position.set(-14, 26, 12);
   lights.sun.castShadow = true; lights.sun.shadow.mapSize.set(style.shadowRes, style.shadowRes);
-  Object.assign(lights.sun.shadow.camera, { left: -14, right: 14, top: 14, bottom: -14, near: 1, far: 80 });
+  // v2: frustum fitted to the island (half diagonal + margin) -> about 2.6x sharper shadows at 2048 than the old 1024 / +-14
+  const sr = style.shadowFit === false ? 14 : Math.min(14, Math.hypot(I.w, I.d) / 2 + 2);
+  Object.assign(lights.sun.shadow.camera, { left: -sr, right: sr, top: sr, bottom: -sr, near: 1, far: 80 });
   lights.sun.shadow.bias = -0.0005; lights.sun.shadow.radius = 4; scene.add(lights.sun);
   lights.heat = new THREE.PointLight(0xff5a1f, 0, 30); lights.heat.position.set(0, 6, 0); scene.add(lights.heat);
 }
@@ -472,6 +475,7 @@ function updateCamera(t) {
   const sh = shakeAt(t) * dist * .05;
   if (sh) camera.position.add(new THREE.Vector3(Math.sin(t * 91) * sh, Math.sin(t * 73 + 1) * sh, Math.cos(t * 67) * sh));
   camera.lookAt(target);
+  handheld(camera, t, style.handheld ?? 1); // v2: ~1 cm breathing of a hand-held camera, never a jump
   return i;
 }
 
@@ -513,7 +517,7 @@ function fadeAlpha(t) { let a = 0; for (const f of plan.fades || []) { const d =
 window.setup = async (p, opts = {}) => {
   plan = p; Object.assign(style, p.style || {}, opts.style || {});
   R.W = opts.width || 540; R.H = opts.height || 960;
-  renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+  renderer = new THREE.WebGLRenderer({ antialias: style.post === false, preserveDrawingBuffer: true }); // v2: the post chain has its own MSAA scene target
   renderer.setSize(R.W, R.H); renderer.setPixelRatio(1);
   renderer.localClippingEnabled = true; // cutaway: a glb with cutY is sliced open to show the organs inside
   renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -521,7 +525,7 @@ window.setup = async (p, opts = {}) => {
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   document.body.appendChild(renderer.domElement);
   comp = document.createElement('canvas'); comp.width = R.W; comp.height = R.H; cctx = comp.getContext('2d');
-  scene = new THREE.Scene(); camera = new THREE.PerspectiveCamera(p.fov || 42, R.W / R.H, .1, 400);
+  scene = new THREE.Scene(); camera = new THREE.PerspectiveCamera(p.fov || 42, R.W / R.H, .1, 1000);
   makeTextures();
   if (p.env?.soil) { const L = new THREE.TextureLoader(), rs = {}; for (const k of ['diff', 'nor', 'rough']) { try { const t = await L.loadAsync(`/assets/ph_tex/${p.env.soil}/${k}.jpg`);
       t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(p.env.soilRepeat || 3, p.env.soilRepeat || 3); if (k === 'diff') t.colorSpace = THREE.SRGBColorSpace; rs[k] = t; } catch {} } if (rs.diff) TEX.realSoil = rs; }
@@ -535,19 +539,39 @@ window.setup = async (p, opts = {}) => {
   if (skyName) try { const tex = await new RGBELoader().loadAsync(`/assets/hdri/${skyName}.hdr`); tex.mapping = THREE.EquirectangularReflectionMapping;
     TEX.sky = { tex, env: new THREE.PMREMGenerator(renderer).fromEquirectangular(tex).texture }; } catch (e) { console.warn('sky failed', e); }
   buildEnvironment(p.env || {}); await preloadGLB(p); instantiate();
+  await buildRealism(p.env || {});
   await document.fonts.load('italic 800 40px Cap'); await document.fonts.load('40px CapAr');
   return { objects: objects.length, beats: p.beats.length };
 };
 window.renderAt = (t, q = .9) => {
   const bi = updateCamera(t); updateEffects(t, bi); updateObjects(t);
-  renderer.render(scene, camera);
+  realismTick(t, camera);
+  if (postFx) postFx.render(scene, camera, t); else renderer.render(scene, camera);
   cctx.drawImage(renderer.domElement, 0, 0);
   drawOverlay(t, bi);
   const fa = fadeAlpha(t); if (fa > 0) { cctx.fillStyle = `rgba(0,0,0,${fa})`; cctx.fillRect(0, 0, comp.width, comp.height); }
   drawCaption(t);
   return comp.toDataURL('image/jpeg', q).slice(23);
 };
-window.__scene = () => scene; // debug hook for review tools (bbox checks)
+// v2 realism layer (renderer/realism.js): on by default in the real-sky looks, every part has a plan knob
+async function buildRealism(env) {
+  resetRealism();
+  const real = env.sky !== false && !!fx.water;
+  if (real) {
+    buildHorizon(scene, env, fx.water.position.y);
+    // ground cover avoids flat props lying on the soil (water, boards, cracked mud...)
+    const excl = []; const bb = new THREE.Box3(), sz = new THREE.Vector3();
+    for (const o of objects) { bb.setFromObject(o.holder); if (bb.isEmpty()) continue; bb.getSize(sz);
+      if (bb.max.y > -.05 && bb.min.y < .4 && sz.y < .5) excl.push([bb.min.x - .1, bb.max.x + .1, bb.min.z - .1, bb.max.z + .1]); }
+    buildCover(scene, env, fx.island, excl, style.post === false ? 0 : (style.aa ?? (R.W >= 1000 ? 4 : 0)));
+    upgradeWater(scene, fx.water, env, fx.island);
+    buildMotes(scene, env);
+    await buildBirds(scene, env);
+  }
+  if (style.aniso !== 0) sharpenTextures(scene, renderer, style.aniso);
+  postFx = makePost(renderer, R.W, R.H, style);
+}
+window.__scene = () => scene; window.__plan = () => plan; // debug hook for review tools (bbox checks)
 window.__ready = true;
 
 // ================= v2: VFX, overlays, lift, bee-keeping asset pack =================
@@ -906,7 +930,7 @@ const GLB = {};
 async function preloadGLB(p) {
   const names = new Set(); for (const b of p.beats || []) for (const a of b.add || []) { if (a.type === 'glb') names.add(a.params.model); if (a.params?.rider) names.add(a.params.rider); }
   const l = new GLTFLoader();
-  await Promise.all([...names].map(async n => { GLB[n] = await l.loadAsync(n.startsWith('ph/') ? `/assets/${n}/${n.slice(3)}.gltf` : `/assets/lib/${n}.glb`); }));
+  await Promise.all([...names].map(async n => { GLB[n] = await l.loadAsync(n.startsWith('ph/') ? `/assets/${n}/${n.slice(3)}.gltf` : n.startsWith('models/') ? `/assets/${n}.glb` : `/assets/lib/${n}.glb`); }));
   // 3D-sky (realistic) plans: smooth the low-poly animal meshes so facets do not show as flat triangles.
   // Vertices with the same position are welded and normals averaged; the silhouette stays the same.
   if (p.env?.sky === 'sky3d' && p.env?.smoothAnimals !== false) for (const n of names) if (n.startsWith('animals_pack/') && GLB[n]) GLB[n].scene.traverse(m => {

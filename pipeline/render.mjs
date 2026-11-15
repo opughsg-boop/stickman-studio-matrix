@@ -53,7 +53,8 @@ async function renderChunk(browser, url, plan, opt, ci, f0, f1, file) {
 
 export async function render(planFile, audio, outDir, o = {}) {
   const gpu = !!(o.gpu || process.env.RENDER_GPU);
-  const opt = { fps: 30, w: gpu ? 1080 : 540, h: gpu ? 1920 : 960, workers: Math.max(2, os.cpus().length - 1), chunkSec: 12, outFps: 30, ...o };
+  // v2 (2026-11-15): CPU renders at 630x1120 (was 540x960): measured 1.46x the old time with the whole realism layer on; 720x1280 = 1.69x (pass --w 720 --h 1280)
+  const opt = { fps: 30, w: gpu ? 1080 : 630, h: gpu ? 1920 : 1120, workers: Math.max(2, os.cpus().length - 1), chunkSec: 12, outFps: 30, ...o };
   for (const k of ['fps', 'w', 'h', 'workers']) opt[k] = +opt[k];
   const plan = JSON.parse(fs.readFileSync(planFile, 'utf8'));
   fs.mkdirSync(path.join(outDir, 'chunks'), { recursive: true });

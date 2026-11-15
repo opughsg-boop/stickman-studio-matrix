@@ -24,13 +24,14 @@ export async function runJob(o, log = console.log) {
   else { plan = await makePlan(JSON.parse(fs.readFileSync(tr, 'utf8')), { prompt: o.prompt || '', mode: o.planner || 'auto' });
     fs.writeFileSync(path.join(out, 'plan.json'), JSON.stringify(plan, null, 1)); }
   step('preview', .15);
-  await render(path.join(out, 'plan.json'), o.audio, out, { preview: true, gpu: o.gpu });
+  const res = o.w ? { w: +o.w, h: +o.h } : {};
+  await render(path.join(out, 'plan.json'), o.audio, out, { preview: true, gpu: o.gpu, ...res });
   if (o.previewOnly) { step('preview-ready', 1); return { out }; }
   step('sfx', .18);
   const mix = path.join(out, 'mix.wav');
   if (!o.noSfx) execFileSync('python3', ['pipeline/sfx.py', path.join(out, 'plan.json'), o.audio, mix], { stdio: 'inherit' });
   step('render', .2);
-  await render(path.join(out, 'plan.json'), o.noSfx ? o.audio : mix, out, { fps: +o.fps || 30, gpu: o.gpu, ...(o.workers ? { workers: +o.workers } : {}), onProgress: p => step('render', .2 + p * .7) });
+  await render(path.join(out, 'plan.json'), o.noSfx ? o.audio : mix, out, { fps: +o.fps || 30, gpu: o.gpu, ...res, ...(o.workers ? { workers: +o.workers } : {}), onProgress: p => step('render', .2 + p * .7) });
   step('review', .92);
   execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', path.join(out, 'final.mp4'), '-vf', `fps=${((plan.beats || plan.shots).length / plan.duration).toFixed(4)},scale=180:-1,tile=6x${Math.ceil((plan.beats || plan.shots).length / 6)}`, '-frames:v', '1', path.join(out, 'sheet_final.jpg')]);
   execFileSync('python3', ['pipeline/critic.py', out], { stdio: 'inherit' });

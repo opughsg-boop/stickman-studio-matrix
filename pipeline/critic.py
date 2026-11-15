@@ -28,7 +28,7 @@ for m in re.finditer(r'black_start:([\d.]+) black_end:([\d.]+)', ff(['-i', video
     a, b = float(m[1]), float(m[2])
     if not any(a >= x - .2 and b <= y + .2 for x, y in fades):
         issue('unexpected_black', 3, f'unplanned black frames {a:.2f}-{b:.2f}s', a)
-for m in re.finditer(r'freeze_start: ([\d.]+)[\s\S]*?freeze_duration: ([\d.]+)', ff(['-i', video, '-vf', 'freezedetect=n=0.002:d=2.5', '-an', '-f', 'null', '-'])):
+for m in re.finditer(r'freeze_start: ([\d.]+)[\s\S]*?freeze_duration: ([\d.]+)', ff(['-i', video, '-vf', 'scale=135:240,freezedetect=n=0.002:d=2.5', '-an', '-f', 'null', '-'])):
     issue('frozen', 2, f'picture almost static for {float(m[2]):.1f}s', float(m[1]))
 
 # ---- 2. loudness ----
