@@ -85,3 +85,8 @@ Rule: when a preview or final video shows a mistake, add one entry here (what wa
 - Mistake: the pine is a low-poly cone (PineTree_1 from the nature pack), the man is the Xbot mannequin, the pot is a flat black cylinder and the fire is a faint particle cloud. The pour (line 9) is barely visible and line 6 is blurred.
 - Fix (next): use a realistic person and a real pine (Poly Haven or a scanned model under the size limit), a real fire pit with a bright flame, and a clear amber stream into the bamboo. Keep the handheld shake low.
 - Source: contact sheet of runs/candle_v2/final.mp4 (2026-11-15).
+
+## Bees (preview 2026-11-15, plans/bees_winter.mjs)
+- **Mistake:** bee bodies were about 20 cm long (radius .1 m), far too big next to a hive. Fix: `bees` params `scale` (set .16 for ~3 cm bees). Still a bit small: .3 is the next try.
+- **Mistake:** the `drips` asset rendered as a yellow ellipse, not drips. Fix: left out. Use the `rain` effect for moisture instead.
+- **Open:** the hive is a plain wooden box with comb faces; it needs a stand, an entrance board and a lid edge for realism.

@@ -630,7 +630,7 @@ function beeMesh(queen) {
 }
 function bees(p = {}) { // swarm; modes: {mode:'swarm',c,r,h} | {mode:'stream',from,to} | {mode:'pass',c} | {mode:'messy',c}
   const g = new THREE.Group(), n = p.count || 26, r = rng(p.seed || 12), list = [];
-  for (let i = 0; i < n; i++) { const b = beeMesh(false); g.add(b); list.push({ b, ph: r() * 6.28, sp: .8 + r() * 1.2, rad: .4 + r(), hy: r() }); }
+  for (let i = 0; i < n; i++) { const b = beeMesh(false); b.scale.setScalar(p.scale ?? 1); g.add(b); list.push({ b, ph: r() * 6.28, sp: .8 + r() * 1.2, rad: .4 + r(), hy: r() }); }
   const P = new THREE.Vector3();
   g.userData.tick = (t) => {
     const mo = g.userData.mode || p.init || { mode: 'swarm', c: [0, 2, 0], r: 2, h: 1 };
