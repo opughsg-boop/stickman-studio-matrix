@@ -7,20 +7,27 @@ const tr = JSON.parse(fs.readFileSync(trf, 'utf8')), S = tr.segments, D = tr.dur
 const at = (i, k = 0) => (i === 0 && k === 0 ? 0 : S[Math.min(i, S.length - 1)].words[k].start);
 const stk = (id, name, pos, size = .32, o = {}) => ({ id, type: 'sticker', pos, params: { name, size, ...o }, anim: 'none', delay: o.delay || 0, dust: false });
 const obj = (id, parts, delay = 0) => ({ id, type: 'custom', pos: [0, 0, 0], params: { parts }, anim: 'grow', delay, dust: false });
-// a small flying bird (sparrow-like, wings spread), faces +z
+// feathered parts get the fur/feather noise (fur:true); wings are layered feather blades with darker tips
+const P = (shape, size, pos, color, o = {}) => ({ shape, size, pos, color, rough: o.rough ?? .85, fur: o.fur, rot: o.rot, tex: o.tex });
+const wingBlades = (x, y, z, side, base) => [0, 1, 2, 3].map(k => P('sphere', [.3 - k * .03, .03, .17], [x + side * (.12 + k * .075), y + .075 - k * .012, z - .02 - k * .035], k > 1 ? '#3b2c1f' : base, { fur: true, rot: [0, side * .18 * k, side * (.45 - k * .08)] }));
+// a small flying bird (sparrow-like, wings spread, feather blades), faces +z
 const flyer = (id, [x, y, z], delay = 0) => obj(id, [
-  { shape: 'sphere', size: [.2, .16, .3], pos: [x, y, z], color: '#8a6a48', rough: .7 }, { shape: 'sphere', size: [.17, .15, .19], pos: [x, y - .02, z - .02], color: '#d8c7a6', rough: .8 },
-  { shape: 'sphere', size: [.13, .12, .13], pos: [x, y + .08, z + .14], color: '#8a6a48', rough: .6 }, { shape: 'cone', size: [.04, .08, .04], pos: [x, y + .08, z + .23], rot: [Math.PI / 2, 0, 0], color: '#3a2a1a' },
-  { shape: 'sphere', size: [.5, .03, .2], pos: [x - .3, y + .07, z], rot: [0, 0, .5], color: '#5a4330', rough: .8 }, { shape: 'sphere', size: [.5, .03, .2], pos: [x + .3, y + .07, z], rot: [0, 0, -.5], color: '#5a4330', rough: .8 },
-  { shape: 'sphere', size: [.09, .025, .2], pos: [x, y - .01, z - .27], color: '#5a4330' }], delay);
-// a kiwi-like flightless bird: round body, tiny wing stubs, strong legs, long beak, faces +z (about 0.4 m)
+  P('sphere', [.2, .16, .3], [x, y, z], '#8a6a48', { fur: true }), P('sphere', [.17, .13, .2], [x, y - .035, z - .02], '#e2d3b4', { fur: true }),
+  P('sphere', [.13, .12, .13], [x, y + .08, z + .14], '#8a6a48', { fur: true }), P('cone', [.04, .08, .04], [x, y + .08, z + .23], '#3a2a1a', { rot: [Math.PI / 2, 0, 0] }),
+  P('sphere', [.03, .03, .03], [x + .05, y + .11, z + .17], '#0d0a08', { rough: .3 }), P('sphere', [.03, .03, .03], [x - .05, y + .11, z + .17], '#0d0a08', { rough: .3 }),
+  ...wingBlades(x, y, z, -1, '#6a5038'), ...wingBlades(x, y, z, 1, '#6a5038'),
+  P('sphere', [.1, .02, .22], [x, y - .01, z - .28], '#4a3828', { fur: true }), P('sphere', [.07, .02, .2], [x + .03, y - .015, z - .3], '#3b2c1f', { fur: true })], delay);
+// a kiwi: shaggy feather coat (layered body shells), tiny wing stubs, long slightly curved beak with nostril tip, thick legs with toes
+const toes = (x, y, z) => [-.05, 0, .05].map(a => P('cylinder', [.014, .09, .014], [x + a * .9, y, z + .045], '#6a4a2a', { rot: [Math.PI / 2 - .15, 0, a * 3] }));
 const kiwi = (id, [x, y, z], delay = 0) => obj(id, [
-  { shape: 'sphere', size: [.42, .4, .5], pos: [x, y + .26, z], color: '#7a5b3a', tex: 'papillae', rough: .95 },
-  { shape: 'sphere', size: [.16, .15, .17], pos: [x, y + .4, z + .27], color: '#8a6a48', rough: .8 },
-  { shape: 'cone', size: [.035, .3, .035], pos: [x, y + .35, z + .46], rot: [Math.PI / 2 + .25, 0, 0], color: '#d7c7a0', rough: .5 },
-  { shape: 'sphere', size: [.03, .03, .03], pos: [x + .06, y + .44, z + .31], color: '#0d0a08' }, { shape: 'sphere', size: [.03, .03, .03], pos: [x - .06, y + .44, z + .31], color: '#0d0a08' },
-  { shape: 'sphere', size: [.06, .03, .1], pos: [x - .21, y + .28, z - .02], color: '#5a4330' }, { shape: 'sphere', size: [.06, .03, .1], pos: [x + .21, y + .28, z - .02], color: '#5a4330' },
-  { shape: 'cylinder', size: [.05, .2, .05], pos: [x - .1, y + .1, z + .02], color: '#6a4a2a', rough: .8 }, { shape: 'cylinder', size: [.05, .2, .05], pos: [x + .1, y + .1, z + .02], color: '#6a4a2a', rough: .8 }], delay);
+  P('sphere', [.44, .42, .52], [x, y + .26, z], '#6b5238', { fur: true, rough: .95 }), P('sphere', [.4, .3, .46], [x, y + .2, z + .03], '#7d6040', { fur: true, rough: .95 }),
+  P('sphere', [.34, .2, .4], [x, y + .38, z - .04], '#54402b', { fur: true, rough: .95 }), P('sphere', [.28, .15, .3], [x, y + .43, z - .1], '#6b5238', { fur: true, rough: .95 }),
+  P('sphere', [.16, .15, .17], [x, y + .4, z + .27], '#7d6040', { fur: true }),
+  P('cone', [.032, .32, .032], [x, y + .36, z + .46], '#d9c9a2', { rot: [Math.PI / 2 + .3, 0, 0], rough: .45 }), P('sphere', [.02, .02, .02], [x, y + .27, z + .66], '#b8a67f', { rough: .4 }),
+  P('sphere', [.028, .028, .028], [x + .065, y + .445, z + .31], '#0d0a08', { rough: .25 }), P('sphere', [.028, .028, .028], [x - .065, y + .445, z + .31], '#0d0a08', { rough: .25 }),
+  P('sphere', [.06, .03, .1], [x - .21, y + .28, z - .02], '#4a3828', { fur: true }), P('sphere', [.06, .03, .1], [x + .21, y + .28, z - .02], '#4a3828', { fur: true }),
+  P('cylinder', [.055, .22, .055], [x - .1, y + .1, z + .02], '#6a4a2a', { rough: .75 }), P('cylinder', [.055, .22, .055], [x + .1, y + .1, z + .02], '#6a4a2a', { rough: .75 }),
+  ...toes(x - .1, y + .015, z + .02), ...toes(x + .1, y + .015, z + .02)], delay);
 const scenery = [
   { id: 'g1', type: 'glb', pos: [-1.6, 0, 1.3], params: { model: 'ph/grass_medium_01', height: .45 }, anim: 'grow' }, { id: 'g2', type: 'glb', pos: [1.7, 0, 1.4], params: { model: 'ph/grass_medium_02', height: .45 }, anim: 'grow' },
   { id: 'sh', type: 'glb', pos: [-3, 0, -1.5], params: { model: 'ph/shrub_02', height: .9 }, anim: 'grow' }, { id: 'palm', type: 'glb', pos: [3.2, 0, -2.2], params: { model: 'nature_pack/PalmTree_1', height: 7 }, anim: 'grow' },
