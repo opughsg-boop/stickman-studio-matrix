@@ -25,3 +25,4 @@
 {"run": "sneeze", "time": "2026-11-14 20:32", "score": 85, "issues": 3, "codes": ["ref_slow_cuts", "ref_static", "ref_too_bright"]}
 {"run": "rumen_window", "time": "2026-11-14 22:06", "score": 100, "issues": 0, "codes": []}
 {"run": "horse", "time": "2026-11-14 23:29", "score": 100, "issues": 0, "codes": []}
+{"run": "candle", "time": "2026-11-15 01:01", "score": 85, "issues": 3, "codes": ["ref_slow_cuts", "ref_static", "repetitive_beats"]}

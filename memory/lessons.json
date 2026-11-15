@@ -58,9 +58,9 @@
  {
   "code": "ref_static",
   "rule": "Keep the camera always moving (push/orbit/handheld) like the reference.",
-  "count": 3,
-  "last_seen": "2026-11-14",
-  "example": "less motion than reference (6.7 vs 22.1)"
+  "count": 4,
+  "last_seen": "2026-11-15",
+  "example": "less motion than reference (6.6 vs 22.1)"
  },
  {
   "code": "subject_lost",
@@ -86,9 +86,9 @@
  {
   "code": "ref_slow_cuts",
   "rule": "Cut every 1-2 seconds; one visual per phrase.",
-  "count": 2,
-  "last_seen": "2026-11-14",
-  "example": "cuts slower than reference (1.76s vs 1.10s)"
+  "count": 3,
+  "last_seen": "2026-11-15",
+  "example": "cuts slower than reference (1.67s vs 1.10s)"
  },
  {
   "code": "no_context",
@@ -145,5 +145,12 @@
   "count": 1,
   "last_seen": "2026-11-13",
   "example": "cranberry v1 scored 95 but looked artificial"
+ },
+ {
+  "code": "repetitive_beats",
+  "rule": "Consecutive beats must differ: new object, new camera preset or new action.",
+  "count": 1,
+  "last_seen": "2026-11-15",
+  "example": "beats 1 and 2 look almost identical (diff 4.7)"
  }
 ]

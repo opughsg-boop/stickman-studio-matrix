@@ -1,0 +1,17 @@
+{ "title": "أول شمعة في التاريخ",
+  "hero": { "model": "Xbot", "height": 1.8 },
+  "lines": [
+    { "shot": "sky" },
+    { "shot": "close", "glow": "#ffb020" },
+    { "shot": "close" },
+    { "shot": "far" },
+    { "shot": "twist" },
+    { "shot": "object" },
+    { "shot": "far" },
+    { "shot": "dive" },
+    { "shot": "route" },
+    { "shot": "react" },
+    { "shot": "orbit", "glow": "#ffb020" },
+    { "shot": "react" },
+    { "shot": "cta" }
+  ] }
