@@ -170,22 +170,53 @@ const cyl = (r1, r2, h, m, s = 16) => new THREE.Mesh(new THREE.CylinderGeometry(
 const sph = (r, m) => new THREE.Mesh(new THREE.SphereGeometry(r, 18, 14), m);
 const woodMat = () => new THREE.MeshStandardMaterial({ map: TEX.wood, color: col('#c08a58'), roughness: .9 });
 
-function chicken(p = {}) {
+const FEATHER = {};
+function featherTex(base, edge, bars) { // scalloped overlapping feathers, soft barring; cached per colour
+  const k = base + edge + (bars || ''); if (FEATHER[k]) return FEATHER[k];
+  const c = document.createElement('canvas'); c.width = c.height = 256; const x = c.getContext('2d');
+  x.fillStyle = base; x.fillRect(0, 0, 256, 256); const r = rng(7);
+  for (let row = 0; row < 18; row++) for (let i = 0; i < 14; i++) {
+    const cx = i * 19 + (row % 2 ? 9 : 0) + (r() - .5) * 4, cy = row * 15 + 8, sh = (r() - .5) * 26;
+    const R = 11 + r() * 3; const col2 = `rgb(${parseInt(base.slice(1, 3), 16) + sh},${parseInt(base.slice(3, 5), 16) + sh * .8},${parseInt(base.slice(5, 7), 16) + sh * .6})`;
+    x.fillStyle = col2; x.beginPath(); x.ellipse(cx, cy, R * .85, R * 1.15, 0, 0, Math.PI * 2); x.fill();
+    x.strokeStyle = edge; x.globalAlpha = .55; x.lineWidth = 1.4; x.beginPath(); x.arc(cx, cy - 4, R * .85, .15 * Math.PI, .85 * Math.PI); x.stroke(); x.globalAlpha = 1;
+    x.strokeStyle = 'rgba(0,0,0,.22)'; x.lineWidth = 1; x.beginPath(); x.moveTo(cx, cy - R); x.lineTo(cx, cy + R); x.stroke();
+    if (bars) { x.fillStyle = bars; x.globalAlpha = .35; x.fillRect(cx - R, cy - 1, R * 2, 3); x.globalAlpha = 1; } }
+  const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return FEATHER[k] = t;
+}
+function chicken(p = {}) { // realistic-proportion laying hen, ~0.4 m tall at scale .36: feathered body, layered wings, tail fan, comb, wattles, scaled legs with toes
   const g = new THREE.Group(), r = rng(p.seed || 1);
-  const shade = ['#9a4a1e', '#8a3c16', '#a8582a', '#7a3412'][Math.floor(r() * 4)];
-  const body = sph(.5, std(p.color || shade, { r: .95 })); body.scale.set(.8, .78, 1.05); body.position.y = .62; g.add(body);
-  const wing = sph(.36, std('#6a2a0e')); wing.scale.set(.25, .6, 1); wing.position.set(.36, .66, 0); g.add(wing);
-  const w2 = wing.clone(); w2.position.x = -.36; g.add(w2);
-  const tail = new THREE.Mesh(new THREE.ConeGeometry(.22, .55, 10), std('#3a1a0a')); tail.position.set(0, .95, -.45); tail.rotation.x = -.9; g.add(tail);
-  const head = new THREE.Group(); head.position.set(0, 1.0, .42); g.add(head);
-  head.add(sph(.2, std(shade)));
-  const comb = sph(.09, std('#d4231d')); comb.scale.set(.6, 1.2, 1.6); comb.position.set(0, .2, .02); head.add(comb);
-  const wat = sph(.06, std('#d4231d')); wat.position.set(0, -.13, .12); head.add(wat);
-  const beak = new THREE.Mesh(new THREE.ConeGeometry(.06, .16, 8), std('#e3b23c')); beak.rotation.x = Math.PI / 2; beak.position.set(0, -.02, .23); head.add(beak);
-  for (const s of [-1, 1]) { const e = sph(.035, std('#111', { r: .3 })); e.position.set(s * .13, .05, .12); head.add(e);
-    const leg = cyl(.03, .03, .32, std('#e0b040')); leg.position.set(s * .14, .16, .05); g.add(leg); }
-  g.scale.setScalar(p.scale || .7);
-  g.userData.head = head;
+  const pal = [['#8c4a22', '#e0a15e', '#3b1d0c'], ['#a3562b', '#f0b878', '#4a2410'], ['#6e3a1c', '#c98a4c', '#24120a'], ['#b96a32', '#f2c48a', '#5a2c12'], ['#d9d2c4', '#ffffff', '#5b564d']][Math.floor(r() * 5)];
+  const fm = (c, e, rep = [2, 2], bars) => { const t = featherTex(c, e, bars).clone(); t.repeat.set(...rep); t.needsUpdate = true; return new THREE.MeshStandardMaterial({ map: t, roughness: .88, bumpMap: t, bumpScale: .6 }); };
+  const bodyM = fm(pal[0], pal[1]), wingM = fm(pal[2], pal[1], [1.2, 1.4]);
+  const body = new THREE.Mesh(new THREE.SphereGeometry(.5, 28, 22), bodyM); body.scale.set(.74, .7, 1.12); body.position.set(0, .66, -.02); body.rotation.x = -.18; g.add(body);
+  const breast = new THREE.Mesh(new THREE.SphereGeometry(.34, 22, 16), bodyM); breast.scale.set(.95, .9, .9); breast.position.set(0, .62, .34); g.add(breast);
+  for (const s of [-1, 1]) { // folded wings with 3 stacked feather layers
+    for (let i = 0; i < 3; i++) { const w = new THREE.Mesh(new THREE.SphereGeometry(.34, 18, 12), i ? wingM : bodyM); w.scale.set(.16, .5 - i * .08, .95 - i * .12);
+      w.position.set(s * (.37 - i * .005), .68 - i * .05, -.05 - i * .12); w.rotation.set(-.15 + i * .06, 0, s * (.05 + i * .02)); g.add(w); } }
+  const tail = new THREE.Group(); tail.position.set(0, .86, -.52); tail.rotation.x = .55; g.add(tail);
+  for (let i = -3; i <= 3; i++) { const f = new THREE.Mesh(new THREE.SphereGeometry(.2, 12, 8), fm(i % 2 ? pal[2] : pal[0], pal[1], [.6, 1])); f.scale.set(.07, .5, .02 + .01 * (3 - Math.abs(i)));
+    f.position.set(i * .06, .22 - Math.abs(i) * .02, 0); f.rotation.set(0, 0, -i * .16); tail.add(f); }
+  const neck = new THREE.Mesh(new THREE.CylinderGeometry(.13, .24, .55, 16), bodyM); neck.position.set(0, .98, .42); neck.rotation.x = .38; g.add(neck);
+  const hackle = new THREE.Mesh(new THREE.SphereGeometry(.28, 18, 12), fm(pal[1], pal[0], [1.5, 1])); hackle.scale.set(.85, .6, .8); hackle.position.set(0, .86, .38); g.add(hackle);
+  const head = new THREE.Group(); head.position.set(0, 1.28, .56); g.add(head);
+  const skin = std('#e8cfc0', { r: .6 }), red = std('#c4161c', { r: .45 });
+  const hd = new THREE.Mesh(new THREE.SphereGeometry(.15, 20, 16), skin); hd.scale.set(.9, 1, 1.15); head.add(hd);
+  for (let i = 0; i < 3; i++) { const c = new THREE.Mesh(new THREE.SphereGeometry(.07 - i * .008, 12, 10), red); c.scale.set(.35, 1.1, 1); c.position.set(0, .17 - Math.abs(i - 1) * .03, -.04 + i * .06); head.add(c); }
+  for (const s of [-1, 1]) { const wt = new THREE.Mesh(new THREE.SphereGeometry(.05, 12, 10), red); wt.scale.set(.5, 1.5, .8); wt.position.set(s * .025, -.17, .1); head.add(wt);
+    const ear = new THREE.Mesh(new THREE.SphereGeometry(.04, 10, 8), std('#f3efe8')); ear.scale.set(.4, 1, .8); ear.position.set(s * .13, -.04, .0); head.add(ear);
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(.03, 12, 10), std('#e67e22', { r: .2 })); eye.position.set(s * .125, .04, .09); head.add(eye);
+    const pu = new THREE.Mesh(new THREE.SphereGeometry(.016, 8, 6), std('#050505', { r: .1 })); pu.position.set(s * .15, .04, .1); head.add(pu); }
+  const beakM = std('#d9a63a', { r: .45 }); const bu = new THREE.Mesh(new THREE.ConeGeometry(.055, .17, 10), beakM); bu.rotation.x = Math.PI / 2 + .12; bu.position.set(0, -.01, .2); head.add(bu);
+  const bl = new THREE.Mesh(new THREE.ConeGeometry(.04, .12, 8), beakM); bl.rotation.x = Math.PI / 2 - .1; bl.position.set(0, -.06, .18); head.add(bl);
+  const legs = [], legM = std('#d6a93c', { r: .55 });
+  for (const s of [-1, 1]) { const lg = new THREE.Group(); lg.position.set(s * .17, .42, .02); g.add(lg);
+    const th = new THREE.Mesh(new THREE.SphereGeometry(.14, 14, 10), bodyM); th.scale.set(.8, 1.2, 1); th.position.y = -.02; lg.add(th);
+    const tar = cyl(.026, .02, .34, legM, 10); tar.position.y = -.2; lg.add(tar);
+    for (const a of [-.45, 0, .45]) { const toe = cyl(.014, .01, .16, legM, 6); toe.rotation.set(Math.PI / 2, 0, a); toe.position.set(Math.sin(a) * .07, -.37, .08); lg.add(toe); }
+    const hind = cyl(.012, .01, .09, legM, 6); hind.rotation.x = Math.PI / 2; hind.position.set(0, -.37, -.05); lg.add(hind); legs.push(lg); }
+  g.scale.setScalar(p.scale || .36);
+  g.userData.head = head; g.userData.legs = legs; g.userData.body = body; g.userData.neck = neck;
   return shadowed(g);
 }
 function flock(p = {}) {
@@ -210,7 +241,10 @@ function flock(p = {}) {
       } else if (mode === 'sleep') { face = b.ph; y = -.1; b.o.userData.head.rotation.x = .9;
       } else if (mode === 'perch' && perchAt) { const len = perchAt.len || 4, k = i / Math.max(1, n - 1); x = perchAt.at[0] - P.x + lerp(-len / 2 + .3, len / 2 - .3, k);
         z = perchAt.at[2] - P.z + (i % 2 ? .35 : -.35); y = perchAt.at[1] + .03; face = 0; b.o.userData.head.rotation.x = Math.sin(t * 2 + i) * .1; }
-      b.o.position.set(x, y, z); b.o.rotation.y = face ?? 0;
+      if (p.bounds) { const bx = p.bounds[0], bz = p.bounds[1]; x = Math.max(-bx, Math.min(bx, x)); z = Math.max(-bz, Math.min(bz, z)); } // hens stay inside the cage
+      const mv = (mode === 'wander' || mode === 'scratch') ? 1 : 0, lg = b.o.userData.legs;
+      if (lg) { lg[0].rotation.x = Math.sin(t * 6 + b.ph) * .35 * mv; lg[1].rotation.x = -Math.sin(t * 6 + b.ph) * .35 * mv; }
+      b.o.position.set(x, y + Math.abs(Math.sin(t * 6 + b.ph)) * .012 * mv, z); b.o.rotation.y = face ?? 0;
     });
   };
   return g;

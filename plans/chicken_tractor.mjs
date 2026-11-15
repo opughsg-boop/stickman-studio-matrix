@@ -7,8 +7,12 @@ const at = (i, k = 0) => (i === 0 && k === 0 ? 0 : S[Math.min(i, S.length - 1)].
 const glb = (id, model, pos, height, extra = {}, more = {}) => ({ id, type: 'glb', pos, params: { model, height, ...extra }, anim: 'grow', ...more });
 const st = (id, name, pos, size = .7, extra = {}, more = {}) => ({ id, type: 'sticker', pos, params: { name, size, ...extra }, anim: 'grow', dust: false, ...more });
 const patch = (id, x, w, color, h = .03, more = {}) => ({ id, type: 'custom', pos: [x, 0, 0], params: { parts: [{ shape: 'box', size: [w, h, 3.2], pos: [0, h / 2 + .01, 0], color, rough: 1 }] }, anim: 'fade', dust: false, ...more });
-const blades = (id, x, w, count, h, more = {}) => ({ id, type: 'hay', pos: [x, .02, 0], params: { w, d: 3, count, hgt: h, color: '#4f9a2c' }, anim: 'grow', dust: false, ...more });
-const eggs = [];
+const blades = (id, x, w, count, h, more = {}) => ({ id, type: 'hay', pos: [x, .02, 0], params: { w, d: 3, count, hgt: h, color: '#5d9433' }, anim: 'grow', dust: false, ...more });
+const R = (n => () => (n = (n * 9301 + 49297) % 233280) / 233280)(11);
+const scenery = [];
+for (let i = 0; i < 26; i++) { const x = -7 + R() * 14, z = (R() < .5 ? -1 : 1) * (1.5 + R() * 2.4); scenery.push(glb('gt' + i, `ph/grass_medium_0${1 + i % 2}`, [x, 0, z], .28 + R() * .22, {}, { anim: 'fade', dust: false })); }
+for (let i = 0; i < 5; i++) scenery.push(glb('sb' + i, `ph/shrub_0${1 + i % 3}`, [-6 + i * 3 + R(), 0, -4 - R()], .9 + R() * .4, {}, { anim: 'fade', dust: false }));
+for (let i = 0; i < 4; i++) scenery.push(glb('rk' + i, i % 2 ? 'ph/stone_01' : 'ph/rock_07', [-5 + i * 3.2, 0, -3.2 - R()], .22 + R() * .15, {}, { anim: 'fade', dust: false }));
 // light chicken tractor: wooden frame, wire mesh on the sides, tilted roof, NO floor, two wheels and a handle
 function tractor(id, x, more = {}) {
   const L = 2.4, W = 1.3, H = 1.0, wood = '#b98a55', mesh = '#9aa3aa', parts = [];
@@ -30,11 +34,11 @@ function heavy(id, x, more = {}) {
     { shape: 'box', size: [3.7, .12, 2.9], pos: [0, 2.05, 0], color: '#6b4a2b' }];
   return { id, type: 'custom', pos: [x, 0, 0], params: { parts }, anim: 'rise', ...more };
 }
-const flock = (id, x, more = {}) => ({ id, type: 'flock', pos: [x, 0, 0], params: { count: 5, area: [1.5, .7], scale: .42 }, anim: 'grow', dust: false, ...more });
+const flock = (id, x, more = {}) => ({ id, type: 'flock', pos: [x, 0, 0], params: { count: 5, area: [1.4, .6], bounds: [.85, .4], scale: .36 }, anim: 'grow', dust: false, ...more });
 
 const beats = [
   // 1 hook: tractor on a green lawn, hens inside
-  { t: 0, kind: 'intro', add: [patch('lawn', -1, 11, '#58a03a', .05), blades('g1', -1, 10, 900, .16), tractor('tr', -2, { anim: 'rise' }), flock('hens', -2, { delay: .3 })],
+  { t: 0, kind: 'intro', add: [patch('lawn', -1, 11, '#6b9a45', .05), blades('g1', -1, 10, 900, .16), tractor('tr', -2, { anim: 'rise' }), flock('hens', -2, { delay: .3 }), ...scenery],
     modes: { hens: 'wander' }, camera: { preset: 'hero', target: [-2, .7, 0], dist: 9, elev: .3, az: .4, zoom: 'in' } },
   // 2 no floor: hens eat the fresh grass directly
   { t: at(1), kind: 'info', add: [st('s2', 'point_down', [-2, 1.9, 0], .7, { bob: .08, pulse: true })],
@@ -52,7 +56,7 @@ const beats = [
   { t: at(5), kind: 'info', remove: ['s5'], add: [{ id: 'dr', type: 'droppings', pos: [-.4, .04, 0], params: { count: 24, w: 3, d: 1.4 }, anim: 'fade', dust: false }, st('s6', 'face_wow', [1.2, 2.3, 0], .8, { pulse: true }, { delay: .3 })],
     modes: { hens3: 'scratch' }, camera: { preset: 'low', target: [-.4, .3, 0], dist: 5.4, elev: .14, az: -.3, zoom: 'in' } },
   // 7 grass grows back thicker behind the tractor
-  { t: at(6), kind: 'solution', remove: ['s6', 'eaten', 'dr'], add: [patch('back', -3.2, 3.2, '#3f8a22', .06, { anim: 'fade' }), blades('g3', -3.2, 3.2, 1100, .3, { anim: 'rise' }), st('s7', 'arrows_cycle', [-3.2, 1.6, 0], .7, { bob: .06 })],
+  { t: at(6), kind: 'solution', remove: ['s6', 'eaten', 'dr'], add: [patch('back', -3.2, 3.2, '#4d8a2c', .06, { anim: 'fade' }), blades('g3', -3.2, 3.2, 1100, .3, { anim: 'rise' }), st('s7', 'arrows_cycle', [-3.2, 1.6, 0], .7, { bob: .06 })],
     modes: { hens3: 'wander' }, camera: { preset: 'hero', target: [-2, .8, 0], dist: 10, elev: .3, az: .55, zoom: 'out' } },
   // 8 CTA: wide orbit pull-out
   { t: at(7), kind: 'info', remove: ['s7'], camera: { preset: 'orbit', target: [-.5, .8, 0], dist: 15, elev: .38, az: .2, zoom: 'out' } },
