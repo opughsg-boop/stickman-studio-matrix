@@ -125,3 +125,8 @@ Rule: when a preview or final video shows a mistake, add one entry here (what wa
 - Kiwi: cone-shaped body tapering to a small head, long slightly down-curved bill with nostrils at the TIP, hair-like shaggy feathers, no tail, hidden wings, short strong legs, 3 toes forward + 1 back, whiskers at the bill base.
 - **Mistakes caught:** wing blades too thin looked like sticks; cheeks too big made a white face; shaggy feather cones stuck out like thorns. Keep feather cones small and lying along the body.
 - **Mistake:** ✓/✗ placed as world-space labels sat on the caption at the top, then off the frame edge once moved aside (the camera's side offset shifts them). **Fix:** for a single verdict icon, use screen-space `counter` at [.5, .3], just under the caption band. **Source:** washer_ref frames at 28.6 and 29 s.
+
+## Buffalo shed (2026-11-16, plans/buffalo_shed.mjs)
+- **Mistake:** a plan object removed in one beat and re-added later with the SAME id does not reappear. Fix: give the rebuilt object a new id (`postsH2`, `roofH2`).
+- **Mistake:** thin pale roof slabs disappeared against the sky. Fix: red-brown tin colour, .16 m thick, camera 15 m back so both roof heights read side by side.
+- **Note:** the library has no buffalo; the dark `Bull` model stands in for it.
