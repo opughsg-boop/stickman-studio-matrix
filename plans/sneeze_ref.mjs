@@ -64,7 +64,7 @@ const shots = [
   // 8 the eyes slam shut on "slam" and the head jolts forward - the reflex cannot be stopped; slow push into the face
   { t: at(7), set: REAL, props: [
       { id: 'kid', type: 'person', pos: [0, 0, 0], closeAt: at(7, 2) - at(7), sneezeAt: at(7, 2) - at(7) + .14, snapAmp: .2, reopen: 99 }],
-    camera: { pos: [.1, .7, .6], target: [0, .67, .07], to: { pos: [.06, .69, .5], target: [0, .668, .08] }, fov: 34, handheld: .35, dof: { aperture: .008, maxblur: .008 } }, fx: RFX },
+    camera: { pos: [.14, .71, .82], target: [0, .66, .07], to: { pos: [.09, .69, .68], target: [0, .655, .08] }, fov: 34, handheld: .35, dof: { aperture: .008, maxblur: .008 } }, fx: RFX },
   // 9 tip: the right arm comes up and the sneeze goes into the elbow (check), an open hand pops up beside (cross)
   { t: at(8), set: REAL, props: [
       { id: 'kid', type: 'person', pos: [0, 0, 0], rotY: .45, raise: [.4, at(8, 4) - at(8) - .1], sneezeAt: at(8, 4) - at(8) + .25, snapAmp: .14 },
