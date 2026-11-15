@@ -1,0 +1,11 @@
+{ "title": "الغسالة",
+  "hero": { "model": "Xbot", "height": 1.8 },
+  "lines": [
+    { "shot": "sky", "question": true },
+    { "shot": "people" },
+    { "shot": "close", "glow": "#3aa8ff" },
+    { "shot": "twist", "glow": "#ffc94a" },
+    { "shot": "science" },
+    { "shot": "orbit", "flash": true },
+    { "shot": "far" }
+  ] }
