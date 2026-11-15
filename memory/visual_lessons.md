@@ -75,3 +75,8 @@ Rule: when a preview or final video shows a mistake, add one entry here (what wa
 - **Mistake:** the face looked grotesque: a big nose on a fully round face. **Fix:** flatten the front of the head (z beyond .5 scaled by .75), shrink the nose by about 20%, and re-seat the eyes, brows and mouth on the flatter surface. Frame faces from 0.7-0.8 m. **Source:** sneeze_full frame at 26 s.
 - **Mistake:** the hair was a smooth helmet, and an oversized cap made a ledge on the forehead. **Fix:** a strand texture as colour and bump map, a side-parting groove, volume on the crown and sides, and the cap rim tucked to head size so it hugs the forehead. **Source:** our preview stills, 2026-11-15.
 - **Mistake:** the skin was a flat single orange. **Fix:** a skin-tone map with warm and red blotches, lighter patches and fine specks under the pore bump and the warm sheen. **Source:** sneeze_full frames at 20.5 and 30 s.
+
+## Candle video (runs/candle, score 85): the render did not show the story
+- Mistake: I mapped each voice-over line to a generic template (sky, twist, dive, orbit, cta). The result had a mannequin standing in the sky, leg close-ups and a robot, and none of it showed tapping resin, bamboo, a pot, heat or pouring. Score 85 hid this.
+- Fix: before rendering, every line must show its own literal object or action. Build the scene with real props (Poly Haven fire pit, stumps, barrel, tools, nature_pack trees, bamboo) and never rely on generic templates to carry a process video.
+- Source: user review of runs/candle/final.mp4 (contact sheet frames 1-13).
