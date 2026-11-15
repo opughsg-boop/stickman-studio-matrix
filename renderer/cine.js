@@ -83,7 +83,7 @@ async function buildSet(scene, s = {}) {
   if (s.floorColor) { const f = new THREE.Mesh(new THREE.PlaneGeometry(s.floorSize || 30, s.floorSize || 30), new THREE.MeshStandardMaterial({ color: s.floorColor, roughness: .9 }));
     f.rotation.x = -Math.PI / 2; f.position.y = .002; f.receiveShadow = true; scene.add(f); }
   const key = new THREE.DirectionalLight(s.keyColor || 0xfff1e0, s.key ?? 2.2); key.position.set(...(s.keyPos || [4, 8, 5])); key.castShadow = true; const ss = s.shadowSize || 8;
-  key.shadow.mapSize.set(1024, 1024); key.shadow.mapSize.set(2048, 2048); Object.assign(key.shadow.camera, { left: -ss, right: ss, top: ss, bottom: -ss, near: .5, far: 40 }); key.shadow.bias = -.0004; key.shadow.radius = 5;
+  key.shadow.mapSize.set(s.shadowRes || 2048, s.shadowRes || 2048); Object.assign(key.shadow.camera, { left: -ss, right: ss, top: ss, bottom: -ss, near: .5, far: 40 }); key.shadow.bias = -.0004; key.shadow.radius = 5;
   scene.add(key); scene.add(new THREE.HemisphereLight(s.skyFill || 0xdfefff, s.groundFill || 0x6a5a4a, s.fill ?? .5));
   if (s.rim !== false) { const rim = new THREE.DirectionalLight(s.rimColor || 0xbfe4ff, s.rim ?? 1.2); rim.position.set(-5, 4, -6); scene.add(rim); }
 }

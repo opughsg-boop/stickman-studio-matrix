@@ -15,7 +15,7 @@ const SUNSET = { type: 'sunset', key: 2.2, keyColor: '#ffe2c4', keyPos: [2, 5, 4
 const RED = { type: 'flat', color: '#8a0f1f', key: 2.4, keyPos: [2, 6, 4], fill: .65, skyFill: '#ffd0d8', groundFill: '#4a0610', rim: 1.1, rimColor: '#ff8fa8', envIntensity: .9, shadowSize: 3, fogNear: 2.6, fogFar: 8 };
 const CYAN = '#4fd6ff';
 // realism pass (lines 5-10): one warm sun key + soft purple sky fill, low pink rim, detailed wood, grain; organs/skin/fabric use realMat
-const REAL = { ...SUNSET, real: true, key: 2.5, keyColor: '#ffd2a1', keyPos: [3, 4, 5], fill: .55, skyFill: '#e6c2d6', rim: .3, rimColor: '#ffb38a', envIntensity: .45 };
+const REAL = { ...SUNSET, real: true, key: 2.5, keyColor: '#ffd2a1', keyPos: [3, 4, 5], fill: .55, skyFill: '#e6c2d6', rim: .3, rimColor: '#ffb38a', envIntensity: .45, shadowSize: 1.6, shadowRes: 512 };
 const RFX = { bloom: .12, grain: .06 };
 
 const shots = [
