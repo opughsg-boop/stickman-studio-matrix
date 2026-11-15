@@ -114,3 +114,8 @@ Rule: when a preview or final video shows a mistake, add one entry here (what wa
 - **Mistake:** the Arabic captions in the glossy look were laid out left to right (Nunito with no Arabic glyphs, words in English order), and an inline comment then swallowed the `let fs` declaration. **Fix:** the font stack adds CapAr2 for Arabic, direction is rtl with no manual word reversal (checked on a frame), and the comment is on its own line. **Source:** washer_ref preview sheet.
 - **Mistake:** a 0.5 m drum framed from 1.4-1.6 m in a 9:16 frame was cut at both sides (the frame is only ~0.5 m wide there at fov 36). **Fix:** frame a 0.5 m object from 1.8-2.0 m. **Source:** washer_ref frames at 16.5 and 19.5 s.
 - **Mistake:** soap foam read as opaque white balls. **Fix:** iridescent bubbles at opacity .42 with depthWrite off, sizes skewed small (2-14 mm). **Source:** washer_ref preview sheet, shot 2.
+
+## Animal realism pass (2026-11-15)
+- **Added:** fur/hide detail for library animals (`furShader` in renderer/scene.js): object-space noise at three scales (hair strands, tufts, patches), no UVs needed. Applies automatically to `animals_pack` models in 3D-sky plans. Flat plastic colour is gone.
+- **Still open:** the silhouette is low-poly (thin legs, blocky head). Only a higher-detail model fixes that: Sketchfab 'Anatomy of a Cow' style CC-BY models (needs the user's token) or a decimated scan. Do not claim photorealism for these animals.
+- **Shader lesson:** `patch` is a reserved word in GLSL, so name noise variables `blot`, not `patch`.
