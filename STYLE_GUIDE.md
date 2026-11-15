@@ -49,6 +49,19 @@ Target: the user's three reference reels (Spanish: rabbit hutch build-up, sugar-
 - **Anatomy window:** `cutBox`/`cutOpen` opens a window in the flank, organs inside in real places with real textures (rumen with grass, honeycomb reticulum, leafy omasum, folded abomasum, intestines). Reference: `plans/rumen_window.mjs`.
 - **Learn from mistakes:** read `memory/visual_lessons.md` before every plan, and add each new mistake after every preview. Improve realism one step at a time and re-check.
 
+**Realism v2 (2026-11-15, `renderer/realism.js`, ON by default for every plan, old plans render unchanged otherwise):**
+- **Sharper picture:** the CPU render is now 630x1120 (was 540x960), with FXAA and an unsharp mask in the final shader, then upscaled to 1080x1920. `--w 720 --h 1280` is sharper but slower. `--gpu` renders the full 1080x1920 with 4x MSAA.
+- **Post chain:** HDR scene, soft bloom at half resolution (only the sun glint, fire and glowing parts bloom), then OutputPass (ACES tone mapping and sRGB, as in cine.js), then a display-space grade: gentle S-curve, warm highlights, slightly teal shadows, vignette and very light film grain.
+  Knobs: `style.post:false` (the old direct render), `bloom` (.22), `bloomThreshold` (1.05), `grade` (0-1), `sharpen` (.35), `vignette` (.2), `grain` (.014), `aa` (MSAA samples, 0 on CPU), `fxaa:false`, `aniso` (8, 0 = off).
+- **Horizon:** a fogged landscape ring 190-340 m away with hills (vertex-colour variation), a tree line, palms and a small village. Use `env.horizon:'hills'` (default), `'nile'` (green plain, palm line, mud-brick village, pale desert ridge), `'desert'` or `false`. Also `env.haze` (.55) and `env.horizonDist` (190). The camera far plane is now 1000.
+- **Ground cover:** thousands of instanced grass tufts swaying in the wind, plus pebbles and tiny flowers on the island top. Flat props such as water, boards and cracked mud are left clear. Instances cast no shadows. Use `env.cover:'low'|'medium'|'high'|<tufts per m2>|false`, `env.coverTint:'dry'` (straw-coloured, no flowers), `env.coverGain` (1.3) and `env.coverShadow:false`.
+- **Water:** two scrolling wave normal layers and a soft breathing foam band under the island edge. Use `env.waves` (1, 0 = flat) and `env.foam:false`.
+- **Life in the air:** sunlit dust and pollen motes drift near the camera (`env.motes`, 1, 0 = off). Flying birds (white storks by default) make slow loops 35-70 m away with flapping wings. Use `env.birds` (3) and `env.birdModel:'Stork'|'Flamingo'|'Parrot'` or a list. Any `assets/models/<name>.glb` can also be placed as `model:'models/<name>'`.
+- **Camera:** handheld micro-motion of about 1 cm on top of the continuous camera, never a jump (`style.handheld`, 1, 0 = off).
+- **Shadows:** 2048 px, with the frustum fitted to the island, so they are about 2.6x sharper (`style.shadowRes`, `style.shadowFit:false`).
+- **Timing (4-core cloud CPU, 8 s test clip of `beans`):** old 540 px took 136 s. v2 at 630 px takes 199 s (1.46x), and v2 at 720 px takes 230 s (1.69x; 2 workers instead of 3 gives the same time). A 45 s video takes about 25-30 min on the CPU. 4x MSAA in software GL would add about 60%, so on the CPU it stays off. `node pipeline/bench.mjs PLAN.json --w 630 --h 1120 --style '{...}' --env '{...}'` measures the cost per frame.
+- **Critic:** freeze detection works on a downscaled copy, so the film grain cannot hide a frozen picture. The luma of the beans preview moved by only about -3, so the thresholds are unchanged.
+
 **Rules for every new plan:**
 1. **Real models first:** Renderpeople scanned people, Quaternius animals (`type:'glb'`), Poly Haven ground cover, rocks and props (`ph/<id>`), real soil. Hand-built primitives only when nothing real exists, and then give them textures or natural colour variation, never flat single colours.
 2. **Real sizes, in metres:** person 1.75, cow 1.4, horse 1.9, donkey 1.3, fox 0.6, dog 0.7, sheep or goat 0.9, chicken 0.4, rat 0.25 long, sugar cane 3-3.5, maize 2.2, wheat or rice 1, palm 8-12, small tree 4-6, barrel 0.9-1.3, cart 1.4, cane truck 2.5. Magnify on purpose only for an "x-ray" explainer prop (like the giant cut stalk), and show it beside the real thing.
@@ -59,7 +72,7 @@ Target: the user's three reference reels (Spanish: rabbit hutch build-up, sugar-
    - **Build-up:** "تحط كذا… بس مشكلة… فـ الحل… اسمه كذا". Each line adds a real part, as in the rabbit hutch and the beehive.
    - **Inside-the-process story:** a strange event, then the camera dives inside to explain it, as in the sugar cane.
 
-**Still missing (next upgrades):** detailed vehicle models (the truck is still built from boxes), real rat, snake and rabbit models, a backdrop option (a plastered house wall with a window), and instanced fields for even denser crops.
+**Still missing (next upgrades):** cloud shadows, SSAO/depth of field (too slow in software GL), detailed vehicle models (the truck is still built from boxes), real rat, snake and rabbit models, a backdrop option (a plastered house wall with a window), and instanced fields for even denser crops.
 
 ## 3. Diorama building blocks (the world is now the real-sky island of 2b)
 **World:**

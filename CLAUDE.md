@@ -42,6 +42,7 @@ Keep creative work in the main conversation: scripts, plans and shot choices, vi
 - Script writing for the user: follow the formula in `STYLE_ZD.md` (hook → "ده بسبب" → "بس" → "فـ" → twist ending → follow CTA). About 40 s, at most 110 words. Write it ready to paste into Google AI Studio TTS, with a style line on top.
 
 ## Faster rendering
+Realism v2 is automatic (`renderer/realism.js`): 630x1120 CPU render, bloom, colour grade, horizon, grass, waves, birds, motes and handheld camera. It is about 1.46x the old render time. Its knobs are in `STYLE_GUIDE.md` 2b; use `env.horizon:'nile'` for Egyptian countryside stories.
 `--gpu` renders at full 1080x1920 on a machine with a graphics card (the user's PC, via Remote Control). Workers default to CPU cores minus 1.
 
 ## STYLE LOCK (user decisions, never change without the user asking)
