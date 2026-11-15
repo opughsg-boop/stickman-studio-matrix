@@ -7,27 +7,40 @@ const tr = JSON.parse(fs.readFileSync(trf, 'utf8')), S = tr.segments, D = tr.dur
 const at = (i, k = 0) => (i === 0 && k === 0 ? 0 : S[Math.min(i, S.length - 1)].words[k].start);
 const stk = (id, name, pos, size = .32, o = {}) => ({ id, type: 'sticker', pos, params: { name, size, ...o }, anim: 'none', delay: o.delay || 0, dust: false });
 const obj = (id, parts, delay = 0) => ({ id, type: 'custom', pos: [0, 0, 0], params: { parts }, anim: 'grow', delay, dust: false });
-// feathered parts get the fur/feather noise (fur:true); wings are layered feather blades with darker tips
+// Designs follow field-guide anatomy (searched 2026-11-15): house sparrow = 15 cm, wingspan about 1.5 x body length, grey crown, chestnut nape,
+// black bib, pale cheeks, streaked brown back, grey belly, short conical dark bill, pink legs. Kiwi = cone-shaped body tapering to a small head,
+// long slightly down-curved bill with nostrils at the TIP, hair-like shaggy feathers, no tail, wings hidden, short strong legs, 3 front toes + 1 back, whiskers at the bill base.
 const P = (shape, size, pos, color, o = {}) => ({ shape, size, pos, color, rough: o.rough ?? .85, fur: o.fur, rot: o.rot, tex: o.tex });
-const wingBlades = (x, y, z, side, base) => [0, 1, 2, 3].map(k => P('sphere', [.3 - k * .03, .03, .17], [x + side * (.12 + k * .075), y + .075 - k * .012, z - .02 - k * .035], k > 1 ? '#3b2c1f' : base, { fur: true, rot: [0, side * .18 * k, side * (.45 - k * .08)] }));
-// a small flying bird (sparrow-like, wings spread, feather blades), faces +z
+// one wing: broad coverts near the body, 5 long primaries fanning back with darker tips
+const wing = (x, y, z, side) => [
+  P('sphere', [.15, .03, .15], [x + side * .1, y + .075, z - .01], '#7a5a3a', { fur: true, rot: [0, side * .1, side * .25] }),
+  P('sphere', [.13, .028, .12], [x + side * .17, y + .07, z - .04], '#6a4c30', { fur: true, rot: [0, side * .15, side * .3] }),
+  ...[0, 1, 2, 3, 4].map(k => P('sphere', [.2 - k * .015, .018, .055], [x + side * (.22 + k * .035), y + .062 - k * .004, z - .06 - k * .035], k > 2 ? '#34261a' : '#4f3a27', { fur: true, rot: [0, side * (.15 + k * .08), side * .15] }))];
 const flyer = (id, [x, y, z], delay = 0) => obj(id, [
-  P('sphere', [.2, .16, .3], [x, y, z], '#8a6a48', { fur: true }), P('sphere', [.17, .13, .2], [x, y - .035, z - .02], '#e2d3b4', { fur: true }),
-  P('sphere', [.13, .12, .13], [x, y + .08, z + .14], '#8a6a48', { fur: true }), P('cone', [.04, .08, .04], [x, y + .08, z + .23], '#3a2a1a', { rot: [Math.PI / 2, 0, 0] }),
-  P('sphere', [.03, .03, .03], [x + .05, y + .11, z + .17], '#0d0a08', { rough: .3 }), P('sphere', [.03, .03, .03], [x - .05, y + .11, z + .17], '#0d0a08', { rough: .3 }),
-  ...wingBlades(x, y, z, -1, '#6a5038'), ...wingBlades(x, y, z, 1, '#6a5038'),
-  P('sphere', [.1, .02, .22], [x, y - .01, z - .28], '#4a3828', { fur: true }), P('sphere', [.07, .02, .2], [x + .03, y - .015, z - .3], '#3b2c1f', { fur: true })], delay);
-// a kiwi: shaggy feather coat (layered body shells), tiny wing stubs, long slightly curved beak with nostril tip, thick legs with toes
-const toes = (x, y, z) => [-.05, 0, .05].map(a => P('cylinder', [.014, .09, .014], [x + a * .9, y, z + .045], '#6a4a2a', { rot: [Math.PI / 2 - .15, 0, a * 3] }));
+  P('sphere', [.19, .15, .3], [x, y, z], '#7a5a3a', { fur: true }), P('sphere', [.16, .11, .24], [x, y - .035, z - .01], '#bdb7aa', { fur: true }),     // back, grey belly
+  P('sphere', [.14, .13, .14], [x, y + .075, z + .13], '#8d8d8a', { fur: true }), P('sphere', [.075, .07, .05], [x, y + .06, z + .175], '#1a1512', { fur: true }), // grey head, black bib
+  P('sphere', [.04, .035, .03], [x + .06, y + .07, z + .15], '#d3cab8', { fur: true }), P('sphere', [.04, .035, .03], [x - .06, y + .07, z + .15], '#d3cab8', { fur: true }), // pale cheeks
+  P('sphere', [.12, .05, .07], [x, y + .125, z + .09], '#7a4a2a', { fur: true }),                                                                  // chestnut nape band
+  P('cone', [.04, .06, .04], [x, y + .07, z + .215], '#3a3a38', { rot: [Math.PI / 2, 0, 0], rough: .4 }),                                          // short conical bill
+  P('sphere', [.022, .022, .022], [x + .055, y + .095, z + .185], '#0d0a08', { rough: .2 }), P('sphere', [.022, .022, .022], [x - .055, y + .095, z + .185], '#0d0a08', { rough: .2 }),
+  ...wing(x, y, z, -1), ...wing(x, y, z, 1),
+  P('sphere', [.09, .02, .2], [x, y - .005, z - .27], '#4a3828', { fur: true }), P('sphere', [.05, .018, .17], [x + .035, y - .01, z - .28], '#3b2c1f', { fur: true }),
+  P('cylinder', [.012, .07, .012], [x - .03, y - .11, z + .02], '#c99a8a', { rough: .6 }), P('cylinder', [.012, .07, .012], [x + .03, y - .11, z + .02], '#c99a8a', { rough: .6 })], delay);
+// kiwi: cone body (big rear, tapering forward), shaggy hair-like feathers, long down-curved bill, tip nostrils, whiskers, short strong legs, 3+1 toes
+const toes = (x, y, z) => [-.06, 0, .06].map(a => P('cylinder', [.013, .1, .013], [x + a * .8, y, z + .055], '#7a5a3a', { rot: [Math.PI / 2 - .12, 0, a * 3.5] })).concat(P('cylinder', [.013, .06, .013], [x, y, z - .035], '#7a5a3a', { rot: [Math.PI / 2 - .12, 0, 0] }));
+const shag = (n, x, y, z) => Array.from({ length: n }, (_, i) => { const a = i / n * 6.28, r = .21; return P('cone', [.03, .09, .03], [x + Math.cos(a) * r * .85, y + .24 + (i % 3) * .05, z + Math.sin(a) * r * 1.0 - .05], i % 2 ? '#5c452e' : '#6f5538', { fur: true, rot: [Math.sin(a) * 1.9, 0, -Math.cos(a) * 1.9] }); });
 const kiwi = (id, [x, y, z], delay = 0) => obj(id, [
-  P('sphere', [.44, .42, .52], [x, y + .26, z], '#6b5238', { fur: true, rough: .95 }), P('sphere', [.4, .3, .46], [x, y + .2, z + .03], '#7d6040', { fur: true, rough: .95 }),
-  P('sphere', [.34, .2, .4], [x, y + .38, z - .04], '#54402b', { fur: true, rough: .95 }), P('sphere', [.28, .15, .3], [x, y + .43, z - .1], '#6b5238', { fur: true, rough: .95 }),
-  P('sphere', [.16, .15, .17], [x, y + .4, z + .27], '#7d6040', { fur: true }),
-  P('cone', [.032, .32, .032], [x, y + .36, z + .46], '#d9c9a2', { rot: [Math.PI / 2 + .3, 0, 0], rough: .45 }), P('sphere', [.02, .02, .02], [x, y + .27, z + .66], '#b8a67f', { rough: .4 }),
-  P('sphere', [.028, .028, .028], [x + .065, y + .445, z + .31], '#0d0a08', { rough: .25 }), P('sphere', [.028, .028, .028], [x - .065, y + .445, z + .31], '#0d0a08', { rough: .25 }),
-  P('sphere', [.06, .03, .1], [x - .21, y + .28, z - .02], '#4a3828', { fur: true }), P('sphere', [.06, .03, .1], [x + .21, y + .28, z - .02], '#4a3828', { fur: true }),
-  P('cylinder', [.055, .22, .055], [x - .1, y + .1, z + .02], '#6a4a2a', { rough: .75 }), P('cylinder', [.055, .22, .055], [x + .1, y + .1, z + .02], '#6a4a2a', { rough: .75 }),
-  ...toes(x - .1, y + .015, z + .02), ...toes(x + .1, y + .015, z + .02)], delay);
+  P('sphere', [.46, .44, .56], [x, y + .27, z - .06], '#6b5238', { fur: true, rough: .98 }),                                                         // big rear body
+  P('sphere', [.34, .32, .42], [x, y + .3, z + .14], '#6f5538', { fur: true, rough: .98 }),                                                           // tapering middle
+  P('sphere', [.2, .2, .24], [x, y + .36, z + .3], '#7d6040', { fur: true, rough: .95 }),                                                             // neck/head base: small head
+  ...shag(14, x, y, z),
+  P('cone', [.034, .17, .034], [x, y + .385, z + .5], '#d9c9a2', { rot: [Math.PI / 2 + .12, 0, 0], rough: .45 }),                                      // bill base
+  P('cone', [.026, .17, .026], [x, y + .33, z + .65], '#d9c9a2', { rot: [Math.PI / 2 + .5, 0, 0], rough: .45 }),                                      // bill tip, curving down
+  P('sphere', [.016, .016, .016], [x + .012, y + .285, z + .735], '#6a5a40', { rough: .3 }), P('sphere', [.016, .016, .016], [x - .012, y + .285, z + .735], '#6a5a40', { rough: .3 }), // nostrils at the tip
+  P('sphere', [.026, .026, .026], [x + .06, y + .41, z + .385], '#0d0a08', { rough: .2 }), P('sphere', [.026, .026, .026], [x - .06, y + .41, z + .385], '#0d0a08', { rough: .2 }),
+  ...[-1, 1].flatMap(sd => [0, 1, 2].map(k => P('cylinder', [.004, .12, .004], [x + sd * (.055 + k * .01), y + .37 - k * .018, z + .43], '#3a2a1a', { rot: [Math.PI / 2, 0, sd * (.55 + k * .25)] }))), // whiskers
+  P('cylinder', [.06, .2, .06], [x - .1, y + .1, z + .0], '#7a5a3a', { rough: .75 }), P('cylinder', [.06, .2, .06], [x + .1, y + .1, z + .0], '#7a5a3a', { rough: .75 }),
+  ...toes(x - .1, y + .012, z), ...toes(x + .1, y + .012, z)], delay);
 const scenery = [
   { id: 'g1', type: 'glb', pos: [-1.6, 0, 1.3], params: { model: 'ph/grass_medium_01', height: .45 }, anim: 'grow' }, { id: 'g2', type: 'glb', pos: [1.7, 0, 1.4], params: { model: 'ph/grass_medium_02', height: .45 }, anim: 'grow' },
   { id: 'sh', type: 'glb', pos: [-3, 0, -1.5], params: { model: 'ph/shrub_02', height: .9 }, anim: 'grow' }, { id: 'palm', type: 'glb', pos: [3.2, 0, -2.2], params: { model: 'nature_pack/PalmTree_1', height: 7 }, anim: 'grow' },

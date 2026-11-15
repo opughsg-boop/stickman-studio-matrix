@@ -119,3 +119,8 @@ Rule: when a preview or final video shows a mistake, add one entry here (what wa
 - **Added:** fur/hide detail for library animals (`furShader` in renderer/scene.js): object-space noise at three scales (hair strands, tufts, patches), no UVs needed. Applies automatically to `animals_pack` models in 3D-sky plans. Flat plastic colour is gone.
 - **Still open:** the silhouette is low-poly (thin legs, blocky head). Only a higher-detail model fixes that: Sketchfab 'Anatomy of a Cow' style CC-BY models (needs the user's token) or a decimated scan. Do not claim photorealism for these animals.
 - **Shader lesson:** `patch` is a reserved word in GLSL, so name noise variables `blot`, not `patch`.
+
+## Bird designs (searched 2026-11-15, plans/island_birds.mjs)
+- House sparrow (field guides): 15 cm, wingspan about 1.5 x body length, grey crown, chestnut nape, black bib, small pale cheeks, streaked brown back, grey belly, short conical dark bill, pink legs. Wings = broad coverts + long primaries, not sticks.
+- Kiwi: cone-shaped body tapering to a small head, long slightly down-curved bill with nostrils at the TIP, hair-like shaggy feathers, no tail, hidden wings, short strong legs, 3 toes forward + 1 back, whiskers at the bill base.
+- **Mistakes caught:** wing blades too thin looked like sticks; cheeks too big made a white face; shaggy feather cones stuck out like thorns. Keep feather cones small and lying along the body.
