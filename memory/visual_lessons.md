@@ -163,3 +163,4 @@ Rule: when a preview or final video shows a mistake, add one entry here (what wa
 ## Wooden farm fence (2026-11-16, plans/wood_fence.mjs)
 - Works: posts on stone bases, three rails, timber texture, sticker pointers, clean framing. This is the reliable build style for simple wood structures.
 - Mistake to watch: a corner brace was drawn at the wrong angle (it looks like a stray plank). Check that braces run from the top of the end post down to the ground rail.
+- **Fixed (fence):** the corner brace now runs as a true diagonal from the top of the end post down to the ground rail, with length and angle computed from the two points. Use this helper for any diagonal member.

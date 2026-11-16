@@ -17,7 +17,9 @@ const fenceParts = (show) => {
   const p = [];
   XS.forEach((x, i) => { p.push(stone([.42, .16, .42], [x, .08, 0])); p.push(box([.2, H, .2], [x, .16 + H / 2, 0], i % 2 ? TIM : TIM2)); });
   [.35, .8, 1.25].forEach((y) => p.push(box([2 * 2.4 + .3, .09, .09], [0, y, 0], TIM2)));  // three horizontal rails
-  [-2.4, 2.4].forEach((x, i) => p.push(box([.1, .1, 1.2], [x + (i ? -.5 : .5), .6, 0], TIM2, { rot: [0, 0, i ? -.7 : .7] }))); // corner braces
+  // corner braces: a diagonal from the top of each end post down to the ground rail (length and angle from the two points)
+  [[XS[0], 1], [XS[XS.length - 1], -1]].forEach(([x0, sd]) => { const x1 = x0 + sd * .95, y0 = 1.15, y1 = .3, L = Math.hypot(x1 - x0, y0 - y1), ang = Math.atan2(y1 - y0, x1 - x0);
+    p.push(box([L, .11, .11], [(x0 + x1) / 2, (y0 + y1) / 2, 0], TIM2, { rot: [0, 0, ang] })); });
   return p;
 };
 const fence = obj('fence', fenceParts(), .2);
