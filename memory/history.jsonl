@@ -53,3 +53,4 @@
 {"run": "rooftop_bees_us", "time": "2026-11-16 11:30", "score": 100, "issues": 0, "codes": []}
 {"run": "compost", "time": "2026-11-16 11:38", "score": 98, "issues": 1, "codes": ["beat_too_short"]}
 {"run": "rooftop_bees_en", "time": "2026-11-16 12:07", "score": 100, "issues": 0, "codes": []}
+{"run": "bees_ar_visual_en", "time": "2026-11-16 13:29", "score": 93, "issues": 2, "codes": ["caption_flash", "dead_beat"]}

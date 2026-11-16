@@ -23,9 +23,9 @@
  {
   "code": "caption_flash",
   "rule": "Hold each caption until the next word starts.",
-  "count": 2,
-  "last_seen": "2026-11-11",
-  "example": "caption \"hay\" shown only 0.08s"
+  "count": 3,
+  "last_seen": "2026-11-16",
+  "example": "caption \"like\" shown only 0.04s"
  },
  {
   "code": "beat_too_short",
@@ -100,7 +100,7 @@
  {
   "code": "dead_beat",
   "rule": "Each beat must add an object, change a character mode, add an effect or change the camera.",
-  "count": 6,
+  "count": 7,
   "last_seen": "2026-11-16",
   "example": "beat 1 adds nothing new visually"
  },
