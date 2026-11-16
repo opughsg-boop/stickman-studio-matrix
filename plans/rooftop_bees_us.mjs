@@ -36,7 +36,7 @@ b.push({ t: 0, kind: 'intro', add: [...scenery, stk('q', 'question', [-.6, 2.2, 
   camera: { preset: 'hero', target: [-.1, .8, -.2], dist: 6, elev: .22, az: .35, zoom: 'in' } });
 b.push({ t: at(1), kind: 'info', remove: ['scout', 'q'], camera: { preset: 'hero', target: [1.5, .8, -.8], dist: 13, elev: .42, az: .45, zoom: 'in' },
   modes: { bees: { mode: 'stream', from: ENT, to: [-6, 4, -12] } } });
-b.push({ t: at(2), kind: 'problem', add: [stk('x2', 'warning', [-.2, 1.4, 0], .25, { pulse: true }), { id: 'gust', type: 'bees', pos: [0, 0, 0], params: { count: 4, scale: .16 }, anim: 'none', dust: false }],
+b.push({ t: at(2), kind: 'problem', add: [stk('x2', 'warning', [0.6, 1.6, 0], .25, { pulse: true }), { id: 'gust', type: 'bees', pos: [0, 0, 0], params: { count: 4, scale: .16 }, anim: 'none', dust: false }],
   modes: { bees: { mode: 'swarm', c: [.3, 1.0, 0], r: .8, h: .25 }, gust: { mode: 'stream', from: ENT, to: [-3.5, 1.2, 2.5] } },
   camera: { preset: 'close', target: [-.35, .9, 0], dist: 4.6, elev: .3, az: .2, zoom: 'in' } });
 b.push({ t: at(3), kind: 'solution', remove: ['gust', 'x2'], add: [
@@ -57,7 +57,7 @@ b.push({ t: at(6), kind: 'info', remove: ['gar'], camera: { preset: 'orbit', tar
 const plan = {
   version: 2, planner: 'directed', duration: D, language: 'en', prompt: 'Rooftop bees (US)',
   captions: S.flatMap((seg, si) => buildCaptions({ segments: [seg] }, 2).map(c => ({ ...c, end: Math.min(c.end + .25, si + 1 < S.length ? S[si + 1].start : D) }))),
-  fades: [], env: { sky: 'kloofendal_48d_partly_cloudy_puresky', soil: 'aerial_grass_rock', soilRepeat: 3, cover: 'high', coverGain: 1.0,
+  fades: [], env: { sky: 'kloofendal_48d_partly_cloudy_puresky', soil: 'aerial_grass_rock', soilRepeat: 3,
     cover: false, water: '#7f9fb3', fog: '#b4d0e8', haze: .3, horizon: 'hills', horizonDist: 260, waves: 0, foam: false, birds: 3, motes: 1 },
   style: { camEase: .6, captionY: .78 },
   beats: b.map((x, i) => ({ start: x.t, end: i + 1 < b.length ? b[i + 1].t : D, text: '', remove: [], modes: {}, effects: [], add: [], ...x, camera: { punch: false, ...x.camera } })),
