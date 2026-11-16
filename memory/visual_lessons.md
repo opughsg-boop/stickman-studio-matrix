@@ -199,3 +199,8 @@ Rule: when a preview or final video shows a mistake, add one entry here (what wa
 - **Mistake:** the nest box was a plain white block. **Fix:** wood-brown box (#7a5a36). Still needs straw and a real opening; not fully fixed.
 - **Mistake:** hens too small on a flat green lawn. **Fix:** flock scale .5. The lawn is still flat; add Poly Haven grass clumps and varied soil next.
 - **Open:** a check icon still clips the right edge in one beat, and two check icons stack in the same spot (ck4 and ok6). Move one of them.
+
+## Wood bed / carpentry (preview 2026-11-16, plans/wood_bed.mjs)
+- **Mistake:** the `carpenter` default model `modular_men/Worker` wears a hard hat and a hi-vis vest, so he reads as a construction worker, not a village carpenter. **Fix next:** `params.model:'modular_men/Farmer'` or `Casual` (re-probe palms: the poses were tuned on Worker, hands hang at .93 m).
+- **Works:** palm contact tuned with a probe (`window.__rigPoses` + `carpenter.userData.palm`), hammer rides the palm and lands on the nail head (< 1 cm); sectioned mortise and tenon reads clearly in close-up.
+- Source: runs/wood_bed/sheet_preview.jpg.

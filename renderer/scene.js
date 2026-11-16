@@ -1020,7 +1020,7 @@ Object.assign(ASSETS, { ant_farm: antFarm, clock24, film_cam: filmCam, sleeper }
 // modes on the object may switch the clip: modes: { cow: { clip: 'Walk' } }
 const GLB = {};
 async function preloadGLB(p) {
-  const names = new Set(); for (const b of p.beats || []) for (const a of b.add || []) { if (a.type === 'glb') names.add(a.params.model); if (a.params?.rider) names.add(a.params.rider); if (a.type === 'raker') names.add(a.params?.man || 'modular_men/Worker'); if (a.type === 'roof_person') names.add(a.params?.model || 'modular_men/Casual'); if (a.type === 'buffalo') names.add('animals_pack/Bull'); if (a.type === 'fellah') names.add('modular_men/Farmer'); if (a.type === 'rig_person') names.add(a.params?.model || 'modular_men/Casual'); if (a.params?.hanger) names.add(a.params.hanger.model || 'modular_women/Casual'); }
+  const names = new Set(); for (const b of p.beats || []) for (const a of b.add || []) { if (a.type === 'glb') names.add(a.params.model); if (a.params?.rider) names.add(a.params.rider); if (a.type === 'raker') names.add(a.params?.man || 'modular_men/Worker'); if (a.type === 'roof_person') names.add(a.params?.model || 'modular_men/Casual'); if (a.type === 'buffalo') names.add('animals_pack/Bull'); if (a.type === 'fellah') names.add('modular_men/Farmer'); if (a.type === 'carpenter') names.add(a.params?.model || 'modular_men/Worker'); if (a.type === 'rig_person') names.add(a.params?.model || 'modular_men/Casual'); if (a.params?.hanger) names.add(a.params.hanger.model || 'modular_women/Casual'); }
   const l = new GLTFLoader();
   await Promise.all([...names].map(async n => { GLB[n] = await l.loadAsync(n.startsWith('ph/') ? `/assets/${n}/${n.slice(3)}.gltf` : n.startsWith('models/') ? `/assets/${n}.glb` : `/assets/lib/${n}.glb`); }));
   // 3D-sky (realistic) plans: smooth the low-poly animal meshes so facets do not show as flat triangles.
@@ -2464,14 +2464,15 @@ function makeRig(model, height) { const w = ASSETS.glb({ model, height, arms: 0 
 // track keys [t, x, y, z, yaw|null, pose, gait|null]: eased moves (gait moves keep a steady pace with short ramps); pose blends at each key
 function trapE(u, r = .18) { u = clamp(u); const k = 1 / (1 - r); return u < r ? k * u * u / (2 * r) : u > 1 - r ? 1 - k * (1 - u) * (1 - u) / (2 * r) : k * (u - r / 2); }
 function trapV(u, r = .18) { u = clamp(u); const k = 1 / (1 - r); return u < r ? k * u / r : u > 1 - r ? k * (1 - u) / r : k; }
-function rigTrack(keys) { const K = keys.map(k => ({ t: k[0], p: new THREE.Vector3(k[1], k[2], k[3]), yaw: k[4], pose: k[5] || 'stand', gait: k[6] || null })), seg = [];
+function rigTrack(keys) { const K = keys.map(k => ({ t: k[0], p: new THREE.Vector3(k[1], k[2], k[3]), yaw: k[4], pose: k[5] || 'stand', gait: k[6] || null, ease: k[7] || null })), seg = [];
   let cum = 0, yp = K[0].yaw ?? 0;
   for (let i = 0; i < K.length - 1; i++) { const a = K[i], b = K[i + 1], len = a.p.distanceTo(b.p), hz = Math.hypot(b.p.x - a.p.x, b.p.z - a.p.z);
     const y1 = angTo(yp, b.yaw != null ? b.yaw : hz > .05 ? Math.atan2(b.p.x - a.p.x, b.p.z - a.p.z) : yp); seg.push({ a, b, len, cum, y0: yp, y1 }); cum += len; yp = y1; }
   return t => { if (!seg.length || t <= K[0].t) return { pos: K[0].p, yaw: seg[0]?.y0 ?? yp, A: K[0].pose, B: K[0].pose, pk: 1, gait: null, dist: 0, speed: 0 };
     const i = seg.findIndex(q => t < q.b.t); if (i < 0) { const q = seg[seg.length - 1]; return { pos: q.b.p, yaw: q.y1, A: q.a.pose, B: q.b.pose, pk: 1, gait: null, dist: cum, speed: 0 }; }
     const q = seg[i], D = Math.max(.001, q.b.t - q.a.t), u = (t - q.a.t) / D, g = q.b.gait, e = g ? trapE(u) : sEase(u);
-    return { pos: q.a.p.clone().lerp(q.b.p, e), yaw: lerp(q.y0, q.y1, easeIO(u / .3)), A: q.a.pose, B: q.b.pose, pk: easeIO((t - q.a.t) / Math.min(.45, D * .6)), gait: g,
+    return { pos: q.a.p.clone().lerp(q.b.p, e), yaw: lerp(q.y0, q.y1, easeIO(u / .3)), A: q.a.pose, B: q.b.pose, pk: q.b.ease === 'in' ? Math.pow(clamp((t - q.a.t) / Math.min(.45, D * .6)), 2.2) : easeIO((t - q.a.t) / Math.min(.45, D * .6)), gait: g, // 'in' = accelerate into the pose (a hammer blow)
+     
       dist: q.cum + q.len * e, speed: q.len / D * (g ? trapV(u) : Math.PI / 2 * Math.sin(Math.PI * u)) }; }; }
 function gaitAdd(P, st, t) { const G = GAIT[st.gait]; let bob = 0; if (!G) return bob; const a = clamp(st.speed / G.v), ph = st.dist / G.stride * Math.PI * 2, s = Math.sin(ph), c = Math.cos(ph);
   if (st.gait === 'shuffle') { P.oL += G.abd * Math.max(0, s) * a; P.oR += G.abd * Math.max(0, -s) * a; P.hL += .08 * Math.max(0, s) * a; P.hR += .08 * Math.max(0, -s) * a; return G.bob * Math.abs(c) * a; }
@@ -2635,3 +2636,220 @@ function flatDoor(p = {}) { const g = new THREE.Group(), w = p.w || .96, h = p.h
   g.userData.tick = t => { const rt = p.rattle && t > p.rattle[0] && t < p.rattle[1] ? 1 : 0; leaf.rotation.y = kv(p.openK, t) + rt * .006 * Math.sin(t * 38); handle.rotation.z = rt ? -.35 - .15 * Math.sin(t * 19) : kv(p.openK, t) < -.05 ? 0 : 0; };
   return g; }
 Object.assign(ASSETS, { apt_block: aptBlock, street_set: streetSet, wash_rack: washRack, ac_unit: acUnit, flat_door: flatDoor, rig_person: rigPerson });
+
+// ---------- carpentry pack (2026-11-16, plans/wood_bed.mjs): joinery without nails or glue ----------
+// Graphics step-up: planed timber with metre-scaled UVs (long grain on the faces, growth-ring end grain on every cut end, per-board tint),
+// instead of one stretched texture per box. Realism: real joinery sizes (bed 1.9 x 0.95 m, rail 12 x 4.5 cm, tenon a third of the rail,
+// mortise 6 cm deep, oak pegs), a cast-iron bar clamp, a Khufu-style lashed hull. Motion: a hammer that rides the carpenter's palm
+// with a wrist snap and an accelerating blow, a split that runs along the grain, an eased tenon slide with a seating jolt, a turning
+// clamp screw, a wet tenon that swells and pushes the joint open, and a damped push test. All timings are absolute keys [[t, v]] (kv).
+function grainTex() { return SPR.grain ||= (() => { const t = canvasT(512, 128, (c, w, h) => { const r = rng(141); c.fillStyle = '#efe0c8'; c.fillRect(0, 0, w, h);
+    for (let i = 0; i < 54; i++) { const y0 = r() * h, a = 1 + r() * 3.5, f = (1 + (r() * 3 | 0)) * Math.PI * 2 / w, ph = r() * 6, dark = r() < .6;
+      c.strokeStyle = dark ? `rgba(118,74,36,${.1 + r() * .24})` : `rgba(255,244,222,${.1 + r() * .14})`; c.lineWidth = .6 + r() * 2.4; c.beginPath();
+      for (let x = 0; x <= w; x += 8) { const y = y0 + Math.sin(x * f + ph) * a + Math.sin(x * f * 2 + ph * 1.7) * a * .35; x ? c.lineTo(x, y) : c.moveTo(x, y); } c.stroke(); }
+    for (let i = 0; i < 1600; i++) { c.fillStyle = `rgba(92,56,24,${r() * .13})`; c.fillRect(r() * w, r() * h, 2 + r() * 7, .8); }
+    for (let k = 0; k < 2; k++) { const x = 80 + r() * (w - 160), y = 30 + r() * (h - 60); for (let j = 7; j > 0; j--) { c.strokeStyle = `rgba(96,56,24,${.1 + .05 * (7 - j)})`; c.lineWidth = 1.3; c.beginPath(); c.ellipse(x, y, j * 3.4, j * 1.5, 0, 0, 6.3); c.stroke(); }
+      c.fillStyle = 'rgba(78,44,18,.55)'; c.beginPath(); c.ellipse(x, y, 3.2, 1.6, 0, 0, 6.3); c.fill(); } }, [1, 1]); return t; })(); }
+function endTex() { return SPR.endg ||= canvasT(256, 256, (c, w, h) => { const r = rng(143); c.fillStyle = '#e2c9a2'; c.fillRect(0, 0, w, h); const cx = w * .35, cy = h * 1.35;
+  for (let k = 8; k < 520; k += 3 + r() * 4) { c.strokeStyle = `rgba(${120 + r() * 30 | 0},${78 + r() * 20 | 0},${40 | 0},${.18 + r() * .3})`; c.lineWidth = .8 + r() * 1.8; c.beginPath(); c.arc(cx, cy, k, 0, Math.PI * 2); c.stroke(); }
+  for (let i = 0; i < 2600; i++) { c.fillStyle = `rgba(70,40,15,${r() * .14})`; c.fillRect(r() * w, r() * h, 1, 1); }
+  for (let i = 0; i < 40; i++) { c.fillStyle = 'rgba(255,240,215,.08)'; c.fillRect(0, r() * h, w, 1); } }, [1, 1]); }   // saw marks
+const WOODM = {};
+function woodMats(tint, o = {}) { const k = tint + (o.key || ''); if (WOODM[k] && !o.own) return WOODM[k];
+  const m = { side: new THREE.MeshStandardMaterial({ color: col(tint), map: grainTex(), roughness: o.rough ?? .6 }), end: new THREE.MeshStandardMaterial({ color: col(tint).multiplyScalar(.95), map: endTex(), roughness: .82 }) };
+  if (!o.own) WOODM[k] = m; return m; }
+// a planed board: size [x, y, z], axis = index of the length (grain) direction; uv in metres so the grain keeps its real scale on every board
+function woodBox(size, axis, tint, pos, o = {}) { const geo = new THREE.BoxGeometry(...size), P = geo.attributes.position, N = geo.attributes.normal, UV = geo.attributes.uv;
+  const sd = o.seed ?? Math.abs((pos ? pos[0] * 7.13 + pos[1] * 3.37 + pos[2] * 5.71 : 0) + size[0] * 11.3 + size[2] * 4.1) % 1;
+  for (let i = 0; i < P.count; i++) { const p = [P.getX(i), P.getY(i), P.getZ(i)], n = [N.getX(i), N.getY(i), N.getZ(i)], na = n.findIndex(v => Math.abs(v) > .5);
+    if (na === axis) { const [a, b] = [0, 1, 2].filter(k => k !== axis); UV.setXY(i, p[a] / .24 + .5 + sd * .3, p[b] / .24 + .5 + sd * .2); }
+    else { const ac = [0, 1, 2].find(k => k !== axis && k !== na); UV.setXY(i, p[axis] / .75 + sd * 3.7, p[ac] / .16 + sd * 5.3); } }
+  const M = o.mats || woodMats(tint), mesh = new THREE.Mesh(geo, [0, 1, 2, 3, 4, 5].map(f => (f >> 1) === axis ? M.end : M.side));
+  if (pos) mesh.position.set(...pos); if (o.rot) mesh.rotation.set(...o.rot); mesh.castShadow = mesh.receiveShadow = true; return mesh; }
+const steelM = () => SPR.steel ||= std('#6a6f73', { m: .85, r: .32 });
+function peg(par, pos, axis) { const m = cyl(.009, .009, .012, SPR.pegM ||= std('#7a5532', { r: .7 }), 10); m.position.set(...pos); if (axis === 'x') m.rotation.z = Math.PI / 2; if (axis === 'z') m.rotation.x = Math.PI / 2; par.add(m); }
+
+// workshop floor: wide pine planks with seams, sawdust and shavings (top at y = p.top, default .015)
+function shopFloor(p = {}) { const g = new THREE.Group(), W = p.w || 5.2, D = p.d || 4.4, top = p.top ?? .015, r = rng(147);
+  const tex = canvasT(1024, 1024, (c, w, h) => { c.fillStyle = '#9b7a55'; c.fillRect(0, 0, w, h); const n = 9, q = h / n;
+    for (let i = 0; i < n; i++) { const v = .86 + r() * .2; c.fillStyle = `rgb(${172 * v | 0},${134 * v | 0},${92 * v | 0})`; c.fillRect(0, i * q, w, q);
+      for (let j = 0; j < 22; j++) { c.strokeStyle = `rgba(${r() < .6 ? '100,64,32' : '220,190,150'},${.1 + r() * .18})`; c.lineWidth = 1 + r() * 2; c.beginPath(); const y = i * q + r() * q; c.moveTo(0, y); c.bezierCurveTo(w * .3, y + r() * 6 - 3, w * .7, y + r() * 6 - 3, w, y + r() * 4 - 2); c.stroke(); }
+      const bx = r() * w; c.fillStyle = 'rgba(40,25,12,.6)'; c.fillRect(bx, i * q, 2, q);                            // butt joint
+      c.fillStyle = 'rgba(40,25,12,.75)'; c.fillRect(0, i * q, w, 2); }
+    for (let i = 0; i < 14; i++) { const x = r() * w, y = r() * h, rad = 30 + r() * 90, gr = c.createRadialGradient(x, y, 2, x, y, rad); gr.addColorStop(0, 'rgba(236,212,170,.55)'); gr.addColorStop(1, 'rgba(236,212,170,0)'); c.fillStyle = gr; c.fillRect(x - rad, y - rad, rad * 2, rad * 2); }
+    for (let i = 0; i < 4000; i++) { c.fillStyle = `rgba(${r() < .5 ? '240,220,180' : '70,45,20'},${r() * .25})`; c.fillRect(r() * w, r() * h, 1 + r() * 2, 1); } }, [W / 2.6, D / 2.6]);
+  const fl = new THREE.Mesh(new THREE.BoxGeometry(W, .05, D), new THREE.MeshStandardMaterial({ map: tex, roughness: .88 })); fl.position.y = top - .025; fl.receiveShadow = true; g.add(fl);
+  const shM = new THREE.MeshStandardMaterial({ color: col('#ecd1a2'), roughness: .7, side: THREE.DoubleSide });
+  for (let i = 0; i < (p.shavings ?? 60); i++) { const x = (r() - .5) * W * .9, z = (r() - .5) * D * .9; if (p.clear && p.clear.some(([x0, x1, z0, z1]) => x > x0 && x < x1 && z > z0 && z < z1)) continue;
+    const s = new THREE.Mesh(new THREE.TorusGeometry(.018 + r() * .02, .004, 4, 12, 3.5 + r() * 2), shM); s.position.set(x, top + .012, z); s.rotation.set(r() * 3, r() * 3, r() * 3); s.scale.z = 3; g.add(s); }
+  return g; }
+
+// workbench, real size: 1.7 x 0.62 m, top surface at h (.86); laminated top, legs, stretchers, a shelf with offcuts, shavings
+function workbench(p = {}) { const g = new THREE.Group(), L = p.l || 1.7, W = p.w || .62, H = p.h || .86, T = .06, r = rng(149);
+  ['#c69c6c', '#b88d5f', '#cda577', '#bf9466', '#c4996a'].forEach((c, k) => g.add(woodBox([L, T, W / 5 - .002], 0, c, [0, H - T / 2, -W / 2 + W / 10 + k * W / 5])));
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) g.add(woodBox([.08, H - T, .08], 1, '#a47b52', [sx * (L / 2 - .12), (H - T) / 2, sz * (W / 2 - .08)]));
+  for (const sz of [-1, 1]) g.add(woodBox([L - .32, .08, .045], 0, '#a47b52', [0, .2, sz * (W / 2 - .08)]));
+  for (const sx of [-1, 1]) g.add(woodBox([.045, .08, W - .24], 2, '#a47b52', [sx * (L / 2 - .12), .2, 0]));
+  g.add(woodBox([L - .34, .025, W - .26], 0, '#b48c62', [0, .2525, 0]));
+  for (let k = 0; k < 4; k++) g.add(woodBox([.45 + r() * .3, .03, .1], 0, ['#c9a274', '#b58c5c'][k % 2], [-.4 + k * .25, .28 + (k % 2) * .03, -.1 + r() * .2], { rot: [0, (r() - .5) * .3, 0] }));
+  const shM = new THREE.MeshStandardMaterial({ color: col('#efd6aa'), roughness: .7, side: THREE.DoubleSide });
+  for (let i = 0; i < (p.shavings ?? 16); i++) { const x = (r() - .5) * (L - .2), z = (r() - .5) * (W - .1); if (p.clear && p.clear.some(([x0, x1, z0, z1]) => x > x0 && x < x1 && z > z0 && z < z1)) continue;
+    const s = new THREE.Mesh(new THREE.TorusGeometry(.016 + r() * .015, .003, 4, 12, 3.6 + r() * 2), shM); s.position.set(x, H + .01, z); s.rotation.set(Math.PI / 2 + (r() - .5), r() * 6, 0); s.scale.z = 3; g.add(s); }
+  return shadowed(g); }
+
+// a loose plank on the bench (hook shot): length along x, end at x = 0 (the carpenter's hands), lying on its face
+function plank(p = {}) { const g = new THREE.Group(), L = p.l || 1.3; g.add(woodBox([L, p.t || .03, p.w || .12], 0, p.tint || '#c9a06e', [L / 2, (p.t || .03) / 2, 0])); return g; }
+
+// the nail test board: 0.5 x 0.12 x 0.025 m, nail 5 cm from the right end; strikes [t...] drive the nail in steps,
+// splitK [[t, 0..1]] runs a split along the grain from the end to the tip (the right piece swings open on the tip, splinters fly)
+function nailSplit(p = {}) { const g = new THREE.Group(), L = .5, Wd = .12, T = .025, xe = L / 2, xt = -.06, r = rng(151), board = new THREE.Group(); g.add(board);
+  const cr = []; for (let x = xe; x >= xt - 1e-6; x -= .018) cr.push([x, (x === xe ? .002 : (r() - .5) * .006) + (x - xt) * .012]); cr[cr.length - 1] = [xt, 0];
+  const mats = woodMats(p.tint || '#caa070'), mk = (pts) => { const s = new THREE.Shape(pts.map(([x, z]) => new THREE.Vector2(x, z))); const geo = new THREE.ExtrudeGeometry(s, { depth: T, bevelEnabled: false });
+    geo.rotateX(Math.PI / 2); geo.translate(0, T, 0); const P = geo.attributes.position, UV = geo.attributes.uv; for (let i = 0; i < P.count; i++) UV.setXY(i, P.getX(i) / .75 + .3, (P.getZ(i) + P.getY(i)) / .16 + .2);
+    const m = new THREE.Mesh(geo, mats.side); m.castShadow = m.receiveShadow = true; return m; };
+  // piece A: the whole board below the crack and everything left of the tip; piece B: the sliver above the crack, hinged at the tip
+  const A = mk([[-xe, -Wd / 2], [xe, -Wd / 2], ...cr, [xt, Wd / 2], [-xe, Wd / 2]]); board.add(A);
+  const hinge = new THREE.Group(); hinge.position.set(xt, 0, 0); board.add(hinge);
+  const B = mk([...cr.slice().reverse(), [xe, Wd / 2], [xt + .002, Wd / 2]]); B.position.set(-xt, 0, 0); hinge.add(B);
+  for (const [x0, mt] of [[-xe, mats.end], [xe, mats.end]]) { const e = new THREE.Mesh(new THREE.PlaneGeometry(Wd, T), mt); e.position.set(x0 + (x0 < 0 ? -.0005 : .0005), T / 2, 0); e.rotation.y = x0 < 0 ? -Math.PI / 2 : Math.PI / 2; if (x0 > 0) e.visible = false; board.add(e); }
+  const fresh = new THREE.Mesh(new THREE.PlaneGeometry(xe - xt, T * .9), std('#f1dcb4', { r: .95 })); fresh.position.set((xe + xt) / 2, T / 2, .001); board.add(fresh); // pale torn fibres inside the split
+  const crackLine = new THREE.Mesh(new THREE.PlaneGeometry(1, .0016), new THREE.MeshBasicMaterial({ color: 0x2a1a0c })); crackLine.rotation.x = -Math.PI / 2; crackLine.position.y = T + .0006; board.add(crackLine);
+  const nail = new THREE.Group(), nx = xe - .05, nz = .004; nail.position.set(nx, T, nz); board.add(nail);
+  const sh = cyl(.0016, .0016, .065, steelM(), 8); sh.position.y = .0325; nail.add(sh); const hd = cyl(.0042, .0042, .0018, steelM(), 14); hd.position.y = .0659; nail.add(hd);
+  const chips = []; for (let i = 0; i < 7; i++) { const c = woodBox([.006 + r() * .01, .002, .003], 0, '#e6c79a', null); c.visible = false; board.add(c); chips.push({ c, v: [(r() - .2) * .5, .5 + r() * .5, (r() - .5) * .5], w: r() * 20 }); }
+  const S = p.strikes || [], step = [.026, .022, .017];
+  g.userData.tick = t => { let d = 0, jolt = 0; S.forEach((ts, i) => { const u = clamp((t - ts) / .045); d += step[i % 3] * u * (2 - u); if (t > ts) jolt += Math.exp(-(t - ts) * 30) * Math.sin((t - ts) * 90); });
+    nail.position.y = T - Math.min(.0648, d); board.position.y = -.0012 * jolt;
+    const k = kv(p.splitK, t, 0), ang = .05 * k; hinge.rotation.y = -ang; nail.rotation.z = -ang * .5;
+    crackLine.visible = k > .01; const len = (xe - xt) * clamp(k * 1.4); crackLine.scale.x = Math.max(.001, len); crackLine.position.x = xe - len / 2; fresh.visible = k > .01;
+    const tl = S.length ? S[S.length - 1] : 1e9; chips.forEach(({ c, v, w }) => { const a = t - tl - .02; c.visible = a > 0 && a < 1.2;
+      if (c.visible) { const fl = Math.min(a, Math.max(0, v[1] / 4.9 + .01)); c.position.set(xe - .04 + v[0] * a, Math.max(T, T + v[1] * fl - 4.9 * fl * fl), .01 + v[2] * a * .5); c.rotation.set(w * a, w * a * .7, 0); } }); };
+  return g; }
+
+// hammer: origin at the handle butt, handle along +y (33 cm hickory), steel head with the striking face toward +z and the claw toward -z
+function hammerMesh() { const g = new THREE.Group(), hm = std('#b07a45', { r: .55 }), st = steelM();
+  const hd = cyl(.0135, .0155, .31, hm, 12); hd.position.y = .155; hd.scale.z = .75; g.add(hd);
+  const eye = new THREE.Mesh(new THREE.BoxGeometry(.026, .034, .03), st); eye.position.set(0, .318, 0); g.add(eye);
+  const neck = cyl(.012, .012, .045, st, 14); neck.rotation.x = Math.PI / 2; neck.position.set(0, .318, .03); g.add(neck);
+  const face = cyl(.0145, .0145, .012, st, 18); face.rotation.x = Math.PI / 2; face.position.set(0, .318, .057); g.add(face);
+  for (const s of [-1, 1]) { const cl = new THREE.Mesh(new THREE.BoxGeometry(.008, .012, .075), st); cl.position.set(s * .006, .328, -.045); cl.rotation.x = -.45; g.add(cl); }
+  return shadowed(g); }
+
+// carpenter = rig_person (Worker by default) + an optional hammer that rides the right palm. hammer: [t0, t1] visible window,
+// wrist: [[t, angle]] angle between forearm and handle (1.6 cocked at the top of the swing, .7 snapped at the blow)
+function carpenter(p = {}) { const g = rigPerson({ model: 'modular_men/Worker', ...p }), base = g.userData.tick, hm = hammerMesh(); hm.visible = false; g.add(hm);
+  const V = () => new THREE.Vector3(), Q = new THREE.Quaternion(), M4 = new THREE.Matrix4(), IG = new THREE.Matrix4(); let HR, LR, MR;
+  g.userData.palm = (side = 'R') => { const h = g.getObjectByName('Hand' + side), m = g.getObjectByName('Middle2' + side); return h.getWorldPosition(V()).lerp(m.getWorldPosition(V()), .5); };
+  g.userData.tick = (t, age) => { base(t, age); const on = p.hammer && t >= p.hammer[0] && t < p.hammer[1]; hm.visible = !!on; if (!on) return;
+    HR ||= g.getObjectByName('HandR'); LR ||= g.getObjectByName('LowerArmR'); MR ||= g.getObjectByName('Middle2R'); g.updateMatrixWorld(true);
+    const hand = HR.getWorldPosition(V()), f = hand.clone().sub(LR.getWorldPosition(V())).normalize(), palm = hand.clone().lerp(MR.getWorldPosition(V()), .55);
+    const right = new THREE.Vector3(p.side ?? 1, 0, 0).applyQuaternion(g.children[0].getWorldQuaternion(Q)), u = right.clone().cross(f).normalize(), a = kv(p.wrist, t, 1.4);
+    const h = f.clone().multiplyScalar(Math.cos(a)).add(u.multiplyScalar(Math.sin(a))).normalize(), face = h.clone().cross(right).normalize(), x = h.clone().cross(face).normalize();
+    const butt = palm.clone().sub(h.clone().multiplyScalar(.075)); M4.makeBasis(x, h, face).setPosition(butt); IG.copy(g.matrixWorld).invert(); M4.premultiply(IG); M4.decompose(hm.position, hm.quaternion, hm.scale);
+    g.userData.hammerFace = butt.clone().add(h.clone().multiplyScalar(.318)).add(face.clone().multiplyScalar(.063)); };
+  return g; }
+Object.assign(RIG_POSES, {   // tuned with a probe so the palms land on the bench work (Worker model, hands hang at .93 m)
+  holdPlank: { adL: 1.35, adR: 1.35, fL: .45, fR: .45, eL: .05, eR: .05, sp: .8, hd: .2 },                 // both palms on the plank / rail, leaning over the bench
+  holdBoard: { adL: 1.35, fL: .45, eL: .05, adR: 1.3, fR: .2, eR: 1.1, sp: .72, hd: .3 },                    // left palm on the board, hammer hand low
+  hamUp: { adL: 1.35, fL: .45, eL: .05, adR: 1.2, fR: 1.9, eR: 1.7, sp: .6, hd: .3, tw: -.08 },             // wind-up: elbow high, hammer behind the head
+  hamHit: { adL: 1.35, fL: .45, eL: .05, adR: 1.3, fR: .3, eR: .9, sp: .75, hd: .3, tw: .03 },              // the blow
+  clampTurn: { adL: 1.35, adR: 1.35, fL: .55, fR: .55, eL: .05, eR: .05, sp: .85, hd: .2, tw: .05 },
+  pushRail: { adL: 1.35, adR: 1.35, fL: .5, fR: .5, eL: .05, eR: .05, sp: .82, hd: .2 },
+  pushPost: { adL: 1.35, adR: 1.35, fL: .6, fR: .6, eL: .1, eR: .1, sp: .7, hd: .1 } });
+
+// sectioned mortise-and-tenon demo: post (9 x 9 cm) along x, rail (12 x 4.5 cm) along +z with a tenon 9 x 2 x 6 cm into a mortise 6 cm deep.
+// The assembly is sawn in half at x = 0; the +x half lifts away (cutK) so the section shows the fit. Keys (all [[t, v]]):
+// slideK 0 = tenon 14 cm out, 1 = seated; cutK; clampK (clamp lowered on); turnK (screw turns, 0..1 = 3 turns); wetK (rail darkens); swellK; looseK (joint pushed open).
+function mtJoint(p = {}) { const g = new THREE.Group(), PT = p.post || '#c39a6a', RT = p.rail || '#cfa775', r = rng(153);
+  const wetM = woodMats(RT, { own: true }), y0 = .035, y1 = .055;                                    // rail mats own -> can darken when wet
+  const post = [new THREE.Group(), new THREE.Group()], rail = new THREE.Group(), railH = [new THREE.Group(), new THREE.Group()], tenon = [];
+  const cheek = []; g.add(post[0], post[1], rail); rail.add(railH[0], railH[1]);
+  [-1, 1].forEach((s, i) => { const P = post[i];
+    P.add(woodBox([.205, .09, .09], 0, PT, [s * .1475, .045, -.045]));
+    P.add(woodBox([.045, .09, .03], 0, PT, [s * .0225, .045, -.075]));
+    P.add(woodBox([.045, y0, .06], 0, PT, [s * .0225, y0 / 2, -.03]));
+    const top = woodBox([.045, .09 - y1, .06], 0, PT, [s * .0225, (y1 + .09) / 2, -.03]); P.add(top); cheek.push(top);
+    peg(P, [s * .16, .045, -.045 + .0451], 'z');
+    const R = railH[i]; R.add(woodBox([.06, .045, .62], 2, RT, [s * .03, .045, .31], { mats: wetM }));
+    const tn = woodBox([.045, y1 - y0 - .0006, .058], 2, RT, [s * .0225, (y0 + y1) / 2, -.029], { mats: wetM }); R.add(tn); tenon.push(tn); });
+  g.add(woodBox([.16, .0225, .09], 0, '#9b7653', [0, .01125, .52]));                                   // offcut the rail rests on
+  const split = new THREE.Mesh(new THREE.BoxGeometry(.0012, .03, .05), new THREE.MeshBasicMaterial({ color: 0x24160a })); split.position.set(-.0004, .072, -.03); split.scale.y = .001; post[0].add(split); // crack in the section when the tenon swells
+  // bar clamp: steel bar along z above the work, fixed jaw behind the post, sliding jaw on the rail end, screw with a wooden T-handle
+  const clamp = new THREE.Group(), jawM = std('#8a2a22', { r: .45, m: .2 }); g.add(clamp);
+  const bar = new THREE.Mesh(new THREE.BoxGeometry(.03, .008, .98), steelM()); bar.position.set(0, .125, .3); clamp.add(bar);
+  const fj = new THREE.Mesh(new THREE.BoxGeometry(.04, .1, .035), jawM); fj.position.set(0, .085, -.1075); clamp.add(fj);
+  const sj = new THREE.Group(); clamp.add(sj); const sjb = new THREE.Mesh(new THREE.BoxGeometry(.04, .1, .035), jawM); sjb.position.set(0, .08, .645); sj.add(sjb);
+  const scr = cyl(.006, .006, .11, steelM(), 10); scr.rotation.x = Math.PI / 2; scr.position.set(0, .045, .7); clamp.add(scr);
+  const pad = cyl(.014, .014, .006, steelM(), 14); pad.rotation.x = Math.PI / 2; pad.position.set(0, .045, .6235); sj.add(pad);
+  const handle = new THREE.Group(); handle.position.set(0, .045, .76); clamp.add(handle);
+  const hb = cyl(.008, .008, .08, std('#b07a45', { r: .5 }), 10); hb.rotation.z = Math.PI / 2; handle.add(hb);
+  const hc = cyl(.007, .007, .03, steelM(), 8); hc.rotation.x = Math.PI / 2; hc.position.z = -.015; handle.add(hc);
+  shadowed(g); const out = .14, dark = col(RT).multiplyScalar(.55), dry = col(RT);
+  g.userData.tick = t => { const sl = kv(p.slideK, t, 0), cut = kv(p.cutK, t, 0), cl = kv(p.clampK, t, 0), tu = kv(p.turnK, t, 0), wet = kv(p.wetK, t, 0), sw = kv(p.swellK, t, 0), lo = kv(p.looseK, t, 0);
+    const seat = p.slideK && p.slideK.length ? p.slideK[p.slideK.length - 1][0] : 1e9, jo = t > seat ? Math.exp(-(t - seat) * 18) * Math.sin((t - seat) * 70) : 0;
+    rail.position.z = (1 - sl) * out + (1 - Math.min(1, tu * 1.6)) * .003 * (sl > .99 ? 1 : 0) + lo * .016; post[0].position.z = post[1].position.z = -.0008 * jo;
+    post[1].position.set(0, cut * .34, cut * .06 - .0008 * jo); post[1].rotation.x = -cut * .25; railH[1].position.set(0, cut * .34, cut * .06); railH[1].rotation.x = -cut * .25;
+    for (const tn of tenon) tn.scale.y = 1 + sw * .5; for (const R of railH) R.children[0].scale.y = 1 + sw * .12;
+    for (const ck of cheek) ck.position.y = (y1 + .09) / 2 + sw * .0045; split.scale.y = Math.max(.001, sw); split.visible = sw > .02;
+    wetM.side.color.copy(dry).lerp(dark, wet); wetM.end.color.copy(dry).lerp(dark, wet).multiplyScalar(.95); wetM.side.roughness = .6 - .3 * wet;
+    clamp.visible = cl > .001; clamp.position.y = (1 - cl) * .3; handle.rotation.z = tu * Math.PI * 6; sj.position.z = -tu * .004 + lo * .016; };
+  return g; }
+
+// bed frame, real size 1.9 x 0.95 m, length along x, headboard at -x. Legs 8 x 8 cm (head .95 m, foot .5 m), rails 12 x 4.5 cm tenoned
+// into the legs and pinned with oak pegs (no nails), headboard with vertical slats, 13 slats on cleats. stage 'half': the foot legs, foot rail,
+// near side rail and 9 slats are missing and the near rail lies on the floor; buildK [[t, 0..1]] then assembles them (the floor rail swings
+// up on an arc into its mortises, the other parts settle in from above, staggered). pushK [[t, 0..1]] = a hand push; the frame only quivers (< 2 mm).
+function bedFrame(p = {}) { const g = new THREE.Group(), fr = new THREE.Group(); g.add(fr); const L = 1.9, W = .95, lw = .08, half = p.stage === 'half', T1 = '#b98a58', T2 = '#c29466', T3 = '#ae7f4f';
+  const lx = L / 2 - lw / 2, lz = W / 2 - lw / 2, ry = .36, late = []; let railN = null;
+  const add = (m, isLate) => { fr.add(m); if (isLate && half) late.push({ m, p1: m.position.clone(), r1: m.rotation.clone() }); return m; };
+  for (const sz of [-1, 1]) { add(woodBox([lw, .95, lw], 1, T3, [-lx, .475, sz * lz])); add(woodBox([lw, .5, lw], 1, T3, [lx, .25, sz * lz]), sz > 0); }
+  for (const sz of [-1, 1]) { const rl = add(woodBox([L - 2 * lw, .12, .045], 0, T1, [0, ry, sz * (lz - .0175)]), sz > 0); if (sz > 0 && half) railN = late[late.length - 1];
+    add(woodBox([L - 2 * lw - .02, .025, .025], 0, '#a77a4c', [0, ry - .0475, sz * (lz - .0175 - .035)]), sz > 0); }
+  for (const sz of [-1, 1]) { peg(fr, [-lx, ry, sz * (W / 2 + .0005)], 'z'); peg(fr, [-lx, .88, sz * (W / 2 + .0005)], 'z'); }
+  add(woodBox([.045, .12, W - 2 * lw], 2, T1, [-lx + .0175, ry, 0])); add(woodBox([.045, .12, W - 2 * lw], 2, T1, [lx - .0175, ry, 0]), true);
+  add(woodBox([.045, .1, W - 2 * lw], 2, T2, [-lx, .88, 0])); add(woodBox([.045, .08, W - 2 * lw], 2, T2, [-lx, .46, 0]));
+  for (let k = 0; k < 5; k++) add(woodBox([.022, .33, .085], 1, [T2, T1][k % 2], [-lx, .665, -.3 + k * .15]));
+  for (let k = 0; k < 13; k++) add(woodBox([.09, .02, W - 2 * lw - .1], 2, [T2, '#c99d6e', T1][k % 3], [-lx + .1 + k * ((L - .3) / 12), ry - .025, 0]), k > 3);
+  const floorPos = new THREE.Vector3(.15, .0375, W / 2 + .4), floorRot = new THREE.Euler(Math.PI / 2, .06, 0);
+  late.forEach((q, i) => { q.order = q === railN ? 0 : 1 + i; });
+  shadowed(g); const N = late.length;
+  g.userData.tick = t => { const k = kv(p.pushK, t, 0), t0 = p.pushK ? p.pushK[1]?.[0] ?? 0 : 0, a = t > t0 ? Math.exp(-(t - t0) * 7) * Math.sin((t - t0) * 31) : 0; fr.rotation.z = .0012 * a * (k > 0 ? 1 : 0);
+    if (!half) return; const b = kv(p.buildK, t, 0);
+    for (const q of late) { if (q === railN) { const e = sEase(clamp(b / .35)); q.m.position.lerpVectors(floorPos, q.p1, e); q.m.position.y += Math.sin(Math.PI * e) * .35;
+        q.m.rotation.set(lerp(floorRot.x, q.r1.x, e), lerp(floorRot.y, q.r1.y, e), 0); continue; }
+      const u = clamp((b - .3 - (q.order / N) * .5) / .2), e = 1 - Math.pow(1 - u, 3); q.m.visible = u > 0; q.m.position.y = q.p1.y + (1 - e) * .45; } };
+  return g; }
+
+// Khufu-style hull (the Giza boat is about 43 m; this one is 6.4 m), planks edge-joined and sewn with rope, no nails: strakes as separate
+// curved boards with seams, rope stitches across every seam, thwarts, papyrus-flower stem and stern posts, on timber cradles over a pale stone plinth
+function lashedHull(p = {}) { const g = new THREE.Group(), L = p.l || 6.4, B = p.b || 1.25, Dh = p.d || .7, n = 5, nu = 40, r = rng(157), lift = p.lift ?? .55;
+  const pt = (u, s) => { const top = Dh * (1 + 1.1 * Math.pow(Math.abs(u), 3.2)), keel = Dh * .55 * Math.pow(Math.abs(u), 2.4), hb = B / 2 * Math.pow(Math.max(0, 1 - u * u), .55);
+    const a = s * Math.PI / 2; return [u * L / 2, lift + keel + (top - keel) * (1 - Math.cos(a)), hb * Math.pow(Math.sin(a), .8)]; };
+  const hullM = woodMats('#a57a4c', { key: 'hull', rough: .78 }).side, stitch = [];
+  for (const sd of [-1, 1]) for (let k = 0; k < n; k++) { const s0 = k / n + .004, s1 = (k + 1) / n - .004, pos = [], uv = [], idx = [];
+    for (let i = 0; i <= nu; i++) for (let j = 0; j <= 2; j++) { const u = -1 + 2 * i / nu, s = s0 + (s1 - s0) * j / 2, q = pt(u * .985, s); pos.push(q[0], q[1], sd * q[2]); uv.push(q[0] / .75 + k * .37, j * .5 + k * .9); }
+    for (let i = 0; i < nu; i++) for (let j = 0; j < 2; j++) { const a = i * 3 + j, b = a + 3; sd > 0 ? idx.push(a, b, a + 1, b, b + 1, a + 1) : idx.push(a, a + 1, b, b, a + 1, b + 1); }
+    const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); geo.setIndex(idx); geo.computeVertexNormals();
+    const m = new THREE.Mesh(geo, hullM.clone()); m.material.side = THREE.DoubleSide; m.material.color = col(['#a57a4c', '#9a6f43', '#b08455', '#a07247', '#ad8150'][(k + (sd > 0 ? 2 : 0)) % 5]); g.add(m);
+    if (k < n - 1) for (let u = -.9; u <= .9; u += .075) { const q = pt(u, (k + 1) / n); stitch.push([q[0], q[1], sd * (q[2] + .01), sd]); } }
+  const ropeM = std('#5a4128', { r: .95 }), im = new THREE.InstancedMesh(new THREE.TorusGeometry(.022, .0055, 5, 10), ropeM, stitch.length), o3 = new THREE.Object3D();
+  stitch.forEach(([x, y, z, sd], i) => { o3.position.set(x, y, z); o3.rotation.set(0, Math.PI / 2, 0); o3.scale.set(1, 1.3, 1); o3.updateMatrix(); im.setMatrixAt(i, o3.matrix); }); im.castShadow = true; g.add(im);
+  for (let u = -.7; u <= .71; u += .35) { const q = pt(u, 1); g.add(woodBox([.09, .06, q[2] * 2 + .04], 2, '#9c7044', [q[0], q[1] - .05, 0])); }
+  for (const sd of [-1, 1]) { const pts = [0, .25, .5, .75, 1].map(v => { const u = sd * (.985 + v * .06); const top = pt(sd * .985, 1); return new THREE.Vector3(sd * (L / 2 * .985 + v * .45), top[1] + v * v * .55, 0); });
+    const tube = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 16, .045, 8), std('#9a6f43', { r: .8 })); g.add(tube);
+    const fl = new THREE.Mesh(new THREE.ConeGeometry(.11, .22, 12, 1, true), std('#a77b4b', { r: .8, extra: { side: THREE.DoubleSide } })); fl.position.copy(pts[4]).add(new THREE.Vector3(sd * .03, .1, 0)); fl.rotation.z = Math.PI + sd * -.5; g.add(fl); }
+  for (const u of [-.6, 0, .6]) { const q = pt(u, 0); for (const sz of [-1, 1]) g.add(woodBox([.1, q[1] - .06, .1], 1, '#7d5a38', [q[0], (q[1] - .06) / 2 + .06, sz * .32]));
+    g.add(woodBox([.12, .08, .9], 2, '#7d5a38', [q[0], q[1] - .02, 0])); }
+  const st = canvasT(512, 256, (c, w, h) => { c.fillStyle = '#d9cdb6'; c.fillRect(0, 0, w, h); for (let i = 0; i < 8; i++) for (let j = 0; j < 4; j++) { const v = .93 + r() * .1; c.fillStyle = `rgb(${222 * v | 0},${210 * v | 0},${188 * v | 0})`; c.fillRect(i * 64 + 1, j * 64 + 1, 62, 62); }
+    for (let i = 0; i < 3000; i++) { c.fillStyle = `rgba(120,105,80,${r() * .12})`; c.fillRect(r() * w, r() * h, 1, 1); } }, [1, 1]);
+  const plinth = new THREE.Mesh(new THREE.BoxGeometry(L + 1.4, .06, B + 1.6), new THREE.MeshStandardMaterial({ map: st, roughness: .35 })); plinth.position.y = .03; plinth.receiveShadow = true; g.add(plinth);
+  return shadowed(g); }
+
+// pale limestone ashlar wall (museum hall backdrop; no text, no signs)
+function stoneWall(p = {}) { const W = p.w || 8, H = p.h || 2.4, r = rng(159);
+  const tex = canvasT(512, 256, (c, w, h) => { c.fillStyle = '#b8aa8e'; c.fillRect(0, 0, w, h); const rows = 4; for (let j = 0; j < rows; j++) { let x = j % 2 ? -40 : 0; while (x < w) { const bw = 70 + r() * 50, v = .92 + r() * .12;
+    c.fillStyle = `rgb(${226 * v | 0},${214 * v | 0},${190 * v | 0})`; c.fillRect(x + 2, j * h / rows + 2, bw - 4, h / rows - 4); x += bw; } }
+    for (let i = 0; i < 5000; i++) { c.fillStyle = `rgba(110,95,70,${r() * .1})`; c.fillRect(r() * w, r() * h, 1 + r() * 2, 1); } }, [W / 3, H / 1.5]);
+  const m = new THREE.Mesh(new THREE.BoxGeometry(W, H, .4), new THREE.MeshStandardMaterial({ map: tex, roughness: .9 })); m.position.y = H / 2; return shadowed(m); }
+window.__rigPoses = RIG_POSES; // debug hook: pose tuning probes
+Object.assign(ASSETS, { shop_floor: shopFloor, workbench, plank, nail_split: nailSplit, carpenter, mt_joint: mtJoint, bed_frame: bedFrame, lashed_hull: lashedHull, stone_wall: stoneWall });
