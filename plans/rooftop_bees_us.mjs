@@ -36,7 +36,7 @@ b.push({ t: 0, kind: 'intro', add: [...scenery, stk('q', 'question', [-.6, 2.2, 
   camera: { preset: 'hero', target: [-.1, .8, -.2], dist: 6, elev: .22, az: .35, zoom: 'in' } });
 b.push({ t: at(1), kind: 'info', remove: ['scout', 'q'], camera: { preset: 'hero', target: [1.5, .8, -.8], dist: 13, elev: .42, az: .45, zoom: 'in' },
   modes: { bees: { mode: 'stream', from: ENT, to: [-6, 4, -12] } } });
-b.push({ t: at(2), kind: 'problem', add: [stk('x2', 'warning', [0.6, 1.6, 0], .25, { pulse: true }), { id: 'gust', type: 'bees', pos: [0, 0, 0], params: { count: 4, scale: .16 }, anim: 'none', dust: false }],
+b.push({ t: at(2), kind: 'problem', add: [stk('x2', 'warning', [0.15, 1.5, 0], .25, { pulse: true }), { id: 'gust', type: 'bees', pos: [0, 0, 0], params: { count: 4, scale: .16 }, anim: 'none', dust: false }],
   modes: { bees: { mode: 'swarm', c: [.3, 1.0, 0], r: .8, h: .25 }, gust: { mode: 'stream', from: ENT, to: [-3.5, 1.2, 2.5] } },
   camera: { preset: 'close', target: [-.35, .9, 0], dist: 4.6, elev: .3, az: .2, zoom: 'in' } });
 b.push({ t: at(3), kind: 'solution', remove: ['gust', 'x2'], add: [

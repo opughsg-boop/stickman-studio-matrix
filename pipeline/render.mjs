@@ -72,6 +72,9 @@ export async function render(planFile, audio, outDir, o = {}) {
     }
     const total = Math.ceil(plan.duration * opt.fps), per = Math.round(opt.chunkSec * opt.fps), chunks = [];
     for (let f = 0, i = 0; f < total; f += per, i++) chunks.push({ i, f0: f, f1: Math.min(total, f + per), file: path.join(outDir, 'chunks', `c${String(i).padStart(3, '0')}.mkv`) });
+    { // resume only if the plan is unchanged; stale chunks from an older plan are discarded
+      const stamp = path.join(outDir, 'chunks', 'plan.sha'), sha = (await import('crypto')).createHash('sha1').update(JSON.stringify([plan, opt.w, opt.h, opt.fps])).digest('hex');
+      if ((fs.existsSync(stamp) ? fs.readFileSync(stamp, 'utf8') : '') !== sha) { chunks.forEach(c => fs.rmSync(c.file, { force: true })); fs.writeFileSync(stamp, sha); } }
     let done = chunks.filter(c => fs.existsSync(c.file)).length; log(done / chunks.length);
     const queue = chunks.filter(c => !fs.existsSync(c.file));
     const t0 = Date.now();
