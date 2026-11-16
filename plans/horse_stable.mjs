@@ -31,14 +31,14 @@ const stable = { id: 'stable', type: 'custom', pos: [0, 0, 0], params: { parts }
 const strawFloor = { id: 'straw', type: 'custom', pos: [0, 0, 0], params: { parts: [{ shape: 'box', size: [3.66, .05, 3.66], pos: [0, .03, 0], color: '#b79c5c', rough: 1 }] }, anim: 'fade', dust: false };
 const ridgeGap = { id: 'gap', type: 'sticker', pos: [0, WH + rise + .9, 0], params: { name: 'point_down', size: .8, bob: .06 }, anim: 'grow', dust: false };
 const heat = { id: 'heat', type: 'heat', pos: [0, 1.3, 0], params: { w: 4.2, h: 2.4, d: 3.4 }, anim: 'fade', dust: false };
-const horse = (more = {}) => glb('horse', 'animals_pack/Horse', [0, 0, 0], 1.9, { clip: 'Idle' }, { anim: 'grow', ...more });
+const horse = (more = {}) => glb('horse', 'animals_pack/Horse', [0, 0, 0], 1.9, { clip: 'Idle', footLock: true }, { anim: 'grow', ...more });
 const beats = [
   // 1 hook: open stable front, horse inside, one question sticker
   { t: 0, kind: 'intro', add: [...scenery, stable, horse(), st('q', 'question', [-3.4, 4.2, 0], .8, { bob: .08, pulse: true }, { delay: .3 })],
     modes: { horse: { clip: 'Idle' } }, camera: { preset: 'hero', target: [0, 1.6, 0], dist: 14, elev: .3, az: .3, zoom: 'in' } },
   // 2 room: stall walls appear, horse turns around
   { t: at(1), kind: 'info', remove: ['q'], add: [strawFloor, st('c2', 'circle_ring', [1.5, .5, 1.5], 1.1, { bob: .03 }, { delay: .2 })],
-    modes: { horse: { clip: 'Walk', path: [[-1, .6], [1, .6], [1, -.2], [-1, -.2]], pathSpeed: .35 } }, camera: { preset: 'hero', target: [0, 1.1, 0], dist: 13, elev: .32, az: .25, zoom: 'in' } },
+    modes: { horse: { clip: 'Walk', path: [[-1, .6], [1, .6]], footLock: true } }, camera: { preset: 'hero', target: [0, 1.1, 0], dist: 13, elev: .32, az: .25, zoom: 'in' } },
   // 3 problem: no airflow, hot damp air stays in
   { t: at(2), kind: 'problem', remove: ['c2', 'gap'], add: [heat, st('x3', 'warning', [0, 4.6, 0], .8, { pulse: true }, { delay: .2 })],
     modes: { horse: { clip: 'Idle' } }, camera: { preset: 'hero', target: [0, 1.8, 0], dist: 13, elev: .3, az: -.2, zoom: 'out' } },

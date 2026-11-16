@@ -1367,8 +1367,14 @@ ASSETS.glb = (p = {}) => {
     const mo = w.userData.mode || {}; play(mo.clip || p.clip || (acts.Idle ? 'Idle' : Object.keys(acts)[0]));
     mixer.setTime((t + (p.offset || 0)) * (mo.speed ?? p.speed ?? 1));
     const path = mo.path || P;
-    if (path) { const u = ((t * (mo.pathSpeed ?? p.pathSpeed ?? .25)) % 2), k = u < 1 ? u : 2 - u, d = u < 1 ? 1 : -1;
-      const [a, b] = path; const x = lerp(a[0], b[0], easeIO(k)), z = lerp(a[1], b[1], easeIO(k));
+    if (path) { const [a, b] = path, segL = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+      // footLock (new plans): walk at a speed matched to the animal's size, at constant speed, so the feet keep pace with the ground
+      // (the old easing made the animal stop and start mid-stride and slide). Old plans keep pathSpeed and easing unchanged.
+      const lock = p.footLock || mo.footLock; const h = p.height || 1.5;
+      const ps = lock ? (mo.walkSpeed ?? p.walkSpeed ?? 0.35 * Math.sqrt(9.81 * h)) / segL : (mo.pathSpeed ?? p.pathSpeed ?? .25);
+      const u = ((t * ps) % 2), k = u < 1 ? u : 2 - u, d = u < 1 ? 1 : -1;
+      const kk = lock ? k : easeIO(k);
+      const x = lerp(a[0], b[0], kk), z = lerp(a[1], b[1], kk);
       const par = w.parent ? w.parent.position : new THREE.Vector3(); o.parent.position.x = x - par.x; o.parent.position.z = z - par.z;
       w.rotation.y = 0; o.parent.rotation.y = Math.atan2((b[0] - a[0]) * d, (b[1] - a[1]) * d); }
     if (mo.face != null) o.parent.rotation.y = mo.face;
