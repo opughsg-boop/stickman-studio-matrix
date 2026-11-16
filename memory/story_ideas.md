@@ -11,3 +11,17 @@ Build-up (بناء) then husbandry (تربية). Format: problem "بس" -> fix "
 9. Rooftop beekeeping: place, water, ventilation. Hook: "تصدق إن النحل ممكن يتربى على سطح بيتك؟"
 10. Goats climb everything: instinct, build climbing platforms. Hook: "ليه الماعز بتطلع على أي حاجة عالية، حتى العربيات؟"
 Easiest with current assets: 2, 4, 5, 8. Strongest visuals: 6, 5.
+
+## Batch 2 (suggested 2026-11-16; user liked the practical-farm + hidden-secret style)
+Rule of thumb for picking ideas: a surprising secret, OR an everyday thing nobody explains, OR a real problem with a clear fix.
+11. Black plastic mulch: weeds, moisture, soil warmth. Hook: "ليه الفلاح بيغطي الأرض بالبلاستيك الأسود؟!"
+12. Buffalo wallowing: few sweat glands, mud cools and protects from insects. Hook: "ليه الجاموسة بتنزل الترعة وتغطس؟"
+13. Camel hump is fat, not water; real water adaptations (check figures). Hook: "الجمل مش بيخزّن ميّه في السنام… أُمّال بيستحمل العطش إزاي؟"
+14. Egg candling: light shows the embryo. Hook: "إزاي تعرف إن البيضة فيها كتكوت… من غير ما تكسرها؟"
+15. Horseshoe: hoof wall has no nerves like a nail. Hook: "ليه بنسمّر حديد في رجل الحصان… وهو مبيتألمش؟"
+16. Compost without smell: layers, turning, moisture, steam. Hook: "إزاي تعمل سماد من بواقي الأكل… من غير ريحة؟"
+17. Hens swallow grit: gizzard grinds food. Hook: "ليه الفرخة بتبلع حصى؟"
+18. Grain storage a year without weevils: dry, sealed, aerated, cool. Hook: "إزاي تخزّن القمح سنة كاملة… من غير ما السوس ياكله؟"
+19. Cracking clay soil in summer: clay shrinks; mulch and steady irrigation. Hook: "ليه الأرض بتتشقق في الصيف… وبتبلّع الميّه؟"
+20. Bee waggle dance: direction and distance. Hook: "إزاي النحلة بتقول لأخواتها فين الزهور؟"
+Strongest picks: 13, 14, 15.
