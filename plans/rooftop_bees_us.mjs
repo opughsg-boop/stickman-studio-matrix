@@ -14,9 +14,10 @@ const stk = (id, name, pos, size = .3, o = {}) => ({ id, type: 'sticker', pos, p
 const ENT = [.36, .6, 0];          // hive entrance (+x side) once the hive sits on its 0.5 m stand
 const TANK_N = [9.3, .32, -3.7];    // drip puddle under the neighbour's water tank
 const TRAY = [-1.4, 0, 1.2];
-const PLANTS = [[-3.6, .2, -2.6, 'shrub_01', 1.0], [-3.7, .2, .6, 'fern_02', .7], [-2.9, .2, 2.9, 'flower_gazania', .45], [3.4, .2, 2.6, 'shrub_02', .9], [-.9, .2, 3.1, 'dandelion_01', .4], [3.6, .2, -2.9, 'fern_02', .8]].map(([x, y, z, m, h], i) => ({ id: 'pl' + i, type: 'custom', pos: [x, 0, z], params: { parts: [{ shape: 'cylinder', size: [.42, .34, .42], pos: [0, .17, 0], color: '#b5532f', rough: .9 }] }, anim: 'none', dust: false }))
-  .concat([[-3.6, -2.6, 1.0, 'shrub_01'], [-3.7, .6, .7, 'fern_02'], [-2.9, 2.9, .45, 'flower_gazania'], [3.4, 2.6, .9, 'shrub_02'], [-.9, 3.1, .4, 'dandelion_01'], [3.6, -2.9, .8, 'fern_02']].map(([x, z, h, m], i) => ({ id: 'pm' + i, type: 'glb', pos: [x, .34, z], params: { model: 'ph/' + m, height: h }, anim: 'none', dust: false })));
-const scenery = [...PLANTS, 
+const PLANTS = [[-3.6, .2, -2.6, 'shrub_01', 1.0], [-3.7, .2, .6, 'fern_02', .7], [-2.9, .2, 2.9, 'flower_gazania', .45], [3.4, .2, 2.6, 'shrub_02', .9], [-.9, .2, 3.1, 'dandelion_01', .4], [3.6, .2, -2.9, 'fern_02', .8]].map(([x, y, z, m, h], i) => ({ id: 'pl' + i, type: 'custom', pos: [x, .25, z], params: { parts: [{ shape: 'cylinder', size: [.42, .34, .42], pos: [0, .17, 0], color: '#b5532f', rough: .9 }] }, anim: 'none', dust: false }))
+  .concat([[-3.6, -2.6, 1.0, 'shrub_01'], [-3.7, .6, .7, 'fern_02'], [-2.9, 2.9, .45, 'flower_gazania'], [3.4, 2.6, .9, 'shrub_02'], [-.9, 3.1, .4, 'dandelion_01'], [3.6, -2.9, .8, 'fern_02']].map(([x, z, h, m], i) => ({ id: 'pm' + i, type: 'glb', pos: [x, .6, z], params: { model: 'ph/' + m, height: h }, anim: 'none', dust: false })));
+const FLOOR = { id: 'floor', type: 'custom', pos: [0, 0, 0], params: { parts: [{ shape: 'box', size: [40, .3, 34], pos: [0, .1, 0], color: '#cdb596', rough: .35 }] }, anim: 'none', dust: false };
+const scenery = [FLOOR, ...PLANTS, 
   { id: 'roof', type: 'rooftop', pos: [0, 0, 0], params: { w: 10, d: 8, depth: 3.8, tiles: true, facade: '#d8c3a0', stair: { x: 3.4, z: -2.5, w: 2.4, d: 2.6, h: 2.5 },
       dishes: [[-.9, -3.45, .2, .8], [1.1, -3.5, -.2, .7]], laundry: [[-4.3, -3.0, 2.8, 0, 3]] }, anim: 'none', dust: false },
   { id: 'nroof', type: 'rooftop', pos: [10.3, .3, -1], params: { w: 8, d: 10, depth: 4.1, front: 'full', facade: 'brick', stair: { x: 2, z: -3.2, w: 2.2, d: 2.4, h: 2.4, color: '#e2cf9e', door: '#7a5a3a', tank: false },
