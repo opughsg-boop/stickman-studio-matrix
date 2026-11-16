@@ -14,13 +14,13 @@ const box = (size, pos, color, o = {}) => ({ shape: 'box', size, pos, color, rou
 const SOIL_C = '#6e5034', GRASS = '#4f7a2e';
 const cutSoil = obj('cutSoil', [
   box([3.6, .14, 1.8], [0, .07, 0], GRASS, { rough: 1 }),                 // grass top skin
-  box([3.6, 1.5, .12], [0, -.75, -.9], SOIL_C, { rough: 1 }),              // back wall
-  box([.12, 1.5, 1.8], [-1.8, -.75, 0], SOIL_C, { rough: 1 }),             // left wall
-  box([.12, 1.5, 1.8], [1.8, -.75, 0], SOIL_C, { rough: 1 }),              // right wall
-  box([3.6, .12, 1.8], [0, -1.5, 0], SOIL_C, { rough: 1 })], 0, 'grow', LIFT);          // floor
+  box([3.6, 1.5, .35], [0, -.75, -.9 + .17], SOIL_C, { rough: 1 }),       // back wall (thick)
+  box([.35, 1.5, 1.8], [-1.8 + .17, -.75, 0], SOIL_C, { rough: 1 }),      // left wall (thick)
+  box([.35, 1.5, 1.8], [1.8 - .17, -.75, 0], SOIL_C, { rough: 1 }),       // right wall (thick)
+  box([3.6, .3, 1.8], [0, -1.65, 0], SOIL_C, { rough: 1 })], 0, 'grow', LIFT);          // floor (thick, flush with the tank bottom)
 // the buried tank: a real cylinder (1.1 m across, 1.4 m tall), with a cover ring on top
 const tankCyl = (d, h, y, color, o = {}) => ({ shape: 'cylinder', size: [d, h, d], pos: [0, y, 0], color, rough: o.rough ?? .3, tex: o.tex });
-const tank = obj('tank', [tankCyl(1.1, 1.4, -.8, '#3f8fc4'), tankCyl(1.2, .06, .02, '#6e6e6e', { rough: .6 })], .3, 'grow', LIFT);
+const tank = obj('tank', [tankCyl(1.1, 1.2, -.9, '#3f8fc4'), tankCyl(1.2, .06, -.27, '#6e6e6e', { rough: .6 })], .3, 'grow', LIFT);
 // insulation: a warm yellow sleeve around the tank (slightly wider), and a band across the bottom
 const insul = obj('insul', [tankCyl(1.32, 1.5, -.8, '#e3c86b', { rough: 1 }), box([1.9, .1, 1.9], [0, -1.45, 0], '#e3c86b', { rough: 1 })], .6, 'grow', LIFT);
 // sealed lid: a grey disc with a rim, dropped onto the top
