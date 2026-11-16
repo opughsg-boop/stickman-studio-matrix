@@ -2,9 +2,9 @@
  {
   "code": "loudness",
   "rule": "Normalize audio to -14 LUFS.",
-  "count": 2,
+  "count": 3,
   "last_seen": "2026-11-16",
-  "example": "integrated loudness -15.7 LUFS (target -14)"
+  "example": "integrated loudness -15.8 LUFS (target -14)"
  },
  {
   "code": "too_dark",
@@ -100,9 +100,9 @@
  {
   "code": "dead_beat",
   "rule": "Each beat must add an object, change a character mode, add an effect or change the camera.",
-  "count": 26,
+  "count": 27,
   "last_seen": "2026-11-16",
-  "example": "beat 6 adds nothing new visually"
+  "example": "beat 2 adds nothing new visually"
  },
  {
   "code": "flat_primitive_water",
