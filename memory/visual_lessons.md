@@ -146,3 +146,7 @@ Rule: when a preview or final video shows a mistake, add one entry here (what wa
 - **Mistake:** a farmer 2 m beside the buffalo did not fit a vertical frame (hose shot). **Fix:** camera behind the farmer's shoulder looking along the spray toward the buffalo (memory rule: point wide actions toward the camera). Check framing with projected NDC of head/back/rump/farmer (`window.__cam`, `window.__link`) instead of extra preview images.
 - **Works:** walk clip synced to ground distance (measured stance speed of the Bull Walk clip = 0.88 m/s at 1.65 m), eased stops with a settle bounce, sinking the body below y 0 so the island top hides the legs in water or mud.
 
+## Rooftop bees (US version, 2026-11-16)
+- **Mistake (preview):** the white tiny flowers in the roof cover read as snow patches. **Open:** lower the flower density for rooftop plans (`env.cover` with no flowers, or `coverTint:'dry'`) and re-check.
+- **Mistake (preview):** a hand-placed warning sticker sat on the beekeeper's veil. **Fix:** place stickers 0.3 m off the body.
+- **Fixed (2026-11-16, user):** the roof floor must be plain ceramic tile, not grass. `rooftop` now takes `tiles:true` (glazed square tiles with grout), and the plan sets `cover:false` so grass does not spread over the roof. Potted plants (shrubs, ferns, flowers) stand in terracotta pots on the roof.

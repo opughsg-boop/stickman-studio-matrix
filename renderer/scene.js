@@ -1812,7 +1812,10 @@ function rebarStub(m, conc, h) { const g = new THREE.Group(); const c = box(.3, 
   for (const [x, z] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { const b = cyl(.008, .008, .7, m, 5); b.position.set(x * .1, h + .33, z * .1); b.rotation.set(z * .06, 0, x * .07); g.add(b); } return g; }
 function rooftop(p = {}) { // flat Egyptian roof on top of the island (island top = slab at y 0): parapets (front low for the cutaway), facade down the sides
   const g = new THREE.Group(), w = p.w || 10, d = p.d || 8, D = p.depth ?? 3.2, ph = p.parapet ?? 1, t = .2, low = p.front === 'full' ? ph : (p.frontH ?? .22);
-  const slabM = new THREE.MeshStandardMaterial({ map: tiled(slabTex()), color: col(p.slabTint || '#ffffff'), roughness: .95 });
+  // p.tiles: plain glazed ceramic floor tiles (square grid with thin grout lines) instead of concrete
+  const tileMap = p.tiles ? canvasTex(512, 512, (c, w, h) => { c.fillStyle = '#c9b8a0'; c.fillRect(0, 0, w, h); const n = 4, q = w / n, r0 = rng(5);
+    for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) { const v = 0.94 + r0() * .08; c.fillStyle = `rgb(${Math.round(214 * v)},${Math.round(199 * v)},${Math.round(176 * v)})`; c.fillRect(i * q + 3, j * q + 3, q - 6, q - 6); } }, [Math.max(1, Math.round((p.w || 10) / 2)), Math.max(1, Math.round((p.d || 8) / 2))]) : null;
+  const slabM = new THREE.MeshStandardMaterial(tileMap ? { map: tileMap, color: col('#ffffff'), roughness: .35, metalness: 0 } : { map: tiled(slabTex()), color: col(p.slabTint || '#ffffff'), roughness: .95 });
   const slab = new THREE.Mesh(boxUV(new THREE.BoxGeometry(w, .12, d), w, .12, d, 4, 4), slabM); slab.position.y = -.055; g.add(slab);
   if (p.facade !== false) { const fm = new THREE.MeshStandardMaterial({ map: tiled(facadeTex(p.facade || '#d8c3a0')), roughness: .92 });
     const fb = new THREE.Mesh(boxUV(new THREE.BoxGeometry(w + .04, D, d + .04), w + .04, D, d + .04, 3.5, 3), [fm, fm, new THREE.MeshBasicMaterial({ visible: false }), new THREE.MeshBasicMaterial({ visible: false }), fm, fm]);
