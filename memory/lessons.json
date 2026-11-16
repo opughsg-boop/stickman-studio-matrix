@@ -30,9 +30,9 @@
  {
   "code": "beat_too_short",
   "rule": "Merge very short sentences; a beat should last at least ~1.5 s.",
-  "count": 10,
-  "last_seen": "2026-11-12",
-  "example": "beat 12 lasts 1.0s"
+  "count": 11,
+  "last_seen": "2026-11-16",
+  "example": "beat 3 lasts 0.6s"
  },
  {
   "code": "too_bright",
