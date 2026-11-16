@@ -1,0 +1,324 @@
+{
+ "title": "الطبق",
+ "lang": "ar",
+ "fps": 30,
+ "scene": "dish",
+ "persist": [
+  "_"
+ ],
+ "fade": {
+  "at": 18.5,
+  "dur": 0.3
+ },
+ "shots": [
+  {
+   "id": "s01",
+   "t0": 0.0,
+   "t1": 3.14,
+   "world": "roof",
+   "focus": "skyline",
+   "camera": {
+    "move": "push_in",
+    "dist": 34,
+    "az": 5,
+    "el": 10
+   },
+   "fx": [
+    "pulse"
+   ],
+   "props": [
+    "rooftop",
+    "dishes",
+    "crows"
+   ]
+  },
+  {
+   "id": "s02",
+   "t0": 3.14,
+   "t1": 5.38,
+   "world": "dishes",
+   "focus": "dishes",
+   "camera": {
+    "move": "orbit",
+    "dist": 16,
+    "az": -20,
+    "el": 14
+   },
+   "fx": [
+    "arrow"
+   ],
+   "props": [
+    "rooftop",
+    "dishes"
+   ]
+  },
+  {
+   "id": "s03",
+   "t0": 5.38,
+   "t1": 7.7,
+   "world": "nest",
+   "focus": "nest",
+   "camera": {
+    "move": "push_in",
+    "dist": 16,
+    "az": 15,
+    "el": 12
+   },
+   "fx": [
+    "pulse"
+   ],
+   "props": [
+    "rooftop",
+    "dishes",
+    "nest",
+    "crows"
+   ]
+  },
+  {
+   "id": "s04",
+   "t0": 7.7,
+   "t1": 10.1,
+   "world": "beams",
+   "focus": "dishes",
+   "camera": {
+    "move": "crane_down",
+    "dist": 18,
+    "az": 10,
+    "el": 10
+   },
+   "fx": [
+    "pulse"
+   ],
+   "props": [
+    "rooftop",
+    "dishes",
+    "sky_beam"
+   ]
+  },
+  {
+   "id": "s05",
+   "t0": 10.1,
+   "t1": 12.7,
+   "world": "far",
+   "focus": "skyline",
+   "camera": {
+    "move": "pull_out",
+    "dist": 40,
+    "az": -50,
+    "el": 6
+   },
+   "fx": [
+    "gauge",
+    "impact"
+   ],
+   "props": [
+    "rooftop",
+    "dishes",
+    "sky_beam"
+   ]
+  },
+  {
+   "id": "s06",
+   "t0": 12.7,
+   "t1": 15.9,
+   "world": "space1",
+   "focus": "earth",
+   "camera": {
+    "move": "push_in",
+    "dist": 56,
+    "az": 12,
+    "el": 30
+   },
+   "fx": [
+    "flash"
+   ],
+   "props": [
+    "space_a"
+   ],
+   "bg": "space"
+  },
+  {
+   "id": "s07",
+   "t0": 15.9,
+   "t1": 18.5,
+   "world": "south",
+   "focus": "dishes",
+   "camera": {
+    "move": "orbit",
+    "dist": 22,
+    "az": -30,
+    "el": 42
+   },
+   "fx": [
+    "arrow"
+   ],
+   "props": [
+    "rooftop",
+    "dishes",
+    "south_arrow"
+   ]
+  },
+  {
+   "id": "s08",
+   "t0": 18.5,
+   "t1": 20.9,
+   "world": "space2",
+   "focus": "earth",
+   "camera": {
+    "move": "tilt_down",
+    "dist": 40,
+    "az": 0,
+    "el": 72
+   },
+   "fx": [
+    "pulse"
+   ],
+   "props": [
+    "space_b"
+   ],
+   "bg": "space"
+  },
+  {
+   "id": "s09",
+   "t0": 20.9,
+   "t1": 23.0,
+   "world": "geo",
+   "focus": "geo",
+   "camera": {
+    "move": "push_in",
+    "dist": 26,
+    "az": 35,
+    "el": 14
+   },
+   "fx": [
+    "arrow"
+   ],
+   "props": [
+    "space_b"
+   ],
+   "bg": "space"
+  },
+  {
+   "id": "s10",
+   "t0": 23.0,
+   "t1": 25.1,
+   "world": "space3",
+   "focus": "geo",
+   "camera": {
+    "move": "pull_out",
+    "dist": 48,
+    "az": -55,
+    "el": 9
+   },
+   "fx": [
+    "pulse"
+   ],
+   "props": [
+    "space_b"
+   ],
+   "bg": "space"
+  },
+  {
+   "id": "s11",
+   "t0": 25.1,
+   "t1": 27.2,
+   "world": "space4",
+   "focus": "earth",
+   "camera": {
+    "move": "orbit",
+    "dist": 36,
+    "az": 14,
+    "el": 45
+   },
+   "fx": [
+    "arrow"
+   ],
+   "props": [
+    "space_a"
+   ],
+   "bg": "space"
+  },
+  {
+   "id": "s12",
+   "t0": 27.2,
+   "t1": 29.0,
+   "world": "space5",
+   "focus": "geo",
+   "camera": {
+    "move": "dolly",
+    "dist": 30,
+    "az": -40,
+    "el": 6
+   },
+   "fx": [
+    "sparks"
+   ],
+   "props": [
+    "space_a"
+   ],
+   "bg": "space"
+  },
+  {
+   "id": "s13",
+   "t0": 29.0,
+   "t1": 33.1,
+   "world": "fix",
+   "focus": "nest",
+   "camera": {
+    "move": "push_in",
+    "dist": 10,
+    "az": 30,
+    "el": 6
+   },
+   "fx": [
+    "pulse"
+   ],
+   "props": [
+    "rooftop",
+    "dishes",
+    "sky_beam"
+   ]
+  },
+  {
+   "id": "s14",
+   "t0": 33.1,
+   "t1": 35.0,
+   "world": "cta",
+   "focus": "skyline",
+   "camera": {
+    "move": "pull_out",
+    "dist": 26,
+    "az": 40,
+    "el": 2
+   },
+   "fx": [
+    "sparks"
+   ],
+   "props": [
+    "rooftop",
+    "dishes",
+    "sky_beam"
+   ]
+  },
+  {
+   "id": "s15",
+   "t0": 35.0,
+   "t1": 37.720813,
+   "world": "outro",
+   "focus": "skyline",
+   "camera": {
+    "move": "crane_up",
+    "dist": 34,
+    "az": -45,
+    "el": 22
+   },
+   "fx": [
+    "outro"
+   ],
+   "props": [
+    "rooftop",
+    "dishes"
+   ]
+  }
+ ]
+}

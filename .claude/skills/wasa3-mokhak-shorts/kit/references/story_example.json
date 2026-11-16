@@ -1,0 +1,11 @@
+{"title":"example","lang":"ar","fps":30,"style":"blueprint-diorama","fade":{"at":19.5,"dur":0.35},
+ "shots":[
+ {"id":"s01","t0":0.0,"t1":2.6,"text":"hook","world":"yard","focus":"main_object","camera":{"move":"push_in"},"fx":["pulse"],"props":["main_object"]},
+ {"id":"s02","t0":2.6,"t1":5.2,"text":"setup","world":"yard","focus":"wide_context","camera":{"move":"pull_out"},"fx":["arrow"],"props":["context"]},
+ {"id":"s03","t0":5.2,"t1":8.0,"text":"detail","world":"closeup","focus":"detail_a","camera":{"move":"orbit"},"fx":["pulse"],"props":["detail_a"]},
+ {"id":"s04","t0":8.0,"t1":10.6,"text":"measure","world":"closeup","focus":"measure","camera":{"move":"push_in"},"fx":["arrow"],"props":["ruler"]},
+ {"id":"s05","t0":10.6,"t1":13.4,"text":"test","world":"lab","focus":"test_rig","camera":{"move":"whip_pan"},"fx":["sparks","impact"],"props":["rig"]},
+ {"id":"s06","t0":13.4,"t1":16.2,"text":"result","world":"lab","focus":"impact_point","camera":{"move":"push_in"},"fx":["shockwave"],"props":["impact"]},
+ {"id":"s07","t0":16.2,"t1":19.4,"text":"twist setup","world":"yard","focus":"question","camera":{"move":"crane_up"},"fx":["flash"],"props":["question"]},
+ {"id":"s08","t0":19.4,"t1":22.0,"text":"answer","world":"cutaway","focus":"cross_section","camera":{"move":"pull_out"},"fx":["arrow"],"props":["section"]},
+ {"id":"s09","t0":22.0,"t1":24.8,"text":"payoff","world":"cutaway","focus":"final","camera":{"move":"push_in"},"fx":["pulse","sparks"],"props":["final"]}]}

@@ -1,0 +1,64 @@
+{
+ "file": "/mnt/user-data/uploads/AQPmovhFhnxGLLfFg0bFn40_0VfQhzzcCgLeljlRGleYZTMEGMnvKD1oTS2nYkkx5zsUKj1wdwpnHZrSXqtfrVhp-6m7GC9RiddIjvcG8Al1jA.mp4",
+ "width": 720,
+ "height": 1280,
+ "fps": 30.0,
+ "duration": 49.0,
+ "lufs": -14.2,
+ "lra": 4.1,
+ "true_peak": -0.3,
+ "pause_starts": [
+  3.78,
+  6.95,
+  12.62,
+  15.65,
+  17.79,
+  22.8,
+  27.45,
+  30.28,
+  32.12,
+  36.17,
+  39.6,
+  40.95,
+  41.72,
+  47.07
+ ],
+ "hard_cuts": 0,
+ "cut_times": [],
+ "avg_shot_len": 49.0,
+ "camera_motion_mean": 10.44,
+ "camera_motion_p95": 19.78,
+ "static_share": 0.012,
+ "caption_present_share": 0.92,
+ "caption_band_y": [
+  0.753,
+  0.791
+ ],
+ "caption_changes_per_sec": 3.2,
+ "palette": [
+  {
+   "hex": "#3e2f27",
+   "share": 0.282
+  },
+  {
+   "hex": "#715946",
+   "share": 0.252
+  },
+  {
+   "hex": "#2e70af",
+   "share": 0.224
+  },
+  {
+   "hex": "#628fc0",
+   "share": 0.147
+  },
+  {
+   "hex": "#1d416b",
+   "share": 0.062
+  },
+  {
+   "hex": "#c6b3ac",
+   "share": 0.032
+  }
+ ]
+}

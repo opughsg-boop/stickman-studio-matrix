@@ -105,3 +105,17 @@ For 2D cartoon shorts with the hero and coworker cast and real sound effects, fo
 
 ## Lola & Chico style (locked 2026-11-16)
 For the "Lola & Chico" page (US English, farming and animals), follow `memory/lola_chico_style.md`.
+
+## Scoring and self-improvement (required, added 2026-11-16)
+- After every finished video, give it a score out of 100 with a short breakdown: motion, camera, graphics, lighting, realism, captions, audio. Be honest, and say which points were lost and why.
+- Save each score as one line in `memory/scores.jsonl` (`run`, `n`, `score`, `breakdown`, `mistakes`, `fixes`). Mistakes also go into `memory/lessons.json` (or `memory/visual_lessons.md` for visual ones).
+- **Multiplier:** video #1 gets a 1x improvement pass. Video #N gets an Nx pass: N concrete improvements each in motion, camera, graphics, lighting and realism. Video #2 is 2x, #3 is 3x, and so on. Count N from the lines in `memory/scores.jsonl`.
+- Before planning any video, read `memory/lessons.json`, `memory/visual_lessons.md` and the last few score lines. Never repeat a logged mistake.
+- For a new shape, prop or look, search the web for a real reference or review first, then apply it.
+- The same rules apply to the educational channel `وسّع مخك`, using the skill `.claude/skills/wasa3-mokhak-shorts` (its own fact-check and lessons rules).
+
+## Imported knowledge (one place)
+- `.claude/skills/wasa3-mokhak-shorts/`: the "وسّع مخك" educational shorts skill and kit, with its lessons memory.
+- `imports/poultry-feed-v2/`: the poultry-feed video handoff (style notes, script, plan, GRAPHICS.md, project code for reference). Its final MP4 and voice file are not in git.
+- `imports/style-locked-x3/`: older copies of files that also exist in the repo (CLAUDE.md, memory, critic/render code). Kept for reference only. The repo files above are the active ones.
+- Note: the poultry handoff's "numerical readings on measurement graphics" conflicts with the STYLE LOCK (no counters). The STYLE LOCK wins unless the user asks otherwise.

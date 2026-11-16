@@ -1,0 +1,278 @@
+{
+ "title": "طوفان العسل",
+ "lang": "ar",
+ "fps": 30,
+ "scene": "molasses",
+ "persist": [
+  "street"
+ ],
+ "fade": {
+  "at": 14.54,
+  "dur": 0.3
+ },
+ "shots": [
+  {
+   "id": "s01",
+   "t0": 0.0,
+   "t1": 3.98,
+   "world": "street",
+   "focus": "chase",
+   "camera": {
+    "move": "push_in",
+    "dist": 24,
+    "az": 18,
+    "el": 9
+   },
+   "fx": [
+    "pulse"
+   ],
+   "props": [
+    "street",
+    "car",
+    "wave_teaser"
+   ]
+  },
+  {
+   "id": "s02",
+   "t0": 3.98,
+   "t1": 7.36,
+   "world": "boston",
+   "focus": "street_wide",
+   "camera": {
+    "move": "pull_out",
+    "dist": 30,
+    "az": -15,
+    "el": 12
+   },
+   "fx": [
+    "arrow"
+   ],
+   "props": [
+    "street",
+    "tank"
+   ]
+  },
+  {
+   "id": "s03",
+   "t0": 7.36,
+   "t1": 9.9,
+   "world": "tank",
+   "focus": "tank",
+   "camera": {
+    "move": "push_in",
+    "dist": 20,
+    "az": 60,
+    "el": 9
+   },
+   "fx": [
+    "impact"
+   ],
+   "props": [
+    "street",
+    "tank"
+   ]
+  },
+  {
+   "id": "s04",
+   "t0": 9.9,
+   "t1": 11.2,
+   "world": "burst",
+   "focus": "tank",
+   "camera": {
+    "move": "rack_focus",
+    "dist": 16,
+    "az": 80,
+    "el": 9
+   },
+   "fx": [
+    "shockwave",
+    "impact"
+   ],
+   "props": [
+    "street",
+    "tank_burst",
+    "wave_a"
+   ]
+  },
+  {
+   "id": "s05",
+   "t0": 11.2,
+   "t1": 12.5,
+   "world": "run",
+   "focus": "wave_front",
+   "camera": {
+    "move": "dolly",
+    "dist": 15,
+    "az": 40,
+    "el": 9
+   },
+   "fx": [
+    "sparks"
+   ],
+   "props": [
+    "street",
+    "tank_burst",
+    "wave_a"
+   ]
+  },
+  {
+   "id": "s06",
+   "t0": 12.5,
+   "t1": 14.54,
+   "world": "speed",
+   "focus": "gauge_view",
+   "camera": {
+    "move": "push_in",
+    "dist": 20,
+    "az": -25,
+    "el": 9
+   },
+   "fx": [
+    "gauge",
+    "impact"
+   ],
+   "props": [
+    "street",
+    "tank_burst",
+    "wave_a"
+   ]
+  },
+  {
+   "id": "s07",
+   "t0": 14.54,
+   "t1": 16.7,
+   "world": "after",
+   "focus": "street",
+   "camera": {
+    "move": "crane_up",
+    "dist": 24,
+    "az": 10,
+    "el": 10
+   },
+   "fx": [],
+   "props": [
+    "street",
+    "tank_burst",
+    "puddle"
+   ],
+   "grade": {
+    "sat": 0.45,
+    "bright": 0.8,
+    "tint": [
+     0.92,
+     0.97,
+     1.1
+    ]
+   }
+  },
+  {
+   "id": "s08",
+   "t0": 16.7,
+   "t1": 19.0,
+   "world": "rules",
+   "focus": "blueprint",
+   "camera": {
+    "move": "push_in",
+    "dist": 14,
+    "az": 8,
+    "el": 8
+   },
+   "fx": [
+    "arrow",
+    "pulse"
+   ],
+   "props": [
+    "street",
+    "blueprint"
+   ]
+  },
+  {
+   "id": "s09",
+   "t0": 19.0,
+   "t1": 20.3,
+   "world": "rules2",
+   "focus": "blueprint",
+   "camera": {
+    "move": "tilt_down",
+    "dist": 9,
+    "az": -8,
+    "el": 9
+   },
+   "fx": [
+    "pulse"
+   ],
+   "props": [
+    "street",
+    "blueprint"
+   ]
+  },
+  {
+   "id": "s10",
+   "t0": 20.3,
+   "t1": 21.8,
+   "world": "houses",
+   "focus": "houses",
+   "camera": {
+    "move": "orbit",
+    "dist": 20,
+    "az": -25,
+    "el": 9
+   },
+   "fx": [],
+   "props": [
+    "street",
+    "puddle"
+   ]
+  },
+  {
+   "id": "s11",
+   "t0": 21.8,
+   "t1": 23.62,
+   "world": "smell",
+   "focus": "houses",
+   "camera": {
+    "move": "push_in",
+    "dist": 18,
+    "az": 10,
+    "el": 10
+   },
+   "fx": [
+    "pulse"
+   ],
+   "props": [
+    "street",
+    "puddle",
+    "smell"
+   ],
+   "grade": {
+    "sat": 1.15,
+    "tint": [
+     1.1,
+     1.0,
+     0.86
+    ]
+   }
+  },
+  {
+   "id": "s12",
+   "t0": 23.62,
+   "t1": 26.749375,
+   "world": "outro",
+   "focus": "street_wide",
+   "camera": {
+    "move": "pull_out",
+    "dist": 30,
+    "az": 15,
+    "el": 14
+   },
+   "fx": [
+    "outro"
+   ],
+   "props": [
+    "street",
+    "puddle",
+    "smell"
+   ]
+  }
+ ]
+}

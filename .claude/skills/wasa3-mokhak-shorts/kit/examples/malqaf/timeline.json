@@ -1,0 +1,255 @@
+{
+ "fps": 30,
+ "frames": 947,
+ "shots": [
+  {
+   "id": "s01",
+   "f0": 0,
+   "f1": 69,
+   "world": "village",
+   "focus": "village",
+   "camera": {
+    "move": "push_in",
+    "dist": 18,
+    "az": 18,
+    "el": 16
+   },
+   "fx": [
+    "pulse"
+   ],
+   "props": [
+    "house",
+    "sun"
+   ],
+   "show": null
+  },
+  {
+   "id": "s02",
+   "f0": 69,
+   "f1": 156,
+   "world": "village",
+   "focus": "house",
+   "camera": {
+    "move": "pull_out",
+    "dist": 14,
+    "az": -22,
+    "el": 20
+   },
+   "fx": [
+    "arrow"
+   ],
+   "props": [
+    "house",
+    "malqaf"
+   ],
+   "show": null
+  },
+  {
+   "id": "s03",
+   "f0": 156,
+   "f1": 210,
+   "world": "village",
+   "focus": "malqaf",
+   "camera": {
+    "move": "orbit",
+    "dist": 10,
+    "az": -40,
+    "el": 16
+   },
+   "fx": [
+    "pulse"
+   ],
+   "props": [
+    "house",
+    "malqaf"
+   ],
+   "show": null
+  },
+  {
+   "id": "s04",
+   "f0": 210,
+   "f1": 319,
+   "world": "wind",
+   "focus": "opening",
+   "camera": {
+    "move": "push_in",
+    "dist": 12,
+    "az": -62,
+    "el": 12
+   },
+   "fx": [
+    "arrow"
+   ],
+   "props": [
+    "house",
+    "malqaf",
+    "airflow"
+   ],
+   "show": null
+  },
+  {
+   "id": "s05",
+   "f0": 319,
+   "f1": 423,
+   "world": "cutaway",
+   "focus": "duct",
+   "camera": {
+    "move": "crane_down",
+    "dist": 10,
+    "az": 8,
+    "el": 14
+   },
+   "fx": [
+    "pulse"
+   ],
+   "props": [
+    "house",
+    "malqaf",
+    "airflow"
+   ],
+   "show": null
+  },
+  {
+   "id": "s06",
+   "f0": 423,
+   "f1": 498,
+   "world": "cutaway",
+   "focus": "vent",
+   "camera": {
+    "move": "dolly",
+    "dist": 9,
+    "az": 14,
+    "el": 14
+   },
+   "fx": [
+    "arrow"
+   ],
+   "props": [
+    "house",
+    "malqaf",
+    "airflow",
+    "hot_air"
+   ],
+   "show": null
+  },
+  {
+   "id": "s07",
+   "f0": 498,
+   "f1": 606,
+   "world": "water",
+   "focus": "basin",
+   "camera": {
+    "move": "push_in",
+    "dist": 8.5,
+    "az": 6,
+    "el": 18
+   },
+   "fx": [
+    "sparks"
+   ],
+   "props": [
+    "house",
+    "malqaf",
+    "basin",
+    "vapor",
+    "airflow"
+   ],
+   "show": null
+  },
+  {
+   "id": "s08",
+   "f0": 606,
+   "f1": 705,
+   "world": "village",
+   "focus": "village",
+   "camera": {
+    "move": "whip_pan",
+    "dist": 17,
+    "az": 22,
+    "el": 14
+   },
+   "fx": [
+    "flash"
+   ],
+   "props": [
+    "house",
+    "malqaf",
+    "sun"
+   ],
+   "show": null
+  },
+  {
+   "id": "s09",
+   "f0": 705,
+   "f1": 792,
+   "world": "cutaway2",
+   "focus": "room",
+   "camera": {
+    "move": "tilt_down",
+    "dist": 9,
+    "az": 0,
+    "el": 12
+   },
+   "fx": [
+    "arrow",
+    "pulse"
+   ],
+   "props": [
+    "house",
+    "malqaf",
+    "hot_air"
+   ],
+   "show": null
+  },
+  {
+   "id": "s10",
+   "f0": 792,
+   "f1": 907,
+   "world": "cutaway2",
+   "focus": "duct",
+   "camera": {
+    "move": "orbit",
+    "dist": 10,
+    "az": -12,
+    "el": 16
+   },
+   "fx": [
+    "arrow"
+   ],
+   "props": [
+    "house",
+    "malqaf",
+    "hot_air",
+    "airflow"
+   ],
+   "show": null
+  },
+  {
+   "id": "s11",
+   "f0": 907,
+   "f1": 947,
+   "world": "payoff",
+   "focus": "house",
+   "camera": {
+    "move": "pull_out",
+    "dist": 18,
+    "az": 28,
+    "el": 22
+   },
+   "fx": [
+    "sparks"
+   ],
+   "props": [
+    "house",
+    "malqaf",
+    "airflow",
+    "sun"
+   ],
+   "show": null
+  }
+ ],
+ "fade": {
+  "at": 21.5,
+  "dur": 0.3
+ }
+}

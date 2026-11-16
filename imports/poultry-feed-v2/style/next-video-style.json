@@ -1,0 +1,70 @@
+{
+  "effective": "next requested video; do not revise delivered videos unless asked",
+  "captions": {
+    "max_words": 2,
+    "bold": true,
+    "large": true,
+    "high_contrast": true,
+    "animation": "brief pop on phrase entry",
+    "emphasis": "highlight selected spoken words; do not add words",
+    "placement": "choose clear space per shot, inside mobile safe margins, never cover the mechanism being explained",
+    "default_y": 0.78
+  },
+  "visual_effects": [
+    "circles and highlight rings",
+    "arrows and pointers",
+    "rulers and dimension lines",
+    "temperature gauges",
+    "flow and heat indicators"
+  ],
+  "measurement_text": "Minimal numerical readings and units attached to measurement graphics are allowed. Use supplied or supported values only; if no valid numerical value exists, show a qualitative indicator without invented numbers.",
+  "audio": "Purposeful sound effects synchronized to reveals, pointers, transitions and physical actions; keep narration clearly audible; no default music.",
+  "other_text": "Only exact spoken captions may appear on screen, in the same language and script as the narration. Never mix languages in captions. No English text unless it is spoken verbatim. No unspoken titles, paragraphs, component labels, legends, logos or end cards.",
+  "engine": "/workspace/diorama-studio",
+  "visual_style": "realistic natural diorama; light-cloud sky above surface, seven aligned earth strata below, no sky under the earth",
+  "camera": "continuous movement; camEase 0.6; punch false; alternating push/pull",
+  "transition_sound": "soft_transition",
+  "output": {
+    "width": 1080,
+    "height": 1920,
+    "fps": 30,
+    "video": "h264",
+    "audio": "aac",
+    "loudness_lufs": -14
+  },
+  "source_guide": "/workspace/video-factory/references/diorama-studio-uploaded-style-guide.md",
+  "realism": {
+    "enabled": true,
+    "target": "visibly more natural; user calls this 5X, not an objective score",
+    "hero_assets": "photogrammetry / realistic PBR library models first; avoid low-poly polygon foliage",
+    "catalog": "/workspace/diorama-studio/assets/realistic-catalog.json",
+    "sky": "natural blue HDRI upper sky with light scattered clouds; no hard water/sky seam",
+    "materials": "PBR bark, concrete and soil; subtle variation, beveled slab edges",
+    "preserve": "spoken captions only, unchanged narration and purposeful effects",
+    "reference_plan": "/workspace/diorama-studio/plans/tree-roots-realistic.mjs",
+    "sky_settings": {
+      "sky": "kloppenheim_06_puresky",
+      "iblSky": "qwantani_puresky",
+      "skyExposure": 0.42,
+      "skyPitch": 1,
+      "skyMinElevation": 0.22,
+      "skyYaw": 0.7,
+      "iblYaw": 2.2,
+      "envLight": 0.75,
+      "groundLayers": 7,
+      "groundBackdrop": true
+    }
+  },
+  "composition": {
+    "sky": "Upper background: realistic blue sky with light clouds only above the ground",
+    "underground": "The entire lower frame is one continuous earth cross-section, with no detached island floating above an unrelated flat-brown area. Carry exactly seven horizontal strata across the full visible underground backdrop; no sky or clouds below ground.",
+    "ground_layers": 7,
+    "layer_thickness": "seven visually distinct, approximately equal horizontal strata, globally aligned across cutaways",
+    "minimum_ground_extent": "20x12x10 world units for realistic plans; enlarge when camera framing requires a continuous cutaway across the complete frame",
+    "materials": "natural earth tones and textures; retain realistic models and PBR lighting. Poultry houses use plausible timber planks or red brick rather than industrial silver/black sheet panels unless the narration requires metal construction.",
+    "text": "no layer labels or numbering; spoken captions only",
+    "meaning": "visual composition, not a claim that all real soil has seven geological horizons",
+    "effective": "newly requested videos unless an existing video is explicitly requested for revision",
+    "reference_preview": "/workspace/diorama-studio/runs/seven-layer-style/contact-sheet.jpg"
+  }
+}

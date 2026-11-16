@@ -1,0 +1,156 @@
+[
+ {
+  "code": "loudness",
+  "rule": "Normalize audio to -14 LUFS.",
+  "count": 1,
+  "last_seen": "2026-11-11",
+  "example": "integrated loudness -15.9 LUFS (target -14)"
+ },
+ {
+  "code": "too_dark",
+  "rule": "Keep night scenes readable: dim the light but keep the subject clearly visible.",
+  "count": 17,
+  "last_seen": "2026-11-13",
+  "example": "beat 4 too dark (luma 48)"
+ },
+ {
+  "code": "beat_too_long",
+  "rule": "Split long sentences into two beats with a camera change.",
+  "count": 4,
+  "last_seen": "2026-11-13",
+  "example": "beat 1 lasts 7.5s without a new idea"
+ },
+ {
+  "code": "caption_flash",
+  "rule": "Hold each caption until the next word starts.",
+  "count": 2,
+  "last_seen": "2026-11-11",
+  "example": "caption \"hay\" shown only 0.08s"
+ },
+ {
+  "code": "beat_too_short",
+  "rule": "Merge very short sentences; a beat should last at least ~1.5 s.",
+  "count": 10,
+  "last_seen": "2026-11-12",
+  "example": "beat 12 lasts 1.0s"
+ },
+ {
+  "code": "too_bright",
+  "rule": "Avoid white objects filling the frame; lower exposure or change angle.",
+  "count": 2,
+  "last_seen": "2026-11-11",
+  "example": "beat 11 washed out (luma 222)"
+ },
+ {
+  "code": "caption_too_long",
+  "rule": "Captions: 1 to 3 words only.",
+  "count": 2,
+  "last_seen": "2026-11-11",
+  "example": "some captions exceed 3 words"
+ },
+ {
+  "code": "ref_too_bright",
+  "rule": "Match the reference exposure: avoid white sets and large bright surfaces filling the frame.",
+  "count": 3,
+  "last_seen": "2026-11-14",
+  "example": "brighter than reference (luma 133 vs 105)"
+ },
+ {
+  "code": "ref_static",
+  "rule": "Keep the camera always moving (push/orbit/handheld) like the reference.",
+  "count": 5,
+  "last_seen": "2026-11-15",
+  "example": "less motion than reference (5.8 vs 22.1)"
+ },
+ {
+  "code": "subject_lost",
+  "rule": "Keep the main subject filling at least a third of the frame; move the camera closer.",
+  "count": 3,
+  "last_seen": "2026-11-12",
+  "example": "beat 2: subject too small / off-frame (87% background)"
+ },
+ {
+  "code": "user:no_text",
+  "rule": "User: no on-screen words except spoken captions (signs/labels/counters removed; engine-enforced).",
+  "count": 1,
+  "last_seen": "2026-11-12",
+  "source": "user"
+ },
+ {
+  "code": "user:soft_transition",
+  "rule": "User: replace the hissy \"tsh tsh\" transition whoosh with a soft low whoom.",
+  "count": 1,
+  "last_seen": "2026-11-12",
+  "source": "user"
+ },
+ {
+  "code": "ref_slow_cuts",
+  "rule": "Cut every 1-2 seconds; one visual per phrase.",
+  "count": 4,
+  "last_seen": "2026-11-15",
+  "example": "cuts slower than reference (2.51s vs 1.10s)"
+ },
+ {
+  "code": "no_context",
+  "rule": "Show some of the blueprint room in most shots so the diorama look is preserved.",
+  "count": 2,
+  "last_seen": "2026-11-12",
+  "example": "beat 3: blueprint room not visible, framing too tight"
+ },
+ {
+  "code": "dead_beat",
+  "rule": "Each beat must add an object, change a character mode, add an effect or change the camera.",
+  "count": 3,
+  "last_seen": "2026-11-13",
+  "example": "beat 11 adds nothing new visually"
+ },
+ {
+  "code": "flat_primitive_water",
+  "rule": "Water must look real: reflective physical material, small ripples, partial see-through tint. Never a flat opaque coloured box.",
+  "count": 1,
+  "last_seen": "2026-11-13",
+  "example": "cranberry v1: bog water was a mint-green slab"
+ },
+ {
+  "code": "grid_pattern",
+  "rule": "Scatter many small items randomly with size and colour variation (instanced). Never lay them out in a regular grid.",
+  "count": 1,
+  "last_seen": "2026-11-13",
+  "example": "cranberry v1: berries sat in a perfect 16x11 grid"
+ },
+ {
+  "code": "hook_no_subject",
+  "rule": "The first second must show the striking result of the story (e.g. the red sea of floating berries), not bare ground.",
+  "count": 1,
+  "last_seen": "2026-11-13",
+  "example": "cranberry v1: hook frame showed only soil"
+ },
+ {
+  "code": "camera_misses_subject",
+  "rule": "Aim every beat's camera at that beat's new object; people, machines and trucks must be in frame and must not block the subject or fill the frame.",
+  "count": 1,
+  "last_seen": "2026-11-13",
+  "example": "cranberry v1: farmer, harvester and truck off-screen; v2 preview: truck filled the last frames, farmer showed his back"
+ },
+ {
+  "code": "tall_rim_blocks_view",
+  "rule": "Keep rims, dikes and low walls at 0.2 m or less so low and close cameras still see the subject.",
+  "count": 1,
+  "last_seen": "2026-11-13",
+  "example": "cranberry v2 preview: 0.42 m dike hid the vines"
+ },
+ {
+  "code": "critic_blind_to_realism",
+  "rule": "A high critic score does not prove natural graphics. Always look at one sheet and judge realism yourself before sending.",
+  "count": 1,
+  "last_seen": "2026-11-13",
+  "example": "cranberry v1 scored 95 but looked artificial"
+ },
+ {
+  "code": "repetitive_beats",
+  "rule": "Consecutive beats must differ: new object, new camera preset or new action.",
+  "count": 1,
+  "last_seen": "2026-11-15",
+  "example": "beats 1 and 2 look almost identical (diff 4.7)"
+ }
+]

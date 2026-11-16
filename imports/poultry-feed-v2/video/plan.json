@@ -1,0 +1,434 @@
+{
+  "version": 2,
+  "planner": "directed",
+  "duration": 30.1191875,
+  "language": "ar",
+  "prompt": "خط تغذية الدواجن بالحلزون الدوار",
+  "env": {
+    "realism": true,
+    "sky": "kloppenheim_06_puresky",
+    "iblSky": "qwantani_puresky",
+    "skyExposure": 0.42,
+    "skyPitch": 1,
+    "skyMinElevation": 0.22,
+    "skyYaw": 0.7,
+    "iblYaw": 2.2,
+    "envLight": 0.75,
+    "groundLayers": 7,
+    "groundBackdrop": true,
+    "soil": "brown_mud_leaves_01",
+    "soilRepeat": 3,
+    "island": {
+      "w": 24,
+      "d": 14,
+      "depth": 10
+    },
+    "materials": {
+      "bark": "bark_brown_02",
+      "pavement": "concrete_floor_02",
+      "metal": "metal_plate"
+    }
+  },
+  "style": {
+    "antialias": false,
+    "camEase": 0.6,
+    "captionY": 0.78,
+    "captionSize": 0.085,
+    "shadowRes": 512,
+    "shadowUpdateInterval": 0.3,
+    "allowText": false,
+    "shake": 0,
+    "drift": 0.04
+  },
+  "captions": [
+    {
+      "text": "إزاي كل",
+      "start": 0,
+      "end": 0.7
+    },
+    {
+      "text": "الدجاج في",
+      "start": 0.7,
+      "end": 1.3
+    },
+    {
+      "text": "العنبر يلاقي",
+      "start": 1.3,
+      "end": 2.04
+    },
+    {
+      "text": "العلف من",
+      "start": 2.04,
+      "end": 2.8
+    },
+    {
+      "text": "غير ما",
+      "start": 2.8,
+      "end": 3.12
+    },
+    {
+      "text": "العامل يملأ",
+      "start": 3.12,
+      "end": 3.76
+    },
+    {
+      "text": "الأطباق واحد",
+      "start": 3.76,
+      "end": 4.42
+    },
+    {
+      "text": "واحد",
+      "start": 4.42,
+      "end": 4.78
+    },
+    {
+      "text": "العلف بيتخزن",
+      "start": 4.78,
+      "end": 6.28
+    },
+    {
+      "text": "في خزان",
+      "start": 6.28,
+      "end": 6.78
+    },
+    {
+      "text": "كبير ومنه",
+      "start": 6.78,
+      "end": 7.9
+    },
+    {
+      "text": "يدخل أنبوب",
+      "start": 7.9,
+      "end": 8.72
+    },
+    {
+      "text": "التغذية",
+      "start": 8.72,
+      "end": 9.32
+    },
+    {
+      "text": "جوّه الأنبوب",
+      "start": 9.533,
+      "end": 10.44
+    },
+    {
+      "text": "حلزون دوّار",
+      "start": 10.44,
+      "end": 11.62
+    },
+    {
+      "text": "يتحرك ويدفع",
+      "start": 11.62,
+      "end": 12.72
+    },
+    {
+      "text": "العلف على",
+      "start": 12.72,
+      "end": 13.34
+    },
+    {
+      "text": "طول الخط",
+      "start": 13.34,
+      "end": 14.02
+    },
+    {
+      "text": "وعند كل",
+      "start": 14.02,
+      "end": 14.82
+    },
+    {
+      "text": "طبق العلف",
+      "start": 14.82,
+      "end": 15.82
+    },
+    {
+      "text": "ينزل بكمية",
+      "start": 15.82,
+      "end": 16.66
+    },
+    {
+      "text": "مناسبة فيوصل",
+      "start": 16.66,
+      "end": 17.78
+    },
+    {
+      "text": "للدجاج على",
+      "start": 17.78,
+      "end": 18.58
+    },
+    {
+      "text": "امتداد العنبر",
+      "start": 18.58,
+      "end": 19.48
+    },
+    {
+      "text": "ولما الأطباق",
+      "start": 19.48,
+      "end": 20.48
+    },
+    {
+      "text": "تتملي حساس",
+      "start": 20.48,
+      "end": 21.62
+    },
+    {
+      "text": "يوقف الحركة",
+      "start": 21.62,
+      "end": 22.76
+    },
+    {
+      "text": "ولما العلف",
+      "start": 22.76,
+      "end": 23.48
+    },
+    {
+      "text": "يقلّ الخط",
+      "start": 23.48,
+      "end": 24.4
+    },
+    {
+      "text": "يشتغل تاني",
+      "start": 24.4,
+      "end": 25.32
+    },
+    {
+      "text": "كده التوزيع",
+      "start": 25.32,
+      "end": 26.14
+    },
+    {
+      "text": "يبقى أسرع",
+      "start": 26.14,
+      "end": 26.92
+    },
+    {
+      "text": "ومنتظم والدجاج",
+      "start": 26.92,
+      "end": 28.42
+    },
+    {
+      "text": "يلاقي العلف",
+      "start": 28.42,
+      "end": 29.18
+    },
+    {
+      "text": "قريب منه",
+      "start": 29.18,
+      "end": 29.9
+    }
+  ],
+  "fades": [],
+  "beats": [
+    {
+      "start": 0,
+      "end": 4.78,
+      "kind": "info",
+      "text": "إزاي كل الدجاج في العنبر يلاقي العلف، من غير ما العامل يملأ الأطباق واحد واحد؟",
+      "remove": [],
+      "effects": [],
+      "add": [
+        {
+          "id": "feed",
+          "type": "poultry_feed",
+          "pos": [
+            0,
+            0,
+            0
+          ],
+          "params": {
+            "level": 0.35,
+            "drive": [
+              [
+                0,
+                20.4
+              ],
+              [
+                23.7,
+                30.1191875
+              ]
+            ]
+          },
+          "anim": "none",
+          "dust": false
+        }
+      ],
+      "modes": {
+        "feed": {
+          "cutaway": false,
+          "control": false,
+          "duration": 1.2,
+          "level": 0.35
+        }
+      },
+      "camera": {
+        "preset": "hero",
+        "punch": false,
+        "spin": 0.04,
+        "target": [
+          -0.6,
+          1.7,
+          0
+        ],
+        "dist": 31,
+        "elev": 0.32,
+        "az": 0.8,
+        "push": 0.04
+      }
+    },
+    {
+      "start": 4.78,
+      "end": 9.533,
+      "kind": "info",
+      "text": "العلف بيتخزن في خزان كبير، ومنه يدخل أنبوب التغذية.",
+      "remove": [],
+      "effects": [],
+      "add": [],
+      "modes": {
+        "feed": {
+          "cutaway": false,
+          "control": false,
+          "duration": 1.2,
+          "level": 0.45
+        }
+      },
+      "camera": {
+        "preset": "hero",
+        "punch": false,
+        "spin": 0.04,
+        "target": [
+          -4.5,
+          2.2,
+          -0.4
+        ],
+        "dist": 10.5,
+        "elev": 0.26,
+        "az": 0.55,
+        "push": 0.04
+      }
+    },
+    {
+      "start": 9.533,
+      "end": 14.02,
+      "kind": "info",
+      "text": "جوّه الأنبوب، حلزون دوّار يتحرك ويدفع العلف على طول الخط.",
+      "remove": [],
+      "effects": [],
+      "add": [],
+      "modes": {
+        "feed": {
+          "cutaway": true,
+          "control": false,
+          "duration": 1.2,
+          "level": 0.55
+        }
+      },
+      "camera": {
+        "preset": "hero",
+        "punch": false,
+        "spin": 0.04,
+        "target": [
+          -0.3,
+          1.05,
+          0.1
+        ],
+        "dist": 4.8,
+        "elev": 0.3,
+        "az": 0.15,
+        "push": 0.03
+      }
+    },
+    {
+      "start": 14.02,
+      "end": 19.48,
+      "kind": "info",
+      "text": "وعند كل طبق، العلف ينزل بكمية مناسبة، فيوصل للدجاج على امتداد العنبر.",
+      "remove": [],
+      "effects": [],
+      "add": [],
+      "modes": {
+        "feed": {
+          "cutaway": true,
+          "control": false,
+          "duration": 1.2,
+          "level": 0.85
+        }
+      },
+      "camera": {
+        "preset": "hero",
+        "punch": false,
+        "spin": 0.04,
+        "target": [
+          0,
+          0.62,
+          0.1
+        ],
+        "dist": 10.2,
+        "elev": 0.36,
+        "az": 0.36,
+        "push": 0.05
+      }
+    },
+    {
+      "start": 19.48,
+      "end": 25.32,
+      "kind": "info",
+      "text": "ولما الأطباق تتملي، حساس يوقف الحركة، ولما العلف يقلّ، الخط يشتغل تاني.",
+      "remove": [],
+      "effects": [],
+      "add": [],
+      "modes": {
+        "feed": {
+          "cutaway": true,
+          "control": true,
+          "duration": 1.2,
+          "level": 1
+        }
+      },
+      "camera": {
+        "preset": "hero",
+        "punch": false,
+        "spin": 0.04,
+        "target": [
+          2.7,
+          0.66,
+          0.1
+        ],
+        "dist": 4.1,
+        "elev": 0.27,
+        "az": 0.4,
+        "push": 0.02
+      }
+    },
+    {
+      "start": 25.32,
+      "end": 30.1191875,
+      "kind": "info",
+      "text": "كده التوزيع يبقى أسرع ومنتظم، والدجاج يلاقي العلف قريب منه.",
+      "remove": [],
+      "effects": [],
+      "add": [],
+      "modes": {
+        "feed": {
+          "cutaway": false,
+          "control": false,
+          "duration": 1.2,
+          "level": 0.75
+        }
+      },
+      "camera": {
+        "preset": "hero",
+        "punch": false,
+        "spin": 0.04,
+        "target": [
+          -0.6,
+          1.6,
+          0
+        ],
+        "dist": 31,
+        "elev": 0.32,
+        "az": 0.75,
+        "push": -0.1
+      }
+    }
+  ]
+}
