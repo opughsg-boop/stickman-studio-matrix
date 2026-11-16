@@ -60,3 +60,4 @@
 {"run": "rescue", "time": "2026-11-16 15:53", "score": 29, "issues": 16, "codes": ["beat_too_short", "dead_beat"]}
 {"run": "v3", "time": "2026-11-16 15:51", "score": 100, "issues": 0, "codes": []}
 {"run": "v4", "time": "2026-11-16 16:05", "score": 100, "issues": 0, "codes": []}
+{"run": "rescue", "time": "2026-11-16 16:25", "score": 70, "issues": 6, "codes": ["beat_too_long", "dead_beat"]}
