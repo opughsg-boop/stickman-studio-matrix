@@ -159,3 +159,7 @@ Rule: when a preview or final video shows a mistake, add one entry here (what wa
 - **Third attempt (2026-11-16):** lifting the cutaway by 1.2 m made the tank visible, and the yellow insulation sleeve shows. Still wrong: the tank runs below the soil block's floor into the grass, and the soil walls are too thin to read. Fix: put the tank's bottom at the block's floor, and make the soil walls thicker and brown.
 - **Fourth attempt (2026-11-16):** thick brown soil walls and a lidded tank inside now read as buried. Still wrong: the yellow insulation sleeve covers the whole tank in the 'insulation' beat (hides the tank). Fix: make the sleeve a thin band (ring, not a full cylinder), or show it only in a cutaway wedge. Tank base still ends a little below the soil floor.
 - **Fifth attempt (2026-11-16):** the insulation is now a ribbed band of foam strips around the tank, so the blue tank shows between strips. The tank sits on the soil floor and the lid is visible. Remaining: the foam strips stick out past the tank and the soil walls are cut off at the frame edge in this shot. Fix next: keep strips inside radius .6 and move the camera back.
+
+## Wooden farm fence (2026-11-16, plans/wood_fence.mjs)
+- Works: posts on stone bases, three rails, timber texture, sticker pointers, clean framing. This is the reliable build style for simple wood structures.
+- Mistake to watch: a corner brace was drawn at the wrong angle (it looks like a stray plank). Check that braces run from the top of the end post down to the ground rail.
