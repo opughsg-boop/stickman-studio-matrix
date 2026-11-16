@@ -81,7 +81,7 @@ if bees_from is not None:
     for b in beats:
         mode = (b.get('modes') or {}).get('bees', mode)
         if b['start'] < bees_from: continue
-        lvl = .11 if (mode or {}).get('mode') == 'messy' else .06
+        lvl = .07 if (mode or {}).get('mode') == 'messy' else .035
         seg = bee_bed(b['end'] - b['start'] + .05, lvl); put(seg, b['start'], 1)
 
 track = np.tanh(track * 1.2) / 1.2
@@ -93,6 +93,6 @@ w = wave.open(tmp, 'wb'); w.setnchannels(1); w.setsampwidth(2); w.setframerate(S
 subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', voice, '-i', tmp, '-filter_complex',
     '[0:a]aresample=48000,aformat=channel_layouts=mono,asplit=2[v][sc];'
     '[1:a][sc]sidechaincompress=threshold=0.03:ratio=6:attack=15:release=250[duck];'
-    '[v][duck]amix=inputs=2:weights=1 0.9:normalize=0:duration=first[m]', '-map', '[m]', '-ar', '48000', out], check=True)
+    '[v][duck]amix=inputs=2:weights=1 0.5:normalize=0:duration=first[m]', '-map', '[m]', '-ar', '48000', out], check=True)
 os.remove(tmp)
 print('sfx mixed ->', out)
