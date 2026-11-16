@@ -155,3 +155,4 @@ Rule: when a preview or final video shows a mistake, add one entry here (what wa
 - **Mistake:** a solid soil slab covered the whole view, so the buried tank was invisible. Fix needed: a cutaway soil block (open front face, so tank and insulation show inside) like the anatomy window.
 - **Mistake:** the 'above ground' tank was a solid blue box with no cylinder or lid detail, which reads as a box, not a water tank.
 - **Rule:** in any cutaway, check the first beat where the inside should show. If it is hidden, the plan is wrong, not the render.
+- **Second attempt (2026-11-16):** the soil cutaway had an open front, but the island ground (env soil + Poly Haven grass at y=0) covers everything below y=0, so the tank and insulation stay hidden. Fix needed: lift the cutaway block above the ground plane (raise it, or put the ground layer under it as a plate and let the cut show the tank), or add `env:{ground:false}` to the plan.
