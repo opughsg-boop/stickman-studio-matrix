@@ -156,3 +156,9 @@ Rule: when a preview or final video shows a mistake, add one entry here (what wa
 - **Mistake:** the 'above ground' tank was a solid blue box with no cylinder or lid detail, which reads as a box, not a water tank.
 - **Rule:** in any cutaway, check the first beat where the inside should show. If it is hidden, the plan is wrong, not the render.
 - **Second attempt (2026-11-16):** the soil cutaway had an open front, but the island ground (env soil + Poly Haven grass at y=0) covers everything below y=0, so the tank and insulation stay hidden. Fix needed: lift the cutaway block above the ground plane (raise it, or put the ground layer under it as a plate and let the cut show the tank), or add `env:{ground:false}` to the plan.
+
+## Lola & Chico: Why Chickens Lay Eggs in the Dark Corner (2026-11-16)
+- **Mistake:** stickers (?, !, ✗, ✓) sat right above the hens and at the frame edges; some were cut off. **Fix:** size .6, placed at y ~3.0 and x within +-2.6 m, away from the hens. **Source:** contact sheet of v2.
+- **Mistake:** the nest box was a plain white block. **Fix:** wood-brown box (#7a5a36). Still needs straw and a real opening; not fully fixed.
+- **Mistake:** hens too small on a flat green lawn. **Fix:** flock scale .5. The lawn is still flat; add Poly Haven grass clumps and varied soil next.
+- **Open:** a check icon still clips the right edge in one beat, and two check icons stack in the same spot (ck4 and ok6). Move one of them.
