@@ -120,7 +120,9 @@ function buildEnvironment(env = {}) {
     const water = new THREE.Mesh(new THREE.PlaneGeometry(2000, 2000), wm); water.rotation.x = -Math.PI / 2; water.position.y = -(env.island?.depth || 3.2) - .6; water.receiveShadow = true; scene.add(water);
     fx.water = water; fx.rays = new THREE.Group(); buildIsland(env, true);
     // the sun light follows the same sun direction as the 3D sky; soft sky fill
-    lights.sun.position.copy(fx.sunDir).multiplyScalar(40); lights.hemi.intensity = .9; return; }
+    lights.sun.position.copy(fx.sunDir).multiplyScalar(40); lights.hemi.intensity = .9;
+    if (env.shadowCenter) { lights.sun.position.add(new THREE.Vector3(...env.shadowCenter)); lights.sun.target.position.set(...env.shadowCenter); scene.add(lights.sun.target); } // tall scenes: centre the shadow box on the action
+    return; }
   if (TEX.sky) { // realistic mode: real HDRI sky + image-based light, island floating over open water
     scene.background = TEX.sky.tex; scene.backgroundBlurriness = env.skyBlur ?? .02; scene.environment = TEX.sky.env; scene.environmentIntensity = env.envLight ?? .9;
     scene.fog = new THREE.Fog(col(env.fog || '#c8d8e6'), 45, 170);
@@ -162,8 +164,8 @@ function buildIsland(env, real) {
   lights.sun = new THREE.DirectionalLight(real ? 0xffe6c4 : 0xfff4e0, 2.6); lights.sun.position.set(-14, 26, 12);
   lights.sun.castShadow = true; lights.sun.shadow.mapSize.set(style.shadowRes, style.shadowRes);
   // v2: frustum fitted to the island (half diagonal + margin) -> about 2.6x sharper shadows at 2048 than the old 1024 / +-14
-  const sr = style.shadowFit === false ? 14 : Math.min(14, Math.hypot(I.w, I.d) / 2 + 2);
-  Object.assign(lights.sun.shadow.camera, { left: -sr, right: sr, top: sr, bottom: -sr, near: 1, far: 80 });
+  const sr = env.shadowSize || (style.shadowFit === false ? 14 : Math.min(14, Math.hypot(I.w, I.d) / 2 + 2));
+  Object.assign(lights.sun.shadow.camera, { left: -sr, right: sr, top: sr, bottom: -sr, near: 1, far: 80 }); if (env.shadowSize) lights.sun.shadow.camera.updateProjectionMatrix();
   lights.sun.shadow.bias = -0.0005; lights.sun.shadow.radius = 4; scene.add(lights.sun);
   lights.heat = new THREE.PointLight(0xff5a1f, 0, 30); lights.heat.position.set(0, 6, 0); scene.add(lights.heat);
 }
@@ -1018,7 +1020,7 @@ Object.assign(ASSETS, { ant_farm: antFarm, clock24, film_cam: filmCam, sleeper }
 // modes on the object may switch the clip: modes: { cow: { clip: 'Walk' } }
 const GLB = {};
 async function preloadGLB(p) {
-  const names = new Set(); for (const b of p.beats || []) for (const a of b.add || []) { if (a.type === 'glb') names.add(a.params.model); if (a.params?.rider) names.add(a.params.rider); if (a.type === 'raker') names.add(a.params?.man || 'modular_men/Worker'); if (a.type === 'roof_person') names.add(a.params?.model || 'modular_men/Casual'); if (a.type === 'buffalo') names.add('animals_pack/Bull'); if (a.type === 'fellah') names.add('modular_men/Farmer'); }
+  const names = new Set(); for (const b of p.beats || []) for (const a of b.add || []) { if (a.type === 'glb') names.add(a.params.model); if (a.params?.rider) names.add(a.params.rider); if (a.type === 'raker') names.add(a.params?.man || 'modular_men/Worker'); if (a.type === 'roof_person') names.add(a.params?.model || 'modular_men/Casual'); if (a.type === 'buffalo') names.add('animals_pack/Bull'); if (a.type === 'fellah') names.add('modular_men/Farmer'); if (a.type === 'rig_person') names.add(a.params?.model || 'modular_men/Casual'); if (a.params?.hanger) names.add(a.params.hanger.model || 'modular_women/Casual'); }
   const l = new GLTFLoader();
   await Promise.all([...names].map(async n => { GLB[n] = await l.loadAsync(n.startsWith('ph/') ? `/assets/${n}/${n.slice(3)}.gltf` : n.startsWith('models/') ? `/assets/${n}.glb` : `/assets/lib/${n}.glb`); }));
   // 3D-sky (realistic) plans: smooth the low-poly animal meshes so facets do not show as flat triangles.
@@ -2377,3 +2379,259 @@ function buildForeground() { const g = new THREE.Group(), r = rng(13), sides = {
     bl.forEach(([m, ph, rz]) => { m.rotation.z = rz + Math.sin(t * 1.4 + ph) * .05; }); };
   return g; }
 Object.assign(ASSETS, { buffalo: buffaloA, canal_bank: canalBank, canal_water: canalWater, mud_wallow: mudWallow, reeds, egret, fellah });
+
+// ================= Rescue pack (2026-11-16, plans/rescue.mjs) =================
+// Egyptian apartment block: red-brick infill in a concrete frame, slab-edge ledges on every floor, painted storeys above and
+// below ONE real floor (window holes with aluminium sliding sashes, curtains, louvred shutters, rooms, a corridor with flat doors,
+// a stair and an end window), a street (asphalt, interlock pavers, curbs, lamp posts) with flanking blocks, a window laundry rack
+// that bends under a hanging person (anchors give, rod sags, bounce, falling clothes, crumbs), an outdoor AC unit with a spinning fan,
+// a flat door that rattles and opens. Motion step-up: rig_person = a Quaternius person driven by its bones (named poses blended with
+// easing, a walk/run/ledge-shuffle gait whose phase follows the distance moved, so feet do not slide), instead of static figures.
+const kv = (keys, t, d = 0) => { if (!keys || !keys.length) return d; if (t <= keys[0][0]) return keys[0][1]; for (let i = 0; i < keys.length - 1; i++) { const a = keys[i], b = keys[i + 1];
+  if (t < b[0]) return lerp(a[1], b[1], sEase((t - a[0]) / Math.max(.001, b[0] - a[0]))); } return keys[keys.length - 1][1]; };
+const joltAt = (J, t) => (J || []).reduce((s, [tk, a]) => s + (t > tk ? a * Math.exp(-(t - tk) * 3.2) * Math.sin((t - tk) * 12.5) : 0), 0);
+// world-aligned UVs: every piece of a wall shares one texture grid, so brick courses and storeys line up across pieces
+function wUV(geo, o, su = 1, sv = su, ou = 0, ov = 0) { const P = geo.attributes.position, N = geo.attributes.normal, U = geo.attributes.uv;
+  for (let i = 0; i < P.count; i++) { const x = P.getX(i) + o[0], y = P.getY(i) + o[1], z = P.getZ(i) + o[2], ax = Math.abs(N.getX(i)), ay = Math.abs(N.getY(i));
+    if (ay > .5) U.setXY(i, (x + ou) / su, z / sv); else if (ax > .5) U.setXY(i, (z + ou) / su, (y + ov) / sv); else U.setXY(i, (x + ou) / su, (y + ov) / sv); }
+  U.needsUpdate = true; return geo; }
+function wbox(par, x0, x1, y0, y1, z0, z1, mat, su = 1, sv = su, ou = 0, ov = 0) { const w = x1 - x0, h = y1 - y0, d = z1 - z0; if (w <= .002 || h <= .002 || d <= .002) return null;
+  const c = [(x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2], m = new THREE.Mesh(wUV(new THREE.BoxGeometry(w, h, d), c, su, sv, ou, ov), mat); m.position.set(...c); m.castShadow = m.receiveShadow = true; par.add(m); return m; }
+// a wall running along x (axis 'x', thickness z0..z1) or along z (axis 'z', thickness x0..x1) minus rectangular holes [a0, a1, y0, y1]
+function holedWall(par, axis, a0, a1, y0, y1, t0, t1, holes, mat, ...uv) { const cuts = [...new Set([a0, a1, ...holes.flatMap(h => [h[0], h[1]])])].filter(v => v >= a0 && v <= a1).sort((p, q) => p - q);
+  const piece = (u0, u1, ya, yb) => axis === 'x' ? wbox(par, u0, u1, ya, yb, t0, t1, mat, ...uv) : wbox(par, t0, t1, ya, yb, u0, u1, mat, ...uv);
+  for (let i = 0; i < cuts.length - 1; i++) { const u0 = cuts[i], u1 = cuts[i + 1], h = holes.find(q => q[0] <= u0 + 1e-4 && q[1] >= u1 - 1e-4);
+    if (!h) piece(u0, u1, y0, y1); else { piece(u0, u1, y0, h[2]); piece(u0, u1, h[3], y1); } } }
+function interlockTex() { return SPR.interlock ||= canvasT(256, 256, (c, w, h) => { const r = rng(83); c.fillStyle = '#8f8a82'; c.fillRect(0, 0, w, h); const q = w / 8;
+  for (let i = 0; i < 8; i++) for (let j = 0; j < 8; j++) { const v = .86 + r() * .2, red = (i + j * 3) % 7 === 0; c.fillStyle = red ? `rgb(${150 * v | 0},${92 * v | 0},${72 * v | 0})` : `rgb(${176 * v | 0},${170 * v | 0},${160 * v | 0})`;
+    if ((i + j) % 2) c.fillRect(i * q + 2, j * q + 2, q - 4, q - 4); else { c.fillRect(i * q + 2, j * q + 2, q - 4, q / 2 - 3); c.fillRect(i * q + 2, j * q + q / 2 + 1, q - 4, q / 2 - 3); } }
+  for (let i = 0; i < 900; i++) { c.fillStyle = `rgba(${r() > .5 ? '255,250,240' : '50,45,40'},${r() * .1})`; c.fillRect(r() * w, r() * h, 1 + r() * 2, 1 + r() * 2); } }, [1, 1]); }
+function asphaltTex() { return SPR.asphalt ||= canvasT(512, 512, (c, w, h) => { const r = rng(85); c.fillStyle = '#4a4a4b'; c.fillRect(0, 0, w, h);
+  for (let i = 0; i < 9000; i++) { const v = 40 + r() * 70 | 0; c.fillStyle = `rgba(${v},${v},${v + 2},${.25 + r() * .3})`; c.fillRect(r() * w, r() * h, 1 + r() * 2, 1 + r() * 2); }
+  for (let i = 0; i < 14; i++) { const x = r() * w, y = r() * h, R = 30 + r() * 90, g = c.createRadialGradient(x, y, 0, x, y, R); g.addColorStop(0, `rgba(${r() > .5 ? '35,35,36' : '120,116,108'},${.15 + r() * .15})`); g.addColorStop(1, 'rgba(0,0,0,0)'); c.fillStyle = g; c.fillRect(x - R, y - R, 2 * R, 2 * R); }
+  c.strokeStyle = 'rgba(20,20,20,.5)'; for (let k = 0; k < 6; k++) { c.lineWidth = .8 + r(); c.beginPath(); let x = r() * w, y = r() * h; c.moveTo(x, y); for (let s = 0; s < 10; s++) { x += (r() - .5) * 30; y += (r() - .5) * 30; c.lineTo(x, y); } c.stroke(); } }, [1, 1]); }
+function louverTex(colr) { return SPR['lv' + colr] ||= canvasT(64, 128, (c, w, h) => { c.fillStyle = colr; c.fillRect(0, 0, w, h);
+  for (let y = 4; y < h; y += 7) { c.fillStyle = 'rgba(0,0,0,.35)'; c.fillRect(4, y, w - 8, 2); c.fillStyle = 'rgba(255,255,255,.12)'; c.fillRect(4, y + 2, w - 8, 1); }
+  c.fillStyle = 'rgba(0,0,0,.3)'; c.fillRect(0, 0, 4, h); c.fillRect(w - 4, 0, 4, h); c.fillRect(w / 2 - 1, 0, 2, h); }, [1, 1]); }
+function doorTex() { return SPR.flatDoor ||= canvasT(128, 256, (c, w, h) => { const g = c.createLinearGradient(0, 0, w, 0); g.addColorStop(0, '#5a3a24'); g.addColorStop(.5, '#6a452b'); g.addColorStop(1, '#553722'); c.fillStyle = g; c.fillRect(0, 0, w, h);
+  const r = rng(87); for (let i = 0; i < 60; i++) { c.strokeStyle = `rgba(30,18,10,${.08 + r() * .12})`; c.lineWidth = 1; c.beginPath(); const x = r() * w; c.moveTo(x, 0); c.bezierCurveTo(x + 4, h * .3, x - 4, h * .7, x + 2, h); c.stroke(); }
+  c.strokeStyle = 'rgba(25,15,8,.55)'; c.lineWidth = 3; for (const [x, y, ww, hh] of [[16, 16, 96, 100], [16, 138, 96, 100]]) { c.strokeRect(x, y, ww, hh); c.strokeStyle = 'rgba(255,220,180,.12)'; c.strokeRect(x + 3, y + 3, ww - 6, hh - 6); c.strokeStyle = 'rgba(25,15,8,.55)'; } }); }
+function acTex() { return SPR.acBody ||= canvasT(128, 128, (c, w, h) => { c.fillStyle = '#e6e3da'; c.fillRect(0, 0, w, h); const r = rng(89);
+  for (let i = 0; i < 18; i++) { const x = r() * w, g = c.createLinearGradient(0, 0, 0, h); g.addColorStop(0, 'rgba(120,100,70,0)'); g.addColorStop(1, `rgba(120,100,70,${.08 + r() * .14})`); c.fillStyle = g; c.fillRect(x, h * r() * .4, 2 + r() * 5, h); }
+  for (let i = 0; i < 500; i++) { c.fillStyle = `rgba(90,80,60,${r() * .07})`; c.fillRect(r() * w, r() * h, 1, 1); } }, [1, 1]); }
+function finTex() { return SPR.acFin ||= canvasT(64, 64, (c, w, h) => { c.fillStyle = '#3a3c3d'; c.fillRect(0, 0, w, h); c.fillStyle = 'rgba(200,200,195,.55)'; for (let x = 0; x < w; x += 3) c.fillRect(x, 0, 1, h); }, [4, 4]); }
+
+// ---- rig: bone poses for static Quaternius people. Channels are angles about the person's own axes (x right... facing +z):
+// adL/adR arm lowered from the T-pose, fL/fR arm swung forward (0 = hanging), eL/eR elbows, sp/tw torso lean/twist, hd/ht head nod/turn,
+// hL/hR hip flexion, kL/kR knees, oL/oR legs out to the side. Arm and leg angles are measured from the person's vertical, not the torso.
+const RIG0 = { adL: 1.3, adR: 1.3, fL: .05, fR: .05, eL: .15, eR: .15, sp: 0, tw: 0, hd: 0, ht: 0, hL: 0, hR: 0, kL: 0, kR: 0, oL: 0, oR: 0 };
+const RIG_POSES = {
+  stand: {}, walk: { sp: .04, eL: .35, eR: .35 }, run: { sp: .24, eL: 1.45, eR: 1.45, hd: -.1 },
+  look: { sp: .22, ht: .75, hd: .05, fL: .35, fR: .35, eL: .9, eR: .9 },                       // leaning on a sill, looking to the left
+  knock: { fR: 1.3, eR: .35, fL: .15, sp: .1, shake: 1 },                                           // tries the handle, rattles it
+  turn: { sp: .15, ht: -.5, fL: .3, eL: .6 },
+  climb: { adL: 1.1, adR: 1.1, fL: 1.5, fR: 1.5, eL: .7, eR: .7, sp: .6, hL: 1.45, kL: 1.95, hR: .8, kR: 1.2, hd: -.2 },
+  ledge: { adL: .45, adR: .45, fL: .25, fR: .25, eL: .55, eR: .55, sp: -.05, hd: -.05 },         // face to the wall, arms spread on the bricks
+  peek: { adL: .45, adR: .35, fL: .25, fR: .3, eL: .55, eR: .4, sp: -.05, ht: -.9, hd: -.05 },     // on the ledge, looking along the wall
+  recoil: { adL: .55, adR: .7, fL: .55, fR: .3, eL: .8, eR: .4, sp: -.16, hd: -.25, ht: -.6 },
+  wait: { fL: .25, eL: 1.2, fR: .2, eR: .3, ht: .3, sp: .04 },
+  key: { fR: 1.15, eR: .55, fL: .45, eL: .5, sp: .14, hd: .2, shake: .4 },
+  lean: { sp: 1.05, fL: 1.15, fR: 1.2, eL: .15, eR: .15, hd: -.35, hL: .1, hR: .1 },                // half out of a window, arms reaching down
+  kneelLean: { sp: 1.25, fL: .75, fR: .85, eL: .1, eR: .1, hd: -.4, kL: 1.55, kR: 1.55 },          // kneeling at a low sill, arms down to the rack
+  pull: { sp: -.28, fL: .95, fR: 1.0, eL: 1.0, eR: 1.0, hL: .6, kL: .75, hR: -.25, kR: .15, hd: .1 },
+  pullKneel: { sp: .15, fL: .9, fR: .95, eL: 1.1, eR: 1.1, kL: 1.55, kR: 1.55, hd: .1 },
+  gaze: { hd: -.6, sp: -.12, fL: .1, fR: .1 }, point: { hd: -.55, sp: -.12, fR: 2.45, eR: .1, adR: 1.2 },
+  gasp: { hd: -.5, sp: -.08, fL: 1.35, eL: 2.3, fR: 1.25, eR: 2.4, adL: 1.45, adR: 1.45 },
+  cheer: { adL: .35, adR: .35, fL: 2.5, fR: 2.6, eL: .35, eR: .35, hd: -.35 }, relief: { hd: -.2, fL: 1.2, eL: 2.2, fR: .1, sp: -.05 },
+  hang2: { fL: 2.75, fR: 2.75, eL: .25, eR: .3, sp: -.18, hd: -.35, hL: .15, hR: .12, kL: .45, kR: .5, oL: .04, oR: .04 },   // upside down from both feet
+  hang1: { fL: 2.5, fR: 2.9, eL: .5, eR: .2, adL: 1.0, sp: -.25, tw: .25, hd: -.4, hR: .1, kR: .55, hL: 1.0, kL: 1.15, oL: .4 }, // one leg hooked, the other free
+  pulled: { fL: 1.9, fR: 2.1, eL: 1.1, eR: 1.0, adL: 1.1, adR: 1.1, sp: .1, hd: .1, hR: .1, kR: .4, hL: .4, kL: .5 } };
+const GAIT = { walk: { stride: 1.45, v: 1.1, hip: .42, knee: .6, arm: .35, bob: .025 }, run: { stride: 2.3, v: 3.2, hip: .78, knee: 1.35, arm: .6, bob: .055 },
+  shuffle: { stride: .5, v: .3, abd: .22, bob: .012 } };
+function poseOf(n) { return { ...RIG0, ...(RIG_POSES[n] || {}) }; }
+function blendPose(a, b, k) { const o = {}; for (const key in RIG0) o[key] = lerp(a[key], b[key], k); o.shake = lerp(a.shake || 0, b.shake || 0, k); return o; }
+function makeRig(model, height) { const w = ASSETS.glb({ model, height, arms: 0 }), B = {}, q = new THREE.Quaternion(), AX = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
+  for (const n of ['Torso', 'Chest', 'Neck', 'Head', 'UpperArmL', 'UpperArmR', 'LowerArmL', 'LowerArmR', 'UpperLegL', 'UpperLegR', 'LowerLegL', 'LowerLegR']) { const b = w.getObjectByName(n); if (b) B[n] = { b, rest: b.quaternion.clone() }; }
+  const bend = (n, ax, a) => { if (B[n] && a) bendBone(B[n].b, AX[ax], a); };
+  const apply = P => { for (const k in B) B[k].b.quaternion.copy(B[k].rest); w.updateWorldMatrix(true, false); w.getWorldQuaternion(q);
+    AX[0].set(1, 0, 0).applyQuaternion(q); AX[1].set(0, 1, 0).applyQuaternion(q); AX[2].set(0, 0, 1).applyQuaternion(q);
+    bend('Torso', 0, P.sp * .8); bend('Torso', 1, P.tw); bend('Chest', 0, P.sp * .2); bend('Neck', 0, P.hd * .4); bend('Head', 0, P.hd * .6); bend('Head', 1, P.ht);
+    bend('UpperArmL', 2, -P.adL); bend('UpperArmL', 0, -P.fL); bend('LowerArmL', 0, -P.eL);
+    bend('UpperArmR', 2, P.adR); bend('UpperArmR', 0, -P.fR); bend('LowerArmR', 0, -P.eR);
+    bend('UpperLegL', 2, P.oL); bend('UpperLegL', 0, -P.hL); bend('LowerLegL', 0, P.kL);
+    bend('UpperLegR', 2, -P.oR); bend('UpperLegR', 0, -P.hR); bend('LowerLegR', 0, P.kR); };
+  return { w, apply }; }
+// track keys [t, x, y, z, yaw|null, pose, gait|null]: eased moves (gait moves keep a steady pace with short ramps); pose blends at each key
+function trapE(u, r = .18) { u = clamp(u); const k = 1 / (1 - r); return u < r ? k * u * u / (2 * r) : u > 1 - r ? 1 - k * (1 - u) * (1 - u) / (2 * r) : k * (u - r / 2); }
+function trapV(u, r = .18) { u = clamp(u); const k = 1 / (1 - r); return u < r ? k * u / r : u > 1 - r ? k * (1 - u) / r : k; }
+function rigTrack(keys) { const K = keys.map(k => ({ t: k[0], p: new THREE.Vector3(k[1], k[2], k[3]), yaw: k[4], pose: k[5] || 'stand', gait: k[6] || null })), seg = [];
+  let cum = 0, yp = K[0].yaw ?? 0;
+  for (let i = 0; i < K.length - 1; i++) { const a = K[i], b = K[i + 1], len = a.p.distanceTo(b.p), hz = Math.hypot(b.p.x - a.p.x, b.p.z - a.p.z);
+    const y1 = angTo(yp, b.yaw != null ? b.yaw : hz > .05 ? Math.atan2(b.p.x - a.p.x, b.p.z - a.p.z) : yp); seg.push({ a, b, len, cum, y0: yp, y1 }); cum += len; yp = y1; }
+  return t => { if (!seg.length || t <= K[0].t) return { pos: K[0].p, yaw: seg[0]?.y0 ?? yp, A: K[0].pose, B: K[0].pose, pk: 1, gait: null, dist: 0, speed: 0 };
+    const i = seg.findIndex(q => t < q.b.t); if (i < 0) { const q = seg[seg.length - 1]; return { pos: q.b.p, yaw: q.y1, A: q.a.pose, B: q.b.pose, pk: 1, gait: null, dist: cum, speed: 0 }; }
+    const q = seg[i], D = Math.max(.001, q.b.t - q.a.t), u = (t - q.a.t) / D, g = q.b.gait, e = g ? trapE(u) : sEase(u);
+    return { pos: q.a.p.clone().lerp(q.b.p, e), yaw: lerp(q.y0, q.y1, easeIO(u / .3)), A: q.a.pose, B: q.b.pose, pk: easeIO((t - q.a.t) / Math.min(.45, D * .6)), gait: g,
+      dist: q.cum + q.len * e, speed: q.len / D * (g ? trapV(u) : Math.PI / 2 * Math.sin(Math.PI * u)) }; }; }
+function gaitAdd(P, st, t) { const G = GAIT[st.gait]; let bob = 0; if (!G) return bob; const a = clamp(st.speed / G.v), ph = st.dist / G.stride * Math.PI * 2, s = Math.sin(ph), c = Math.cos(ph);
+  if (st.gait === 'shuffle') { P.oL += G.abd * Math.max(0, s) * a; P.oR += G.abd * Math.max(0, -s) * a; P.hL += .08 * Math.max(0, s) * a; P.hR += .08 * Math.max(0, -s) * a; return G.bob * Math.abs(c) * a; }
+  P.hL += G.hip * s * a; P.hR -= G.hip * s * a; P.kL += (st.gait === 'run' ? .25 : .1) * a + G.knee * Math.max(0, c) * a; P.kR += (st.gait === 'run' ? .25 : .1) * a + G.knee * Math.max(0, -c) * a;
+  P.fL -= G.arm * s * a; P.fR += G.arm * s * a; P.tw += .08 * s * a; bob = G.bob * Math.abs(c) * a; return bob; }
+function rigPerson(p = {}) { const g = new THREE.Group(), mover = new THREE.Group(); g.add(mover);
+  const rig = makeRig(p.model || 'modular_men/Casual', p.height || 1.75); mover.add(rig.w); const csh = p.shadow === false ? null : contactShadow(.3, .3, .32); if (csh) g.add(csh);
+  const TR = rigTrack(p.track || [[0, 0, 0, 0, 0, p.pose || 'stand']]), ph = (p.seed || 1) * .37;
+  g.userData.tick = t => { const st = TR(t), P = blendPose(poseOf(st.A), poseOf(st.B), st.pk);
+    P.sp += .015 * Math.sin(t * 1.7 + ph); P.ht += .05 * Math.sin(t * .45 + ph) * (st.gait ? 0 : 1);                     // breathing, small glances
+    if (P.shake) { P.fR += .07 * Math.sin(t * 21) * P.shake; P.eR += .05 * Math.sin(t * 21 + 1) * P.shake; P.sp += .02 * Math.sin(t * 21) * P.shake; }
+    const bob = gaitAdd(P, st, t); mover.position.set(st.pos.x, st.pos.y + bob, st.pos.z); mover.rotation.y = st.yaw;
+    mover.rotation.z = st.gait === 'shuffle' ? .03 * Math.sin(st.dist / .5 * Math.PI * 2) : 0; rig.apply(P);
+    if (csh) { csh.position.set(st.pos.x, st.pos.y + .015, st.pos.z); csh.visible = !p.noShadowAbove || st.pos.y < p.noShadowAbove; } };
+  return g; }
+
+// ---- window glass, sashes, curtains, shutters
+function glassMat() { return SPR.glassM ||= new THREE.MeshStandardMaterial({ color: col('#4d6270'), roughness: .06, metalness: .35, transparent: true, opacity: .5, envMapIntensity: 1.3 }); }
+function sashWindow(par, x0, x1, y0, y1, z, open, alu) { const w = x1 - x0, b = .045, sw = w / 2 + .02;
+  wbox(par, x0, x1, y0, y0 + b, z - .06, z, alu); wbox(par, x0, x1, y1 - b, y1, z - .06, z, alu); wbox(par, x0, x0 + b, y0, y1, z - .06, z, alu); wbox(par, x1 - b, x1, y0, y1, z - .06, z, alu);
+  if (open === 'full') return; // casement swung fully open into the room: only the frame shows
+  for (const k of [0, 1]) { let sx = k ? x1 - sw : x0; const zz = z - .015 - k * .03; if (open === 'L' && k === 0) sx = x1 - sw - .04; if (open === 'R' && k === 1) sx = x0 + .04;
+    const s = new THREE.Group(); par.add(s); wbox(s, sx, sx + sw, y0 + b, y0 + b + .04, zz - .02, zz, alu); wbox(s, sx, sx + sw, y1 - b - .04, y1 - b, zz - .02, zz, alu);
+    wbox(s, sx, sx + .04, y0 + b, y1 - b, zz - .02, zz, alu); wbox(s, sx + sw - .04, sx + sw, y0 + b, y1 - b, zz - .02, zz, alu);
+    const gl = new THREE.Mesh(new THREE.PlaneGeometry(sw - .08, y1 - y0 - 2 * b - .08), glassMat()); gl.position.set(sx + sw / 2, (y0 + y1) / 2, zz - .01); s.add(gl); } }
+function curtain(par, x, y0, y1, z, w, colr, ph, list) { const h = y1 - y0, geo = new THREE.PlaneGeometry(w, h, 12, 4), P = geo.attributes.position;
+  for (let i = 0; i < P.count; i++) P.setZ(i, Math.sin(P.getX(i) / w * Math.PI * 7) * .035); geo.computeVertexNormals();
+  const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: col(colr), roughness: .95, side: THREE.DoubleSide, map: SPR.cloth || null })); const pv = new THREE.Group(); pv.position.set(x, y1, z); m.position.y = -h / 2; pv.add(m); par.add(pv); list.push({ pv, ph }); }
+
+// ---- the apartment block. Front face at z 0 (facing the street, +z), x centred, `depth` back to -z. Storey height fh; floor `real` is built for real.
+function aptBlock(p = {}) { const g = new THREE.Group(), fh = p.fh || 3, nF = p.floors || 10, bw = p.bayW || 3.5, W = bw * (p.bays || 5), hw = W / 2, D = p.depth || 12, F = (p.real ?? 8) * fh, top = nF * fh;
+  const facM = new THREE.MeshStandardMaterial({ map: tiled(facadeTex(p.facade || 'brick')), roughness: .92 }), brick = new THREE.MeshStandardMaterial({ map: tiled(redBrickTex()), roughness: .93 });
+  const conc = new THREE.MeshStandardMaterial({ map: tiled(plasterTex('#b9b3a8', 73)), roughness: .9 }), inner = new THREE.MeshStandardMaterial({ map: tiled(plasterTex(p.inner || '#e9dfcc', 75)), roughness: .95 });
+  const ceil = new THREE.MeshStandardMaterial({ map: tiled(plasterTex('#efe9dc', 77)), roughness: .95 }), alu = std('#c4c8c9', { m: .55, r: .35 });
+  const tileM = new THREE.MeshStandardMaterial({ map: canvasT(256, 256, (c, w, h) => { const r0 = rng(79), n = 4, q = w / n; c.fillStyle = '#9c9284'; c.fillRect(0, 0, w, h);
+    for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) { const v = .93 + r0() * .1; c.fillStyle = `rgb(${226 * v | 0},${214 * v | 0},${192 * v | 0})`; c.fillRect(i * q + 2, j * q + 2, q - 4, q - 4); } }, [1, 1]), roughness: .4 });
+  tileM.map.wrapS = tileM.map.wrapT = THREE.RepeatWrapping;
+  const fu = [bw, fh, hw, 0];                                                       // facade texture grid: one bay x one storey, bays from the left edge
+  // painted storeys below and above the real floor (their windows are in the facade texture)
+  const lower = wbox(g, -hw, hw, 0, F, -D, 0, facM, ...fu); lower.material = [facM, facM, tileM, facM, facM, facM]; wUV(lower.geometry, [0, F / 2, -D / 2], ...fu);
+  const tUV = lower.geometry.attributes.uv, tP = lower.geometry.attributes.position, tN = lower.geometry.attributes.normal; for (let i = 0; i < tP.count; i++) if (tN.getY(i) > .5) tUV.setXY(i, tP.getX(i) / 1.6, tP.getZ(i) / 1.6);
+  const upper = wbox(g, -hw, hw, F + fh, top, -D, 0, facM, ...fu); upper.material = [facM, facM, conc, ceil, facM, facM];
+  // slab-edge ledges on every floor (the real floor's ledge is the one the neighbour walks on)
+  for (let n = 1; n <= nF; n++) { const L = n === nF ? .12 : (p.ledge || .35); wbox(g, -hw - .12, hw + .12, n * fh - .12, n * fh + .12, -.02, L, conc, 1); }
+  // real floor: front wall = brick infill with window holes, concrete columns at the bay edges, beam on top
+  const wins = p.win || [], holes = wins.map(o => [o.x - o.w / 2, o.x + o.w / 2, F + o.y0, F + o.y1]), bt = F + fh - .28;
+  holedWall(g, 'x', -hw, hw, F, bt, -.25, 0, holes, brick, 1); wbox(g, -hw, hw, bt, F + fh, -.25, .02, conc, 1);
+  for (let k = 0; k < (p.bays || 5); k++) wbox(g, -hw + k * bw, -hw + k * bw + .32, F, bt, -.25, .02, conc, 1);
+  const curt = [], r = rng(p.seed || 93), CUR = ['#d9cbb0', '#b9c7c9', '#c9a98f', '#e3dccd'];
+  for (const o of wins) { const x0 = o.x - o.w / 2, x1 = o.x + o.w / 2, y0 = F + o.y0, y1 = F + o.y1;
+    wbox(g, x0 - .05, x1 + .05, y0 - .05, y0, -.27, .06, conc, 1);                     // concrete sill
+    if (o.shut) { const lv = new THREE.MeshStandardMaterial({ map: louverTex(o.shut === true ? '#5d6e4a' : o.shut), roughness: .8 }); wbox(g, x0, x1, y0, y1, -.08, -.03, lv, o.w, y1 - y0, -x0, -y0); }
+    else sashWindow(g, x0, x1, y0, y1, -.08, o.open, alu);
+    if (o.curtain !== false) { const cc = o.curtain || CUR[Math.floor(r() * CUR.length)]; curtain(g, x0 + .18, F + .05, y1 + .15, -.42, .42, cc, r() * 6, curt); curtain(g, x1 - .18, F + .05, y1 + .15, -.42, .42, cc, r() * 6, curt); } }
+  // rooms, corridor, doors, stair (inside the real floor)
+  const [cz0, cz1] = p.corr || [-6.4, -5.0];
+  for (const x of p.parts || []) wbox(g, x - .06, x + .06, F, F + fh, cz1, -.25, inner, 1.5);
+  holedWall(g, 'x', -hw + .25, hw - .25, F, F + fh, cz1 - .12, cz1, (p.doors || []).map(d => [d.x - d.w / 2, d.x + d.w / 2, F, F + d.h]), inner, 1.5);
+  const leafM = new THREE.MeshStandardMaterial({ map: doorTex(), roughness: .6 });
+  for (const d of p.doors || []) { if (d.leaf === false) continue; const L = new THREE.Group(); L.position.set(d.x - d.w / 2 + .02, F, cz1 - .06); L.rotation.y = -(d.open || 0); g.add(L);
+    const lf = box(d.w - .04, d.h - .02, .045, leafM); lf.position.set((d.w - .04) / 2, (d.h - .02) / 2, 0); L.add(lf); const hd = box(.12, .025, .05, alu); hd.position.set(d.w - .14, 1.02, .05); L.add(hd); shadowed(L); }
+  const [sx0, sx1, sd] = p.stair || [-8.45, -7.25, -8.6];
+  wbox(g, -hw, sx0, F, F + fh, -D, cz0, inner, 1.5); wbox(g, sx1, hw, F, F + fh, -D, cz0, inner, 1.5); wbox(g, sx0, sx1, F, F + fh, -D, sd, inner, 1.5);
+  for (let s = 0; s < 6; s++) wbox(g, sx0, sx1, F - .17 * (s + 1), F - .17 * s, cz0 - .28 * (s + 1), cz0 - .28 * s, conc, 1);
+  wbox(g, sx0 - .02, sx0 + .03, F, F + .95, sd, cz0, alu); wbox(g, sx0 - .02, sx1, F + .92, F + .97, cz0 - .03, cz0 + .02, alu);
+  const ew = p.endWin || [-6.3, -5.15, .8, 2.65];
+  wbox(g, -hw, -hw + .25, F, F + fh, cz0, -.25, facM, ...fu);                                     // left gable wall of the real floor
+  holedWall(g, 'z', cz0, -.25, F, F + fh, hw - .25, hw, [[ew[0], ew[1], F + ew[2], F + ew[3]]], facM, ...fu); // right gable with the corridor's end window
+  wbox(g, hw - .27, hw + .06, F + ew[2] - .05, F + ew[2], ew[0] - .05, ew[1] + .05, conc, 1);
+  const lamp = new THREE.PointLight(0xffe2b8, p.lampI ?? 7, 11, 1.6); lamp.position.set(p.lampX ?? 3, F + fh - .35, (cz0 + cz1) / 2); g.add(lamp);
+  const bulb = new THREE.Mesh(new THREE.SphereGeometry(.06, 10, 8), new THREE.MeshStandardMaterial({ color: '#fff3d6', emissive: '#ffe2b0', emissiveIntensity: 2.2 })); bulb.position.copy(lamp.position); g.add(bulb);
+  g.userData.tick = t => curt.forEach(o => { o.pv.rotation.x = -.04 - .04 * Math.sin(t * 1.3 + o.ph); o.pv.rotation.z = .02 * Math.sin(t * .9 + o.ph); });
+  return g; }
+
+// ---- street: interlock sidewalks with curbs, asphalt road with a dashed centre line, paving beyond, lamp posts, flanking blocks with ledges
+function streetSet(p = {}) { const g = new THREE.Group(), X = p.w || 64, Z0 = p.z0 ?? -30, Z1 = p.z1 ?? 30, [s0, s1] = p.walk || [0, 2.4], [r0, r1] = p.road || [2.4, 10.6], s2 = p.walk2 ?? 13;
+  const pav = new THREE.MeshStandardMaterial({ map: tiled(interlockTex()), roughness: .9 }), asp = new THREE.MeshStandardMaterial({ map: tiled(asphaltTex()), roughness: .93 });
+  const curbM = new THREE.MeshStandardMaterial({ map: canvasT(64, 16, (c, w, h) => { for (let i = 0; i < 4; i++) { c.fillStyle = i % 2 ? '#e8e3d6' : '#2c2c2c'; c.fillRect(i * w / 4, 0, w / 4, h); } }, [1, 1]), roughness: .8 });
+  curbM.map.wrapS = curbM.map.wrapT = THREE.RepeatWrapping;
+  wbox(g, -X / 2, X / 2, -.05, .01, Z0, s0, pav, 2.5); wbox(g, -X / 2, X / 2, -.05, .15, s0, r0 - .15, pav, 2.5); wbox(g, -X / 2, X / 2, -.05, .02, r0, r1, asp, 6);
+  wbox(g, -X / 2, X / 2, -.05, .15, r1 + .15, s2, pav, 2.5); wbox(g, -X / 2, X / 2, -.05, .05, s2, Z1, pav, 2.5);
+  for (const z of [r0 - .15, r1]) wbox(g, -X / 2, X / 2, -.05, .17, z, z + .15, curbM, 2, 1);
+  const lineM = std('#e9e4d2', { r: .7 }); for (let x = -X / 2 + 1; x < X / 2; x += 4.5) wbox(g, x, x + 2.2, .02, .026, (r0 + r1) / 2 - .06, (r0 + r1) / 2 + .06, lineM);
+  const pole = std('#5d6b62', { m: .5, r: .5 }), head = std('#d9dcd6', { r: .4 });
+  for (const [x, z] of p.lamps || []) { const L = new THREE.Group(); L.position.set(x, .15, z); const ps = cyl(.06, .09, 6.5, pole); ps.position.y = 3.25; L.add(ps);
+    const arm = cyl(.035, .035, 1.4, pole); arm.rotation.x = Math.PI / 2; arm.position.set(0, 6.4, .7); L.add(arm); const hd = box(.28, .1, .5, head); hd.position.set(0, 6.35, 1.35); L.add(hd); shadowed(L); g.add(L); }
+  for (const [x0, x1, h, kind, d] of p.blocks || []) { const fm = new THREE.MeshStandardMaterial({ map: tiled(facadeTex(kind)), roughness: .93 }), cm = new THREE.MeshStandardMaterial({ map: tiled(plasterTex('#bdb7ab', 67)), roughness: .9 });
+    const m = wbox(g, x0, x1, 0, h, -(d || 12), 0, fm, 3.5, 3, -x0, 0); m.material = [fm, fm, cm, fm, fm, fm];
+    for (let y = 3; y <= h; y += 3) wbox(g, x0 - .08, x1 + .08, y - .1, y + .1, -(d || 12), .3, cm, 1);
+    wbox(g, x0, x1, h, h + 1, -.2, 0, cm, 1); }
+  return g; }
+
+// ---- window laundry rack (منشر): wall plates, two bracket arms with diagonal struts, 5 rods, clothes; it bends under a hanging person.
+// params: w, out, rods, bendK [[t,0..1]], slipK, pullK, jolts [[t,amp]], hanger {model,height,hookX}, pullPath [[k,x,y,z,rx]], drops [[t,x]], crumbs [t], groundY
+function washRack(p = {}) { const g = new THREE.Group(), W = p.w || 1.4, O = p.out || .75, n = p.rods || 5, r = rng(p.seed || 91), steel = std(p.color || '#8b8f8c', { m: .55, r: .45 });
+  const arm = new THREE.Group(); g.add(arm); const V = (a, b, c) => new THREE.Vector3(a, b, c), struts = [];
+  for (const s of [-1, 1]) { const x = s * W / 2, pl = box(.05, .5, .015, steel); pl.position.set(x, -.2, .008); g.add(pl);
+    const bar = box(.025, .025, O + .02, steel); bar.position.set(x, 0, (O + .02) / 2); arm.add(bar);
+    for (let k = 0; k < 2; k++) { const c = cyl(.009, .009, 1, steel, 6); c.castShadow = true; g.add(c); struts.push({ c, x, k }); } }
+  for (let i = 0; i < n - 1; i++) { const c = cyl(.006, .006, W + .04, steel, 6); c.rotation.z = Math.PI / 2; c.position.set(0, .012, O * (i + 1) / n); arm.add(c); }
+  const NS = 14, outer = []; for (let i = 0; i < NS; i++) { const c = cyl(.007, .007, 1, steel, 6); c.castShadow = true; arm.add(c); outer.push(c); }
+  const sagAt = (x, S, xh) => -S * Math.max(0, 1 - ((x - xh) / (W * .62)) ** 2);
+  const clothes = [], tex = SPR.cloth; let x = -W / 2 + .12;
+  for (let i = 0; i < (p.clothes ?? 4); i++) { const cw = .22 + r() * .25, ch = .3 + r() * .35, ri = Math.floor(r() * (n - 2)), z = O * (ri + 1) / n; if (x + cw > W / 2 - .05) break;
+    const geo = new THREE.PlaneGeometry(cw, ch, 3, 5); geo.translate(0, -ch / 2, 0); const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: tex || null, color: col(CLOTH[Math.floor(r() * CLOTH.length)]), roughness: .95, side: THREE.DoubleSide }));
+    const pv = new THREE.Group(); pv.position.set(x + cw / 2, .012, z); pv.rotation.y = Math.PI / 2 * 0; pv.add(m); arm.add(pv); clothes.push({ pv, ph: r() * 6 }); x += cw + .1; }
+  shadowed(g);
+  // hanging person
+  let hang = null; if (p.hanger) { const wg = new THREE.Group(), rig = makeRig(p.hanger.model || 'modular_women/Casual', p.hanger.height || 1.7); rig.w.position.x = p.hanger.footX ?? .1; wg.add(rig.w); g.add(wg); hang = { wg, rig }; }
+  const drops = (p.drops || []).map(([t0, dx], i) => { const cw = .3 + r() * .2, ch = .35 + r() * .3, geo = new THREE.PlaneGeometry(cw, ch, 3, 4); const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: tex || null, color: col(CLOTH[(i * 3 + 2) % CLOTH.length]), roughness: .95, side: THREE.DoubleSide }));
+    m.castShadow = true; g.add(m); return { m, t0, dx, ph: r() * 6 }; });
+  const crumbs = (p.crumbs || []).flatMap(t0 => Array.from({ length: 7 }, () => { const m = box(.02 + r() * .025, .015 + r() * .02, .02 + r() * .02, std('#a69e90')); g.add(m); return { m, t0, vx: (r() - .5) * .6, vz: .2 + r() * .5, sx: (r() > .5 ? 1 : -1) * W / 2 }; }));
+  const gy = p.groundY ?? -24, hookX = p.hanger?.hookX ?? -.25, path = p.pullPath || [], tmp = new THREE.Vector3();
+  g.userData.tick = t => { const bend = kv(p.bendK, t), jol = joltAt(p.jolts, t), ang = bend * .5 + jol * .06, S = .025 + .11 * bend + jol * .03, xh = hookX;
+    arm.rotation.x = ang; arm.rotation.z = -bend * .05 * Math.sign(xh || 1);
+    for (let i = 0; i < NS; i++) { const xa = -W / 2 - .02 + (W + .04) * i / NS, xb = -W / 2 - .02 + (W + .04) * (i + 1) / NS, a = V(xa, .012 + sagAt(xa, S, xh), O), b = V(xb, .012 + sagAt(xb, S, xh), O), c = outer[i];
+      c.position.copy(a).add(b).multiplyScalar(.5); c.scale.set(1, a.distanceTo(b), 1); c.quaternion.setFromUnitVectors(V(0, 1, 0), b.sub(a).normalize()); }
+    // diagonal struts: wall foot fixed, top end rides the bending arm; the joint kinks outward as the anchors give
+    arm.updateMatrix(); for (const s of struts) { const top = V(s.x, 0, O * .62).applyMatrix4(arm.matrix), foot = V(s.x, -.42, .01), mid = foot.clone().lerp(top, .5).add(V(0, -.04 * bend, .06 * bend));
+      const a = s.k ? mid : foot, b = s.k ? top : mid; s.c.position.copy(a).add(b).multiplyScalar(.5); s.c.scale.set(1, a.distanceTo(b), 1); s.c.quaternion.setFromUnitVectors(V(0, 1, 0), b.clone().sub(a).normalize()); }
+    clothes.forEach(o => { o.pv.rotation.x = .08 + Math.sin(t * 1.8 + o.ph) * .12 - ang * .8 + jol * .4; o.pv.rotation.z = Math.sin(t * 1.3 + o.ph) * .04; });
+    if (hang) { const slip = kv(p.slipK, t), pull = kv(p.pullK, t), hk = V(xh, .012 + sagAt(xh, S, xh), O).applyMatrix4(arm.matrix);
+      const pts = [[0, hk.x, hk.y, hk.z, 0], ...path]; let j = 0; while (j < pts.length - 2 && pull > pts[j + 1][0]) j++;
+      const A = pts[j], B = pts[Math.min(j + 1, pts.length - 1)], u = B === A ? 0 : clamp((pull - A[0]) / Math.max(.001, B[0] - A[0])), e = sEase(u);
+      hang.wg.position.set(lerp(A[1], B[1], e), lerp(A[2], B[2], e), lerp(A[3], B[3], e)); const still = 1 - clamp(pull * 3);
+      hang.wg.rotation.set(lerp(A[4], B[4], e) + (.07 * Math.sin(t * 1.9) + jol * .5) * still, 0, Math.PI + (slip * .2 + .04 * Math.sin(t * 1.4 + 1)) * still);
+      const P = blendPose(blendPose(poseOf('hang2'), poseOf('hang1'), slip), poseOf('pulled'), clamp(pull * 2)), fl = still * (1 + slip * .6);
+      P.fL += .3 * Math.sin(t * 3.1) * fl; P.fR += .3 * Math.sin(t * 2.7 + 1) * fl; P.adL += .2 * Math.sin(t * 2.3) * fl; P.adR += .2 * Math.sin(t * 2.0 + 2) * fl; P.kL += .2 * Math.sin(t * 2.2) * slip * still; P.hd += .1 * Math.sin(t * 1.5) * still;
+      hang.rig.apply(P); }
+    drops.forEach(d => { const dt = t - d.t0; d.m.visible = dt > 0; if (dt <= 0) return; const vt = 2.6, fall = vt * dt - vt * vt / 9.8 * (1 - Math.exp(-9.8 * dt / vt)), y = Math.max(gy + .03, -.1 - fall), done = y <= gy + .031;
+      d.m.position.set(d.dx + Math.sin(dt * 1.7 + d.ph) * .6 * Math.min(1, dt), y, O + .1 + dt * .25 + Math.sin(dt * 1.3) * .3);
+      if (done) d.m.rotation.set(-Math.PI / 2, 0, d.ph); else d.m.rotation.set(Math.sin(dt * 3 + d.ph) * 1.1, dt * 2.2 + d.ph, Math.sin(dt * 2.4) * .6); });
+    crumbs.forEach(c => { const dt = t - c.t0; c.m.visible = dt > 0 && dt < 2.4; if (!c.m.visible) return; tmp.set(c.sx + c.vx * dt, -.1 - 4.9 * dt * dt, .02 + c.vz * dt); if (tmp.y < gy) c.m.visible = false; c.m.position.copy(tmp); c.m.rotation.set(dt * 7, dt * 5, 0); }); };
+  return g; }
+
+// ---- outdoor split AC unit on wall brackets (origin: wall surface, bottom of the brackets); the fan spins, the cabinet hums, a drip stain runs down the wall
+function acUnit(p = {}) { const g = new THREE.Group(), W = p.w || .85, H = p.h || .6, Dd = p.d || .3, gap = .07, steel = std('#8f8f8a', { m: .5, r: .5 }), V = (a, b, c) => new THREE.Vector3(a, b, c);
+  for (const s of [-1, 1]) { const x = s * (W / 2 - .1); const b1 = box(.04, .04, Dd + gap + .06, steel); b1.position.set(x, .0, (Dd + gap) / 2); g.add(b1); g.add(rod(V(x, 0, Dd + gap), V(x, -.42, .01), .014, steel));
+    const pl = box(.05, .5, .012, steel); pl.position.set(x, -.2, .006); g.add(pl); }
+  const cab = new THREE.Group(); g.add(cab); const bm = new THREE.MeshStandardMaterial({ map: acTex(), roughness: .55 }); const bx = box(W, H, Dd, bm); bx.position.set(0, .02 + H / 2, gap + Dd / 2); cab.add(bx);
+  const fin = new THREE.Mesh(new THREE.PlaneGeometry(Dd * .9, H * .9), new THREE.MeshStandardMaterial({ map: finTex(), roughness: .7 })); fin.rotation.y = -Math.PI / 2; fin.position.set(-W / 2 - .002, .02 + H / 2, gap + Dd / 2); cab.add(fin);
+  const R = H * .38, fc = V(-W * .12, .02 + H / 2, gap + Dd + .004), dark = std('#1c1e1f', { r: .8 });
+  const disc = cyl(R, R, .01, dark, 28); disc.rotation.x = Math.PI / 2; disc.position.copy(fc).add(V(0, 0, -.006)); cab.add(disc);
+  const fan = new THREE.Group(); fan.position.copy(fc).add(V(0, 0, -.03)); cab.add(fan); for (let k = 0; k < 3; k++) { const bl = box(R * .9, .07, .01, std('#3a3d40', { r: .5 })); bl.position.x = R * .45; const hb = new THREE.Group(); hb.rotation.z = k * 2.094; bl.rotation.x = .35; hb.add(bl); fan.add(hb); }
+  const grillM = std('#d6d4cc', { m: .3, r: .5 }); for (let i = 1; i <= 5; i++) { const rg = new THREE.Mesh(new THREE.TorusGeometry(R * i / 5, .004, 4, 32), grillM); rg.position.copy(fc); cab.add(rg); }
+  for (const a of [0, Math.PI / 2]) { const cb = box(2 * R, .008, .008, grillM); cb.rotation.z = a; cb.position.copy(fc); cab.add(cb); }
+  const cover = box(.16, .2, .02, bm); cover.position.set(W / 2 - .11, .02 + H * .3, gap + Dd + .01); cab.add(cover);
+  const ins = std('#efece4', { r: .8 }); g.add(rod(V(W / 2 - .06, .02 + H * .3, gap + Dd * .5), V(W / 2 + .14, .02 + H * .3, gap + Dd * .5), .022, ins)); g.add(rod(V(W / 2 + .14, .02 + H * .3, gap + Dd * .5), V(W / 2 + .14, .02 + H * .3, .01), .022, ins));
+  g.add(rod(V(-W / 2 + .1, .02, gap + Dd * .6), V(-W / 2 + .12, -.35, gap + Dd * .7), .008, std('#222', { r: .6 })));
+  const st = new THREE.Mesh(new THREE.PlaneGeometry(.22, 1.6), new THREE.MeshBasicMaterial({ map: SPR.acStain ||= canvasT(32, 128, (c, w, h) => { const gr = c.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, 'rgba(40,30,20,.35)'); gr.addColorStop(1, 'rgba(40,30,20,0)'); c.fillStyle = gr; c.fillRect(6, 0, w - 12, h); }), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }));
+  st.position.set(-W / 2 + .11, -.82, .004); g.add(st); shadowed(g); st.castShadow = false;
+  g.userData.tick = t => { fan.rotation.z = -t * (p.rps ?? 26); cab.position.y = Math.sin(t * 97) * .0012; };
+  return g; }
+
+// ---- flat door leaf on a hinge (origin = hinge foot); openK [[t, angle]] (negative swings into +z), rattle [t0, t1]
+function flatDoor(p = {}) { const g = new THREE.Group(), w = p.w || .96, h = p.h || 2.08, alu = std('#c9c2b0', { m: .7, r: .3 }), leaf = new THREE.Group(); g.add(leaf);
+  const lf = box(w, h, .045, new THREE.MeshStandardMaterial({ map: doorTex(), roughness: .6 })); lf.position.set(w / 2, h / 2, 0); leaf.add(lf);
+  const handle = new THREE.Group(); handle.position.set(w - .1, 1.02, 0); leaf.add(handle); for (const s of [-1, 1]) { const hb = box(.13, .022, .025, alu); hb.position.set(-.05, 0, s * .045); handle.add(hb); }
+  const lock = cyl(.02, .02, .06, alu, 10); lock.rotation.x = Math.PI / 2; lock.position.set(w - .1, .9, 0); leaf.add(lock);
+  for (const y of [.25, h - .25]) { const hg = cyl(.012, .012, .1, alu, 8); hg.position.set(.005, y, .03); leaf.add(hg); } shadowed(g);
+  g.userData.tick = t => { const rt = p.rattle && t > p.rattle[0] && t < p.rattle[1] ? 1 : 0; leaf.rotation.y = kv(p.openK, t) + rt * .006 * Math.sin(t * 38); handle.rotation.z = rt ? -.35 - .15 * Math.sin(t * 19) : kv(p.openK, t) < -.05 ? 0 : 0; };
+  return g; }
+Object.assign(ASSETS, { apt_block: aptBlock, street_set: streetSet, wash_rack: washRack, ac_unit: acUnit, flat_door: flatDoor, rig_person: rigPerson });

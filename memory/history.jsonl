@@ -57,5 +57,6 @@
 {"run": "bees_ar_visual_en2", "time": "2026-11-16 14:21", "score": 95, "issues": 1, "codes": ["dead_beat"]}
 {"run": "lola_hens_dark_corner", "time": "2026-11-16 15:02", "score": 100, "issues": 0, "codes": []}
 {"run": "v2", "time": "2026-11-16 15:16", "score": 100, "issues": 0, "codes": []}
+{"run": "rescue", "time": "2026-11-16 15:53", "score": 29, "issues": 16, "codes": ["beat_too_short", "dead_beat"]}
 {"run": "v3", "time": "2026-11-16 15:51", "score": 100, "issues": 0, "codes": []}
 {"run": "v4", "time": "2026-11-16 16:05", "score": 100, "issues": 0, "codes": []}

@@ -156,6 +156,43 @@ Rule: when a preview or final video shows a mistake, add one entry here (what wa
 - **Mistake:** the 'above ground' tank was a solid blue box with no cylinder or lid detail, which reads as a box, not a water tank.
 - **Rule:** in any cutaway, check the first beat where the inside should show. If it is hidden, the plan is wrong, not the render.
 - **Second attempt (2026-11-16):** the soil cutaway had an open front, but the island ground (env soil + Poly Haven grass at y=0) covers everything below y=0, so the tank and insulation stay hidden. Fix needed: lift the cutaway block above the ground plane (raise it, or put the ground layer under it as a plate and let the cut show the tank), or add `env:{ground:false}` to the plan.
+- **Third attempt (2026-11-16):** lifting the cutaway by 1.2 m made the tank visible, and the yellow insulation sleeve shows. Still wrong: the tank runs below the soil block's floor into the grass, and the soil walls are too thin to read. Fix: put the tank's bottom at the block's floor, and make the soil walls thicker and brown.
+- **Fourth attempt (2026-11-16):** thick brown soil walls and a lidded tank inside now read as buried. Still wrong: the yellow insulation sleeve covers the whole tank in the 'insulation' beat (hides the tank). Fix: make the sleeve a thin band (ring, not a full cylinder), or show it only in a cutaway wedge. Tank base still ends a little below the soil floor.
+- **Fifth attempt (2026-11-16):** the insulation is now a ribbed band of foam strips around the tank, so the blue tank shows between strips. The tank sits on the soil floor and the lid is visible. Remaining: the foam strips stick out past the tank and the soil walls are cut off at the frame edge in this shot. Fix next: keep strips inside radius .6 and move the camera back.
+
+## Wooden farm fence (2026-11-16, plans/wood_fence.mjs)
+- Works: posts on stone bases, three rails, timber texture, sticker pointers, clean framing. This is the reliable build style for simple wood structures.
+- Mistake to watch: a corner brace was drawn at the wrong angle (it looks like a stray plank). Check that braces run from the top of the end post down to the ground rail.
+- **Fixed (fence):** the corner brace now runs as a true diagonal from the top of the end post down to the ground rail, with length and angle computed from the two points. Use this helper for any diagonal member.
+## Rescue facade (2026-11-16, runs/rescue, score 29)
+- **Mistake:** 17 beats for 39 s, and the critic flagged 15 `dead_beat` ("adds nothing new visually"). The same facade, same figures and near-identical camera repeat across beats, so the story reads as one still scene. **Fix:** cap beats at about one per 3 s with a new camera angle or a new subject in each; merge beats that show the same pose.
+- **Mistake:** the opening hook was too wide: the hanging woman was a speck in the first beat. **Fix:** frame the hook on the subject (about 4 m from a 1.75 m figure) and hold it.
+- **Mistake:** a hanging figure upside down is hard to read in a 9:16 frame. **Fix:** show the hang from a side angle with the rack bending in the same frame.
+- **Mistake:** the full render died at 90% during the final mux, leaving an invalid final.mp4 (same as the compost run). **Fix:** rerun the same command; cached chunks in runs/<name>/chunks are reused.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ## Lola & Chico: Why Chickens Lay Eggs in the Dark Corner (2026-11-16)
 - **Mistake:** stickers (?, !, ✗, ✓) sat right above the hens and at the frame edges; some were cut off. **Fix:** size .6, placed at y ~3.0 and x within +-2.6 m, away from the hens. **Source:** contact sheet of v2.
