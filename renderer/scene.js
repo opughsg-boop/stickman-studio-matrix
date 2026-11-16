@@ -1353,6 +1353,17 @@ function river(p = {}) { const g = new THREE.Group(), L = p.w || 16, W = p.d || 
     const rr = rng(7); for (let i = 0; i < 300; i++) { c.strokeStyle = `rgba(${rr() > .45 ? '225,245,250' : '25,70,85'},${.1 + rr() * .2})`; c.lineWidth = 1 + rr() * 2; const x = rr() * w, y = rr() * h, l = 20 + rr() * 70;
       c.beginPath(); c.moveTo(x, y); c.quadraticCurveTo(x + l / 2, y + (rr() - .5) * 6, x + l, y); c.stroke(); } }, [L / 4, W / 4]);
   const wmat = new THREE.MeshStandardMaterial({ map: tex, roughness: .1, metalness: .2 }), water = new THREE.Mesh(new THREE.PlaneGeometry(L, W), wmat);
+  // ported from the claude-animated-shorts bridge river (world.ts): view-angle colour gradient, so the river darkens toward the viewer and fades toward the horizon
+  wmat.onBeforeCompile = sh => {
+    sh.uniforms.uRiverNear = { value: col(p.near || '#2b6173') }; sh.uniforms.uRiverFar = { value: col(p.far || '#9fc6d3') };
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vWP;').replace('#include <project_vertex>', '#include <project_vertex>\nvWP = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec3 vWP;\nuniform vec3 uRiverNear; uniform vec3 uRiverFar;')
+      .replace('#include <map_fragment>', `#include <map_fragment>
+  { vec3 vd = normalize(vWP - cameraPosition); float dep = asin(clamp(-vd.y, 0.0, 1.0)); float f = 1.0 - smoothstep(0.0, 0.42, dep);
+    vec3 grad = mix(uRiverNear, uRiverFar, f); float marks = dot(diffuseColor.rgb, vec3(0.33));
+    diffuseColor.rgb = grad * (0.8 + 0.45 * marks); }`);
+  };
+  wmat.customProgramCacheKey = () => 'river_v2';
   water.rotation.x = -Math.PI / 2; water.position.y = .06; water.receiveShadow = true; g.add(water);
   const bank = std('#5e4a33', { r: .95 }); for (const s of [-1, 1]) { const b = box(L, .12, .5, bank); b.position.set(0, .03, s * (W / 2 + .2)); g.add(b); }
   const sm = new THREE.MeshBasicMaterial({ map: streakTex(), transparent: true, opacity: .5, depthWrite: false }), streaks = [];
