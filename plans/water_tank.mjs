@@ -22,7 +22,8 @@ const cutSoil = obj('cutSoil', [
 const tankCyl = (d, h, y, color, o = {}) => ({ shape: 'cylinder', size: [d, h, d], pos: [0, y, 0], color, rough: o.rough ?? .3, tex: o.tex });
 const tank = obj('tank', [tankCyl(1.1, 1.2, -.9, '#3f8fc4'), tankCyl(1.2, .06, -.27, '#6e6e6e', { rough: .6 })], .3, 'grow', LIFT);
 // insulation: a warm yellow sleeve around the tank (slightly wider), and a band across the bottom
-const insul = obj('insul', [tankCyl(1.32, 1.5, -.8, '#e3c86b', { rough: 1 }), box([1.9, .1, 1.9], [0, -1.45, 0], '#e3c86b', { rough: 1 })], .6, 'grow', LIFT);
+// insulation: a thin ribbed band of yellow foam strips around the tank wall (not a full sleeve), so the tank stays visible
+const insul = obj('insul', Array.from({ length: 10 }, (_, k) => { const a = k / 10 * Math.PI * 2; return box([.12, 1.2, .08], [Math.cos(a) * .6, -.9, Math.sin(a) * .6], '#e3c86b', { rough: 1 }); }), .6, 'grow', LIFT);
 // sealed lid: a grey disc with a rim, dropped onto the top
 const lid = obj('lid', [{ shape: 'cylinder', size: [1.2, .08, 1.2], pos: [0, .06, 0], color: '#5a5a5a', rough: .7 }], 1.6, 'drop', LIFT);
 // shade: a canopy on posts, above and in front of the tank
@@ -36,7 +37,7 @@ const beats = [
   // fix: dig the tank into the ground (cutaway), the soil keeps a steady cool temperature
   { t: at(2), kind: 'solution', remove: ['above', 'sun', 'w'], effects: [], add: [cutSoil, tank, stk('ok', 'check', [0, LIFT + .5, 1.1], .32, { delay: .6 })], camera: { preset: 'close', target: [0, LIFT - .6, 0], dist: 6.4, elev: .3, az: .1, zoom: 'in' } },
   // insulation layer around the tank and soil on top
-  { t: at(3), kind: 'solution', remove: ['ok'], add: [insul, stk('ins', 'circle_ring', [1.2, LIFT - .6, .9], .4, { delay: .3, bob: 0, onTop: true })], camera: { preset: 'close', target: [0, LIFT - .6, 0], dist: 6, elev: .25, az: .25, zoom: 'in' } },
+  { t: at(3), kind: 'solution', remove: ['ok'], add: [insul, stk('ins', 'circle_ring', [.95, LIFT - .6, .75], .4, { delay: .3, bob: 0, onTop: true })], camera: { preset: 'close', target: [0, LIFT - .6, 0], dist: 6, elev: .25, az: .25, zoom: 'in' } },
   // shade over the tank, away from direct sun
   { t: at(4), kind: 'solution', add: [shade, stk('sh', 'point_down', [0, LIFT + 1.6, .6], .3, { delay: .4 })], camera: { preset: 'hero', target: [0, LIFT, 0], dist: 9, elev: .3, az: .3, zoom: 'out' } },
   // tip: a sealed lid stops hot air from getting in
