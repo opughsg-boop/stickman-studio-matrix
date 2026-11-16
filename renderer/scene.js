@@ -223,11 +223,34 @@ function chicken(p = {}) { // realistic-proportion laying hen, ~0.4 m tall at sc
   g.userData.head = head; g.userData.legs = legs; g.userData.body = body; g.userData.neck = neck;
   return shadowed(g);
 }
+function duck(p = {}) { // white Pekin-style duck, ~0.4 m long at scale .4: feathered body, short neck, flat orange bill, webbed feet
+  const g = new THREE.Group(), r = rng(p.seed || 1);
+  const base = ['#f4f1e8', '#ece6d6', '#f7f4ec'][Math.floor(r() * 3)];
+  const fm = (rep = [2, 2]) => { const t = featherTex(base, '#ffffff').clone(); t.repeat.set(...rep); t.needsUpdate = true; return new THREE.MeshStandardMaterial({ map: t, roughness: .85, bumpMap: t, bumpScale: .5 }); };
+  const bodyM = fm();
+  const body = new THREE.Mesh(new THREE.SphereGeometry(.5, 28, 22), bodyM); body.scale.set(.72, .62, 1.18); body.position.set(0, .5, 0); body.rotation.x = -.12; g.add(body);
+  const breast = new THREE.Mesh(new THREE.SphereGeometry(.32, 20, 14), bodyM); breast.scale.set(1, .9, .9); breast.position.set(0, .5, .42); g.add(breast);
+  for (const s2 of [-1, 1]) { const w = new THREE.Mesh(new THREE.SphereGeometry(.34, 16, 12), fm([1, 1.4])); w.scale.set(.15, .42, .95); w.position.set(s2 * .35, .56, -.08); w.rotation.set(-.1, 0, s2 * .08); g.add(w); }
+  const tail = new THREE.Mesh(new THREE.ConeGeometry(.17, .42, 10), bodyM); tail.position.set(0, .68, -.62); tail.rotation.x = -1.15; g.add(tail);
+  const neck = new THREE.Mesh(new THREE.CylinderGeometry(.1, .17, .52, 14), bodyM); neck.position.set(0, .86, .46); neck.rotation.x = .3; g.add(neck);
+  const head = new THREE.Group(); head.position.set(0, 1.12, .58); g.add(head);
+  const hd = new THREE.Mesh(new THREE.SphereGeometry(.15, 18, 14), bodyM); hd.scale.set(.95, 1, 1.1); head.add(hd);
+  const bill = box(.16, .06, .22, std('#f08a1a', { r: .5 })); bill.position.set(0, -.04, .2); head.add(bill);
+  const tip = box(.09, .03, .06, std('#f5a940', { r: .5 })); tip.position.set(0, -.04, .33); head.add(tip);
+  for (const s2 of [-1, 1]) { const eye = new THREE.Mesh(new THREE.SphereGeometry(.024, 10, 8), std('#050505', { r: .1 })); eye.position.set(s2 * .12, .04, .08); head.add(eye); }
+  const legs = [], orange = std('#f08a1a', { r: .55 });
+  for (const s2 of [-1, 1]) { const lg = new THREE.Group(); lg.position.set(s2 * .16, .22, .05); g.add(lg);
+    const sh = cyl(.03, .025, .24, orange, 8); sh.position.y = -.08; lg.add(sh);
+    const foot = box(.2, .02, .26, orange); foot.position.set(0, -.2, .06); lg.add(foot); legs.push(lg); }
+  g.scale.setScalar(p.scale || .4);
+  g.userData.head = head; g.userData.legs = legs;
+  return shadowed(g);
+}
 function flock(p = {}) {
   const g = new THREE.Group(), n = p.count || 8, r = rng(p.seed || 4), area = p.area || [8, 8];
   const birds = [];
   for (let i = 0; i < n; i++) {
-    const c = chicken({ seed: i + 1 + (p.seed || 0), scale: p.scale });
+    const c = (p.species === 'duck' ? duck : chicken)({ seed: i + 1 + (p.seed || 0), scale: p.scale });
     const b = { o: c, x: (r() - .5) * area[0], z: (r() - .5) * area[1], ph: r() * 6.28, sp: .25 + r() * .35, rad: .4 + r() * .9 };
     birds.push(b); g.add(c);
   }
