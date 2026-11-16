@@ -25,8 +25,9 @@ const RACK = [W1, F + .55, 0];                  // rack plate just under the sil
 
 // ---- timing from the voice
 const L = [0, 1, 2, 3, 4, 5, 6].map(i => at(i));
-const runT = Math.min(word(1, /^وجري$|^جري$/, .35), L[1] + 1.4), arriveT = Math.max(word(1, /^بس$/, .55), runT + 3.4);
-const decideT = Math.max(word(1, /^فقرر$/, .7), arriveT + .8), climbT = Math.max(word(1, /^يتسلق$/, .78), decideT + .5);
+// v2 (score 29 -> 8 beats): the run to her door is quicker, so his climb out onto the facade lands inside line 1
+const runT = L[1] + .5, arriveT = Math.max(word(1, /^بس$/, .55), runT + 2.9);
+const decideT = Math.max(word(1, /^فقرر$/, .7), arriveT + .7), climbT = decideT;
 const blockT = Math.max(word(4, /^سد$/, .3), L[4] + 1.2), backT = Math.max(word(4, /^واضطره$|^يرجع$/, .45), blockT + .5), stillT = Math.max(word(4, /^الوقت$|^المنشر$/, .65), backT + .6);
 const openT = Math.max(word(5, /^وفتح$|^فتح$/, .6), L[5] + .9);
 const narrowT = Math.max(word(6, /^الشباك$/, .22), L[6] + 1.4), moveT = Math.max(word(6, /^فالجار$|^اتحرك$/, .42), narrowT + .6);
@@ -59,7 +60,7 @@ const scenery = [
   { id: 'rack', type: 'wash_rack', pos: RACK, params: { w: 1.4, out: .75, rods: 5, clothes: 3, seed: 7, groundY: .15 - RACK[1],
       hanger: { model: 'modular_women/Casual', height: 1.68, hookX: -.55, footX: .1 },
       bendK: [[0, .15], [L[2] + .2, .15], [L[3] - .1, .5], [L[3] + .6, .62], [L[4] + .3, .62], [stillT + 1.2, .85], [pullT + .2, .88], [pullT + 1.3, .6]],
-      slipK: [[L[3] + .3, 0], [L[3] + .9, 1]], pullK: [[pullT + .2, 0], [pullT + 2.8, 1]],
+      slipK: [[L[3] + .3, 0], [L[3] + .9, 1]], pullK: [[pullT + .2, 0], [pullT + 2.2, 1]],
       jolts: [[.05, 1.2], [L[3] + .75, .8], [stillT + .8, .35], [pullT + 1.1, .45]],
       drops: [[.12, -.15], [L[3] + .8, .25]], crumbs: [L[2] + .7, stillT + .9],
       pullPath: [[.35, -.3, .3, .42, -.45], [.68, -.3, .2, -.4, -1.45], [1, -.3, -.4, -2.3, -1.57]] }, anim: 'none', dust: false }];
@@ -69,22 +70,22 @@ const nb = mono([
   [0, NWIN, F, -.55, 0, 'look'], [runT - .05, NWIN, F, -.55, 0, 'look'],
   [runT + .35, -3.9, F, -1.6, null, 'run', 'run'], [runT + 1.15, -4.5, F, -4.6, null, 'run', 'run'], [runT + 1.5, -4.1, F, CORR, null, 'run', 'run'],
   [arriveT, 5.75, F, CORR, null, 'run', 'run'], [arriveT + .3, DOORX, F, -5.6, 0, 'knock'], [decideT, DOORX, F, -5.6, 0, 'knock'],
-  [decideT + .35, 6.0, F, CORR, -PI / 2, 'turn'], [climbT + .3, 6.0 - Math.min(4, 3.6 * (climbT - decideT - .05)), F, CORR, null, 'run', 'run'],
-  [climbT + .32, -3.75, F, -1.15, 0, 'stand'], [climbT + .9, -3.8, F, -.5, 0, 'walk', 'walk'], [climbT + 1.7, -3.8, F + .3, -.1, 0, 'climb'],
-  [climbT + 2.6, -3.75, LEDGE, .2, PI, 'ledge'], [L[3] + .6, -1.5, LEDGE, .2, PI, 'peek', 'shuffle'], [blockT + .3, .38, LEDGE, .2, PI, 'ledge', 'shuffle'],
+  [decideT + .3, 6.0, F, CORR, -PI / 2, 'turn'], [decideT + .62, 4.8, F, CORR, null, 'run', 'run'],          // back toward his flat (camera leaves the corridor)
+  [decideT + .64, -3.75, F, -1.15, 0, 'stand'], [decideT + 1.0, -3.8, F, -.5, 0, 'walk', 'walk'], [decideT + 1.6, -3.8, F + .3, -.1, 0, 'climb'],
+  [decideT + 2.3, -3.75, LEDGE, .2, PI, 'ledge'], [L[2] + 1.2, -2.7, LEDGE, .2, PI, 'ledge', 'shuffle'], [L[3] + .6, -1.5, LEDGE, .2, PI, 'peek', 'shuffle'], [blockT + .3, .38, LEDGE, .2, PI, 'ledge', 'shuffle'],
   [blockT + .7, .36, LEDGE, .2, PI, 'recoil'], [backT + .2, .36, LEDGE, .2, PI, 'recoil'], [backT + 1.7, -.6, LEDGE, .2, PI, 'peek', 'shuffle'],
   [L[5] + .85, -.6, LEDGE, .2, PI, 'peek'], [L[5] + .87, -4.5, F, -4.0, PI, 'stand'],     // back in through his flat (hidden), then down the corridor
   [L[5] + 1.1, -4.5, F, -4.9, null, 'run', 'run'], [Math.max(L[6] + .25, L[5] + 3.2), 4.95, F, CORR, null, 'run', 'run'],
   [Math.max(L[6] + .8, L[5] + 3.75), 6.1, F, -5.0, null, 'run', 'run'], [Math.max(L[6] + 1.6, L[5] + 4.55), 6.3, F, -2.2, null, 'run', 'run'], [Math.max(narrowT + .2, L[6] + 2.4), 6.35, F, -.95, 0, 'lean'],
   [moveT + .2, 6.3, F, -.95, 0, 'stand'], [moveT + 1.1, SMALL, F, -.6, .35, 'walk', 'walk'], [moveT + 1.6, SMALL, KNEEL, -.32, .35, 'kneelLean'],
-  [pullT + .2, SMALL, KNEEL, -.32, .35, 'kneelLean'], [pullT + .6, SMALL, KNEEL, -.4, .35, 'pullKneel'], [pullT + 2.6, SMALL - .05, KNEEL, -.6, .3, 'pullKneel'],
+  [pullT + .2, SMALL, KNEEL, -.32, .35, 'kneelLean'], [pullT + .6, SMALL, KNEEL, -.4, .35, 'pullKneel'], [pullT + 2.1, SMALL - .05, KNEEL, -.6, .3, 'pullKneel'],
   [endT + .3, 6.05, F, -1.0, .3, 'relief']]);
 const guard = mono([
   [0, -7.85, F - 2.4, -9.5, PI, 'stand'], [L[5] - 3.6, -7.85, F - 2.4, -9.5, PI, 'stand'], [L[5] - 2.7, -7.85, F - 1.02, -8.1, PI, 'walk', 'walk'], [L[5] - 2.2, -7.85, F, -6.0, null, 'run', 'run'],
   [openT - .45, 5.6, F, CORR, null, 'run', 'run'], [openT - .2, DOORX, F, -5.65, 0, 'key'], [openT + .9, DOORX, F, -5.65, 0, 'key'], [L[6] + .1, DOORX, F, -5.65, 0, 'stand'],
   [L[6] + .6, DOORX, F, -4.6, null, 'run', 'run'], [L[6] + 1.4, 6.75, F, -1.2, null, 'run', 'run'], [Math.max(narrowT, L[6] + 1.9), 6.75, F, -.55, 0, 'lean'],
   [moveT + .5, 6.75, F, -.55, 0, 'lean'], [moveT + 1.3, 6.75, KNEEL, -.3, 0, 'kneelLean'], [pullT + .2, 6.75, KNEEL, -.3, 0, 'kneelLean'],
-  [pullT + .55, 6.8, KNEEL, -.4, 0, 'pullKneel'], [pullT + 1.4, 7.35, KNEEL, -.7, -.3, 'pullKneel'], [pullT + 2.6, 7.45, F, -1.3, -.4, 'stand'], [endT + .3, 7.45, F, -1.3, -.6, 'relief']]);
+  [pullT + .55, 6.8, KNEEL, -.4, 0, 'pullKneel'], [pullT + 1.4, 7.35, KNEEL, -.7, -.3, 'pullKneel'], [pullT + 2.1, 7.45, F, -1.3, -.4, 'stand'], [endT + .3, 7.45, F, -1.3, -.6, 'relief']]);
 const crowd = [['b1', 'modular_men/Farmer', 5.2, .02, 4.2, PI + .1, 'point'], ['b2', 'modular_women/Formal', 6.6, .02, 5.0, PI + .25, 'gasp'],
   ['b3', 'modular_men/Suit', 8.4, .15, 1.8, PI - .35, 'gaze'], ['b4', 'modular_women/Suit', 3.6, .02, 5.6, PI + .3, 'gaze']].map(([id, model, x, y, z, yaw, pose], i) => ({
   id, type: 'rig_person', pos: [0, 0, 0], params: { model, height: [1.76, 1.64, 1.8, 1.66][i], seed: i + 3,
@@ -95,45 +96,28 @@ const people = [
   { id: 'guard', type: 'rig_person', pos: [0, 0, 0], params: { model: 'modular_men/Worker', height: 1.74, seed: 2, track: guard }, anim: 'none', dust: false },
   ...crowd];
 
-// ---- beats (continuous camera; heights and distances in metres)
+// ---- beats: 8 shots, each a new angle AND a new state (lesson "Rescue facade": no repeated frames, hook on the subject)
+const HER = [6.55, 23.75, .8];                                // her body centre while hanging (rack plate x 7.05, hook x -.55, arm out .75)
 const b = [];
-// 0a hook: wide and low from across the street, the whole block in frame, she has just hit the rack (bounce, a shirt falls to the street)
+// 1 hook, whole line 0: 3.7 m from her, high on the side so the facade drops away to the street below; she has just hit the rack
 b.push({ t: 0, kind: 'intro', add: [...scenery, ...people],
-  camera: { preset: 'hero', target: [4.6, 13.5, 0], dist: 30.6, elev: -.41, az: .12, push: .1, spin: .04, fov: 54 } });
-// 0b the rack and her, hanging upside down 24 m over the street
-b.push({ t: word(0, /^منشر$/, .4), kind: 'problem', camera: { preset: 'hero', target: [6.6, 23.6, .8], dist: 6.4, elev: .05, az: .3, push: .08, spin: .05, fov: 40 } });
-// 0c vertigo: from above her, straight down the facade to the street and the people looking up
-b.push({ t: word(0, /^فوق$|^الشارع$/, .7), kind: 'problem', camera: { preset: 'hero', target: [6.6, 9.5, .55], dist: 20, elev: 1.45, az: 0, push: .02, spin: 0, fov: 50 } });
-// 1a the neighbour two flats along sees her from his window
-b.push({ t: L[1], kind: 'info', camera: { preset: 'hero', target: [-3.4, 25.2, -.2], dist: 5.2, elev: .06, az: -.3, push: .06, spin: .04, fov: 42 } });
-// 1b he runs down the corridor to her door (camera looks in through the corridor's end window)
-b.push({ t: runT + .6, kind: 'info', camera: { preset: 'hero', target: [3.6, 25.1, CORR], dist: 9.4, elev: .03, az: PI / 2, push: .12, spin: 0, fov: 34 } });
-// 1c the door is locked: he rattles the handle
-b.push({ t: arriveT + .2, kind: 'problem', add: [stk('x1', 'cross', [5.75, 26.35, -5.6], .3, { delay: .4 })],
-  camera: { preset: 'hero', target: [5.6, 25.0, CORR], dist: 7.0, elev: .04, az: PI / 2, push: .06, spin: 0, fov: 34 } });
-// 1d he climbs out of his own window onto the ledge outside
-b.push({ t: climbT, kind: 'info', remove: ['x1'], camera: { preset: 'hero', target: [-3.1, 25.0, .1], dist: 6.6, elev: .1, az: .3, push: .05, spin: .05, fov: 42 } });
-// 2 the rack's steel starts to bend (anchors give, the outer rod sags, crumbs fall)
-b.push({ t: L[2], kind: 'problem', camera: { preset: 'hero', target: [6.6, 24.0, .6], dist: 5.0, elev: .14, az: .55, push: .1, spin: .04, fov: 40 } });
-// 3 she slips and hangs from one leg (low angle, looking up past her)
-b.push({ t: L[3], kind: 'problem', camera: { preset: 'hero', target: [6.5, 23.7, .8], dist: 5.0, elev: -.16, az: .2, push: .08, spin: .05, fov: 42 } });
-// 4a the neighbour edges along the ledge into the AC unit
-b.push({ t: L[4], kind: 'info', camera: { preset: 'hero', target: [.4, 25.0, .3], dist: 6.2, elev: .1, az: .45, push: .06, spin: .04, fov: 42 } });
-// 4b it blocks him: he has to back off
-b.push({ t: blockT + .2, kind: 'problem', add: [stk('x2', 'cross', [1.1, 25.35, .65], .3, { delay: .3 })], camera: { preset: 'hero', target: [.5, 25.0, .3], dist: 5.6, elev: .08, az: .4, push: .05, spin: .03, fov: 42 } });
-// 4c meanwhile the rack keeps bending: side view along the facade, her near, him small beyond the AC
-b.push({ t: stillT, kind: 'problem', remove: ['x2'], camera: { preset: 'hero', target: [4.2, 24.4, .4], dist: 12.5, elev: .06, az: 1.28, push: .06, spin: 0, fov: 38 } });
-// 5 the building guard comes up the stair, runs down the corridor and unlocks her door
-b.push({ t: L[5], kind: 'solution', camera: { preset: 'hero', target: [4.0, 25.1, CORR], dist: 9.0, elev: .03, az: PI / 2, push: .12, spin: 0, fov: 34 } });
-// 6a both run in to her window
-b.push({ t: L[6], kind: 'info', camera: { preset: 'hero', target: [6.6, 23.95, -.2], dist: 6.0, elev: .1, az: .35, push: .05, spin: .03, fov: 42 } });
-// 6b the window is too narrow for two: the neighbour goes to the small window and grabs her leg from outside
-b.push({ t: moveT, kind: 'solution', camera: { preset: 'hero', target: [6.4, 24.4, .2], dist: 4.6, elev: .08, az: .25, push: .06, spin: .03, fov: 42 } });
-// 6c together they pull her up and in through the window
-b.push({ t: pullT, kind: 'solution', camera: { preset: 'hero', target: [6.6, 24.6, -.1], dist: 5.0, elev: .14, az: .3, push: -.08, spin: .04, fov: 42 } });
-// 6d safe inside: pull back to the street, the crowd cheers, the empty bent rack
-b.push({ t: endT, kind: 'solution', add: [stk('ok1', 'check', [6.75, 25.9, .7], .5, { delay: .2 })],
-  camera: { preset: 'hero', target: [5.2, 18.5, 0], dist: 22, elev: -.12, az: .25, push: .05, spin: .04, fov: 50 } });
+  camera: { preset: 'hero', target: HER, dist: 3.8, elev: .72, az: 1.5, push: .06, spin: .04, fov: 54 } });
+// 2 he runs down the corridor to her door and rattles the locked handle (through the corridor's end window)
+b.push({ t: L[1], kind: 'problem', camera: { preset: 'hero', target: [2.4, 25.0, CORR], dist: 10.6, elev: .03, az: PI / 2, push: .16, spin: 0, fov: 34 } });
+// 3 he climbs out of his own window onto the facade ledge; the camera swings round with him (three-quarter side)
+b.push({ t: climbT, kind: 'info', camera: { preset: 'hero', target: [-3.4, 25.0, .05], dist: 4.6, elev: .14, az: .45, push: .1, spin: .35, fov: 44 } });
+// 4 line 2, side view along the facade: the rack arm bends, crumbs fall; he is a small figure on the ledge far behind her
+b.push({ t: L[2], kind: 'problem', camera: { preset: 'hero', target: [6.3, 24.0, .65], dist: 5.4, elev: .07, az: 1.38, push: .1, spin: -.05, fov: 42 } });
+// 5 line 3, low angle from under her: she slips and hangs by one leg against the sky
+b.push({ t: L[3], kind: 'problem', camera: { preset: 'hero', target: [6.55, 23.85, .8], dist: 4.4, elev: -.5, az: .3, push: .08, spin: .05, fov: 46 } });
+// 6 line 4, close on the AC unit: he edges into it, it blocks him (cross), he backs off
+b.push({ t: L[4], kind: 'problem', add: [stk('x2', 'cross', [1.1, 25.35, .65], .3, { delay: Math.max(.3, blockT + .2 - L[4]) })],
+  camera: { preset: 'hero', target: [.35, 25.0, .35], dist: 3.8, elev: .12, az: .55, push: .06, spin: .04, fov: 42 } });
+// 7 line 5, inside the corridor at her door: the guard runs up toward camera and unlocks it, the door swings open
+b.push({ t: L[5], kind: 'solution', remove: ['x2'], camera: { preset: 'hero', target: [4.9, 24.7, CORR], dist: 3.2, elev: .26, az: PI / 2 + .12, push: .04, spin: 0, fov: 60 } });
+// 8 line 6, outside her window: both men lean out, the neighbour moves to the small window, grabs her leg, they pull her in (check)
+b.push({ t: L[6], kind: 'solution', add: [stk('ok1', 'check', [6.75, 25.9, .7], .5, { delay: Math.max(.3, pullT + 1.8 - L[6]) })],
+  camera: { preset: 'hero', target: [6.45, 24.1, 0], dist: 5.0, elev: .1, az: .32, push: .12, spin: .04, fov: 44 } });
 
 const plan = {
   version: 2, planner: 'directed', duration: D, language: 'ar', prompt: 'إنقاذ من الدور التامن',
