@@ -98,3 +98,6 @@ For 2D cartoon shorts with the hero and coworker cast and real sound effects, fo
 - The user approved the glossy "toy" reference look: on-screen counter badges (e.g. "0.03 mm", "100 MPH") and top captions with cyan underlined key words are allowed for this look only.
 - Set `style.allowText:true` in that plan. Other styles keep the no-words lock.
 - Engine: `plans/sneeze_ref.mjs` + `renderer/cine_ref.js`. The sample covers lines 1-4 only.
+
+## Lola & Chico style (locked 2026-11-16)
+For the "Lola & Chico" page (US English, farming and animals), follow `memory/lola_chico_style.md`.
