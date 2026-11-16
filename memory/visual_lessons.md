@@ -164,3 +164,8 @@ Rule: when a preview or final video shows a mistake, add one entry here (what wa
 - Works: posts on stone bases, three rails, timber texture, sticker pointers, clean framing. This is the reliable build style for simple wood structures.
 - Mistake to watch: a corner brace was drawn at the wrong angle (it looks like a stray plank). Check that braces run from the top of the end post down to the ground rail.
 - **Fixed (fence):** the corner brace now runs as a true diagonal from the top of the end post down to the ground rail, with length and angle computed from the two points. Use this helper for any diagonal member.
+## Rescue facade (2026-11-16, runs/rescue, score 29)
+- **Mistake:** 17 beats for 39 s, and the critic flagged 15 `dead_beat` ("adds nothing new visually"). The same facade, same figures and near-identical camera repeat across beats, so the story reads as one still scene. **Fix:** cap beats at about one per 3 s with a new camera angle or a new subject in each; merge beats that show the same pose.
+- **Mistake:** the opening hook was too wide: the hanging woman was a speck in the first beat. **Fix:** frame the hook on the subject (about 4 m from a 1.75 m figure) and hold it.
+- **Mistake:** a hanging figure upside down is hard to read in a 9:16 frame. **Fix:** show the hang from a side angle with the rack bending in the same frame.
+- **Mistake:** the full render died at 90% during the final mux, leaving an invalid final.mp4 (same as the compost run). **Fix:** rerun the same command; cached chunks in runs/<name>/chunks are reused.
