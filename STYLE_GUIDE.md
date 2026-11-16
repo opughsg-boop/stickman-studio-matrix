@@ -51,6 +51,11 @@ Target: the user's three reference reels (Spanish: rabbit hutch build-up, sugar-
   - `sluice`: sea pipe down the island side, a vibrating pump, a concrete channel and a lifting gate (modes `{ on }`).
   - `vapour`: rising evaporation wisps (modes `{ s }`). `brine_glass`: a 12 cm glass of sea water where salt grains drop in and dissolve.
   - New env knob `soilTint: [r, g, b]` multiplies the soil colour (salt farm: `[1.18, 1.08, .9]` with `coast_sand_rocks_02`, `horizon:'desert'`, `cover:false`, `birdModel:'Flamingo'`).
+- **Rooftop pack (2026-11-15, `plans/bees_roof.mjs`):** Egyptian flat roof as the island top (`env.flatTop:true`, `cover:false`).
+  - `rooftop`: concrete slab, plaster or brick facade down the sides, 1 m brick parapets (front low), rebar column stubs, optional `stair` house with a metal door and a water tank, `tanks`, `dishes`, `laundry` lines (flapping clothes).
+  - `city`: Cairo-like skyline (brick-in-concrete-frame and plaster blocks, rebar, tanks, dishes, a minaret); `avoid` rects keep camera paths clear.
+  - Bees: `bee_hive` (real Langstroth 0.51 x 0.41 m, entrance +x, mode `vent`), `hive_stand` (legs in water cans on bricks), `shade_net`, `water_tray` (brick, stones, ripples), `bee_screen` (2 m flyway boards), `ant_trail` (ants on a polyline, walls too), `damp_patch`, `heat_haze`.
+  - `roof_person`: a Quaternius person; `suit:true, veil:true` = beekeeper; mode `{ wave:true }` raises a hand, `path` walks.
 - **Critic:** the self-review knows the sky mode, so it does not ask for the blue room.
 - **Stickers instead of arrows:** 3D emoji stickers (`type:'sticker'`, `assets/stickers`, 65 names: pointing hands, arrows, circle ring, ✓ ✗, faces, microbe, organs, farm animals). They face the camera and pop in.
 - **Anatomy window:** `cutBox`/`cutOpen` opens a window in the flank, organs inside in real places with real textures (rumen with grass, honeycomb reticulum, leafy omasum, folded abomasum, intestines). Reference: `plans/rumen_window.mjs`.
