@@ -4,7 +4,11 @@ The user speaks Egyptian Arabic and is not technical. Reply in short, simple Egy
 Read `STYLE_GUIDE.md` first (complete approved style). **The hyper-realistic look in its section 2b is LOCKED.** A real sky is the engine default, and objects use real models, real sizes and natural motion. Start new diorama plans from `plans/cane.mjs`. Full history and context: `HANDOFF.md`. Style guides: `STYLE_ZD.md` (cine, the current main style) and `STYLE.md` (diorama).
 
 ## Every-video improvement rule (user request 2026-11-16)
-- Each new video must look a step better than the last: more realistic, better graphics, better motion (natural weight, easing, follow-through, animals and people moving believably, no sliding feet). Name in the plan or the final message what was improved.
+- Each new video must improve by 1x in each of three areas, and the plan or final message names what was improved in each:
+  1. **Motion:** natural weight, easing, follow-through, believable animal and people movement, no sliding feet.
+  2. **Graphics:** better materials, lighting and detail than the last video.
+  3. **Realism:** closer to real objects, sizes and places.
+- **Contact:** hands, feet and bodies must touch the object they hold, lean on or climb. Check contact points (0.2-0.4 m tolerance at most) in every beat that has a grab or a hold.
 - Background sounds (SFX, ambience) stay quiet under the voice: SFX mix weight 0.5 and bee ambience .035/.07 in `pipeline/sfx.py`. Never raise them again without being asked.
 
 ## Learn from mistakes (required)
