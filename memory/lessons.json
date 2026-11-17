@@ -2,9 +2,9 @@
  {
   "code": "loudness",
   "rule": "Normalize audio to -14 LUFS.",
-  "count": 3,
-  "last_seen": "2026-11-16",
-  "example": "integrated loudness -15.8 LUFS (target -14)"
+  "count": 4,
+  "last_seen": "2026-11-17",
+  "example": "integrated loudness -15.6 LUFS (target -14)"
  },
  {
   "code": "too_dark",
@@ -16,9 +16,9 @@
  {
   "code": "beat_too_long",
   "rule": "Split long sentences into two beats with a camera change.",
-  "count": 5,
-  "last_seen": "2026-11-16",
-  "example": "beat 7 lasts 10.1s without a new idea"
+  "count": 6,
+  "last_seen": "2026-11-17",
+  "example": "beat 6 lasts 10.2s without a new idea"
  },
  {
   "code": "caption_flash",
