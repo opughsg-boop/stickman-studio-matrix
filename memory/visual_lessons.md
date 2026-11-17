@@ -204,3 +204,8 @@ Rule: when a preview or final video shows a mistake, add one entry here (what wa
 - **Mistake:** the `carpenter` default model `modular_men/Worker` wears a hard hat and a hi-vis vest, so he reads as a construction worker, not a village carpenter. **Fix next:** `params.model:'modular_men/Farmer'` or `Casual` (re-probe palms: the poses were tuned on Worker, hands hang at .93 m).
 - **Works:** palm contact tuned with a probe (`window.__rigPoses` + `carpenter.userData.palm`), hammer rides the palm and lands on the nail head (< 1 cm); sectioned mortise and tenon reads clearly in close-up.
 - Source: runs/wood_bed/sheet_preview.jpg.
+
+## 2026-11-17 bread-beer2 (score 76)
+- Mistake: the realistic library works for props (table, barrels, bags, cauldron, palm), but flat round loaves made of spheres and terracotta cylinders read as plain shapes. Fix: use a textured bread or a jug model when one exists; otherwise add a clear colour and crust detail.
+- Mistake: a 10 s hold on the "question" beat with no new idea. Fix: split holds over 4.5 s with a camera change (already in the critic's rule).
+- Source for the look: Nile-side countryside uses `env.horizon:'nile'` (CLAUDE.md rule).
