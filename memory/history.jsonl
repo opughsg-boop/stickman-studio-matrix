@@ -64,3 +64,4 @@
 {"run": "wood_bed", "time": "2026-11-16 17:58", "score": 93, "issues": 2, "codes": ["dead_beat", "loudness"]}
 {"run": "bread-beer2", "time": "2026-11-17 00:02", "score": 93, "issues": 2, "codes": ["beat_too_long", "loudness"]}
 {"run": "salt_cow", "time": "2026-11-17 20:02", "score": 85, "issues": 3, "codes": ["ref_slow_cuts", "ref_static", "ref_too_bright"]}
+{"run": "salt_cow", "time": "2026-11-17 20:52", "score": 77, "issues": 7, "codes": ["beat_too_short", "dead_beat"]}
