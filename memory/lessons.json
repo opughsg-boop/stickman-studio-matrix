@@ -51,16 +51,16 @@
  {
   "code": "ref_too_bright",
   "rule": "Match the reference exposure: avoid white sets and large bright surfaces filling the frame.",
-  "count": 3,
-  "last_seen": "2026-11-14",
-  "example": "brighter than reference (luma 133 vs 105)"
+  "count": 4,
+  "last_seen": "2026-11-17",
+  "example": "brighter than reference (luma 129 vs 105)"
  },
  {
   "code": "ref_static",
   "rule": "Keep the camera always moving (push/orbit/handheld) like the reference.",
-  "count": 6,
-  "last_seen": "2026-11-15",
-  "example": "less motion than reference (5.0 vs 22.1)"
+  "count": 7,
+  "last_seen": "2026-11-17",
+  "example": "less motion than reference (6.4 vs 22.1)"
  },
  {
   "code": "subject_lost",
@@ -86,9 +86,9 @@
  {
   "code": "ref_slow_cuts",
   "rule": "Cut every 1-2 seconds; one visual per phrase.",
-  "count": 5,
-  "last_seen": "2026-11-15",
-  "example": "cuts slower than reference (1.97s vs 1.10s)"
+  "count": 6,
+  "last_seen": "2026-11-17",
+  "example": "cuts slower than reference (1.73s vs 1.10s)"
  },
  {
   "code": "no_context",
