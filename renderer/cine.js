@@ -34,7 +34,9 @@ async function loadModel(name) {
   if (MODELS[name]) return MODELS[name];
   const l = new GLTFLoader(); l.setMeshoptDecoder(MeshoptDecoder);
   const ktx = new KTX2Loader().setTranscoderPath('/three/examples/jsm/libs/basis/').detectSupport(renderer); l.setKTX2Loader(ktx);
-  return MODELS[name] = await l.loadAsync(`/assets/models/${name}.glb`);
+  // library packs ("animals_pack/Cow") live in assets/lib; plain names (Stork) live in assets/models
+  const url = name.startsWith('models/') ? `/assets/${name}.glb` : name.includes('/') ? `/assets/lib/${name}.glb` : `/assets/models/${name}.glb`;
+  return MODELS[name] = await l.loadAsync(url);
 }
 async function loadEnv(name) {
   if (ENVS[name]) return ENVS[name];

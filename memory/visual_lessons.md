@@ -209,3 +209,7 @@ Rule: when a preview or final video shows a mistake, add one entry here (what wa
 - Mistake: the realistic library works for props (table, barrels, bags, cauldron, palm), but flat round loaves made of spheres and terracotta cylinders read as plain shapes. Fix: use a textured bread or a jug model when one exists; otherwise add a clear colour and crust detail.
 - Mistake: a 10 s hold on the "question" beat with no new idea. Fix: split holds over 4.5 s with a camera change (already in the critic's rule).
 - Source for the look: Nile-side countryside uses `env.horizon:'nile'` (CLAUDE.md rule).
+
+## salt_cow (2026-11-17)
+- Mistake: hero model "animals_pack/Cow" was loaded from assets/models and returned 404. Fix: renderer/cine.js loadModel routes names with a slash to assets/lib.
+- Source: the render log (404 on /assets/models/animals_pack/Cow.glb).
