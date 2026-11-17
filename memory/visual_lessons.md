@@ -213,3 +213,11 @@ Rule: when a preview or final video shows a mistake, add one entry here (what wa
 ## salt_cow (2026-11-17)
 - Mistake: hero model "animals_pack/Cow" was loaded from assets/models and returned 404. Fix: renderer/cine.js loadModel routes names with a slash to assets/lib.
 - Source: the render log (404 on /assets/models/animals_pack/Cow.glb).
+
+## salt_cow v2 (preview 2026-11-17, plans/salt_cow.mjs)
+- **Mistake:** the hook framed the cow from behind: it walked away from the camera. **Fix:** pick the walk direction first, then put the camera on the side the animal faces (camera az close to its heading). Profile shots (cow facing ±x, camera from +z) show the tongue on the block best.
+- **Mistake:** the carried block was missing or in the wrong place: it read the farmer's palms from LINK before the farmer had ticked that frame (objects tick in plan order). **Fix:** list the carrier before the carried prop (add the farmer in beat 0 with `delay`).
+- **Mistake:** the salt efflorescence on the wall read as cotton balls (big opaque white dots). **Fix:** a thin powdery haze, densest along a wavy tide line, with a damp darker band under it. Real crust is faint, not a white coat.
+- **Mistake:** a 1.6 m trough between the camera and the farmer hid the kneel beat, and a fence on the camera side cut through two shots. **Fix:** keep the camera side of a pen open; check the line from the camera to the target for props with the NDC probe.
+- **Works:** contact by probe: tongue tip within 1-5 cm of the lick spot, mouth 7-14 cm off the surface, palms on the block top (< 3 cm), muzzle on the water (4 cm), hooves at y 0.
+- Source: runs/salt_cow/sheet_preview.jpg (first pass) plus the NDC/contact probe.
