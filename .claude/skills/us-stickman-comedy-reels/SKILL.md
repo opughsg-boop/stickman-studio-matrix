@@ -1,99 +1,102 @@
----
-name: us-stickman-comedy-reels
+## name: us-stickman-comedy-reels
 description: Make wordless full-body cartoon comedy reels for a US audience, with English labels, prop grips, free-library SFX, a licensed music bed, and a scored review after each video.
----
 
 # US Wordless Comedy Reels
 
-Make 30-60 second wordless comedy reels with full-bodied cartoon people, aimed at American viewers. One black label pill at the top with English text. Hard cuts only. Every video ends with a publish pack and a scored review, and the lessons carry into the next video.
+Make 18–60 second wordless comedy reels (9:16 `1080x1920` @ 30 fps) with full-bodied cartoon characters, aimed at American viewers. Hard cuts only. Every video ends with a US-English publish pack and a scored review (out of 100), and verified lessons carry into the next build.
+
+## Language & Audience Split
+
+* **Chat & Explanations:** Match the user's language (e.g., Arabic for Arabic prompts).
+
+* **On-Screen Captions, In-Scene Labels & Publish Pack:** Always **American English** (`Inter Display` / `DejaVu Sans Bold` + `Noto Color Emoji`), original cast/brands only.
 
 ## Workflow
 
-1. **Ask the length first** (30 s, 45 s, or 1 min) unless the user already gave it.
-2. **Pitch ideas** if asked, then wait for the user to pick a number.
-3. **Plan the shot table**: `# | time | label | framing | action | sound`. The total must match the chosen length within 3 s. Use 14-17 shots for 45 s, 18-22 for 60 s.
-4. **Build**: a figure engine (`figure.js`), a scene (`scene.html` from the example), and a renderer (`render.js`). Set DUR to the chosen length.
-5. **Stills check**: render stills at each shot's middle and at the punchline. Tile them into one contact sheet and look at it. A "clean" stills report is not enough.
-6. **Audio**: write `cues.json` with one entry per sound moment, then run `python3 -I sfx.py cues.json sfx.wav`.
-7. **Full render**: `node render.js scene.html frames 30 6`.
-8. **Encode**: `ffmpeg -v error -y -framerate 30 -i frames/%05d.jpg -i sfx.wav -c:v libx264 -preset veryfast -crf 18 -pix_fmt yuv420p -c:a aac -b:a 192k -af loudnorm=I=-14:TP=-1.5 -shortest out.mp4`.
-9. **Check the output**: duration within 3 s of target, cuts on their sounds, label changes on the cut, loop continuous, no blank frame. Make a contact sheet of the final MP4 and look at it.
-10. **Deliver** the MP4 with one line in the user's language, then the publish pack and the review (below).
+1. **Confirm Length & Concept:** Use 18 s for tight punchy loops (e.g., bathroom crises) or 30–60 s for multi-beat stories. Pitch 10 numbered ideas when asked, then build the chosen number.
 
-## Style
+2. **Plan the Shot Table:** `# | time | label | framing | action | sound`. Leave a 0.3–1.6 s silent anticipation beat before the punchline.
 
-- **Characters:** full human figure with a big round head (about 3 heads tall, big-head comedy style). Clothed torso and limbs, thick black outline, soft cel shading, simple shoes. One accessory or outfit colour identifies each character.
-- **World:** simple characters, detailed set. Dark outlines, gradient fills, painterly texture and grain. One motivated light per shot with a coloured glow, and one saturated accent.
-- **Labels:** English, bold sans-serif (DejaVu Sans Bold if Alexandria is missing), left-to-right, changed at hard cuts. Short, e.g. MONDAY, ONE YEAR LATER.
-- **Cutting:** 2-4 s per shot. Each beat goes wide (situation), then a detail close-up (the joke), then a reaction. The last shot matches frame 0 for a seamless loop.
-- **Story shape:** a hook in the first 3 s, two or three escalating rounds, a silent beat, then a punchline that reframes the start.
-- **Movement:** every shot moves (push-in 8-15%, tilt, or shake on impacts). No static shot longer than 3 s.
+3. **Build (`scene.html` + `render.js`):**
 
-## Real-world scale (1x)
+   * Expose `window.canvas = canvas;` and `window.DUR = <seconds>;` inside `scene.html`.
 
-Keep every object at real size next to the body.
+   * Use offline CDP bundling in `render.js` (`--no-proxy-server`, inline scripts) and keep paper grain static (`ox = 0, oy = 0`) for clean H.264 compression and seamless loops.
 
-- Adult about 170 cm; head about 23 cm; shoulders about 40 cm apart.
-- Arm about 3.4 hand-lengths (hand about 17-19 cm wrist to fingertip).
-- Phone about 15 cm; coffee mug about 9 cm; pitcher about 25 cm; tie about 140 cm; candle about 20 cm; pizza box about 30 cm square.
-- Table about 75 cm high; chair and sofa seat about 45 cm.
-- Umbrella: about 100 cm open across, held at 110-120 cm so it covers head and shoulders.
-- Dog about 50-60 cm at the shoulder.
-- Cartoon heads are oversized by design. Only props and furniture follow the real scale.
+4. **Audio (`sfx.py`):**
 
-## Props and grips
+   * Write 48 kHz true-stereo 16-bit PCM WAV using Python's built-in `wave` module (do not depend on `soundfile`).
 
-- Every hand that holds something sits exactly on the prop's grip point (bar, dumbbell handle, cup, phone, rail, door handle). Set the grip point first, then aim the hand at it.
-- Move the body (x, y, lean) before stretching an arm past its length.
-- Face the body toward the prop.
-- Animate arms with an arc between two keyed poses (blend the angles), not a snap.
-- If a hand is meant to miss, make the miss visible and deliberate.
-- Small key objects (cards, receipts) may be enlarged as inserts, but say so in the review and keep the scale break short.
+   * Synthesize satisfying ASMR-style foley (sub-bass drops on cuts, stretchy strain creaks, crisp pops, slurps, ice clinks, liquid rushes, chimes) + quiet room tone (`-30` to `-36 dB`) + original/licensed music bed (`-20` to `-22 dB`, paused during the silent anticipation beat).
 
-## Sound
+5. **Render & Mux:**
 
-- **No voice.** Synthesized SFX come from `sfx.py`. Free-library SFX are welcome: the user downloads them (the sandbox may have no internet), puts wav files in `sfx/`, and cues them as `file:sfx/name.wav`. Sources: Freesound (CC0, or CC-BY with a caption credit), Pixabay Sound Effects, Mixkit.
-- **Music bed (licensed only).** Use a track the user supplies with its license, or a free library (Pixabay Music, YouTube Audio Library, Mixkit, ENDE.APP with CC BY 4.0). Do not use trending commercial songs; the sound libraries inside TikTok or Reels are not licensed for export. Check the file's metadata for a license tag and tell the user what attribution it needs. Add to `cues.json`: `"music": {"file": "music/bed.wav", "gain_db": -20}` after converting with `ffmpeg -i in.mp3 -ac 1 -ar 48000 -t <dur> music/bed.wav`.
-- **Levels.** Room tone at `"bed_db": -30` to `-36`. Cues sit about +4 dB above the bed. Music sits 20-22 dB under the cues.
-- **Mix rules.** Every visible action gets its own sound (phone buzz, tap, tick, clink, scratch, thud, whoosh). The big sound lands on its cut. Leave 0.3-0.6 s of silence before the punchline. The first sound of the loop matches the last.
-- **Cue names in sfx.py:** pop, tap, tick, whoosh, thud, clink, ding, alarm, buzz, snore, gasp, boing, riser, heartbeat, scratch, sting, plus `file:` for library files.
+   * `node render.js scene.html frames 30 6`
 
-## Final review (every video, before delivery)
+   * `ffmpeg -v error -y -framerate 30 -i frames/%05d.jpg -i sfx.wav -c:v libx264 -preset veryfast -crf 18 -pix_fmt yuv420p -c:a aac -b:a 256k -af loudnorm=I=-14:TP=-1.5 -movflags +faststart -shortest out.mp4`
 
-1. **Publish pack:** title (US English, under 60 characters), 2-3 emoji, 1-2 line description, 6-8 hashtags, tags list. Add any required music attribution line to the description.
-2. **Score out of 100**, five parts of 20 each:
-   - Hook: the strangest or funniest image in the first 3 s.
-   - Motion: every shot moves; no static shot longer than 3 s; shake on impacts.
-   - Effects and sound: each object has its own sound; mix levels per above.
-   - Realism at 1x: props at real size; hands exactly on their grips.
-   - Clarity and story: key text readable at phone size; escalation clear; loop matches.
-3. **Fix log:** every mistake in this video, how it was fixed, and the rule that prevents it next time.
-4. **Save the lessons** to the user's notes and apply them to the next build before rendering.
+   * Verify `Loop Seam RMSE = 0.000/255` (last frame matches frame 0).
 
-## Lessons so far (do not repeat)
+6. **Mandatory Visual & Audio Audit:**
 
-1. Check the contact sheet before delivering. A stills report that says "clean" is not enough.
-2. Set scale rules before rendering. Do not rebuild props after the first render.
-3. Key messages on a phone go in close-ups. Wide shots must not depend on reading small text.
-4. Do not add story beats the user did not ask for. If a beat seems needed, ask first.
-5. Labels and on-screen text are English from the start.
-6. Keep the room tone quiet (-30 to -36 dB under the cues).
-7. Every shot needs movement, even a small one.
-8. Music must be licensed and attributed before publish.
-9. An umbrella at real size covers the head and shoulders. Keep its tilt under 25 degrees.
-10. Put the music in before the final render, not after.
-11. Shot order must match the story. A table that sets a seated scene before a standing one reads as a montage; reorder or label it clearly.
-12. Check that every character has the full outfit (sleeves, shoes, accessories) in every shot.
+   * Tile key frames (shot middles + punchline + frame 0/last) into a 3×3 contact sheet JPG.
 
-## Titles and captions
+   * Inspect **both** the contact sheet AND the final MP4 with `view_file` before delivering.
 
-Give one US-English title, a short description, 2-3 emoji, 6-8 hashtags, and a tags list. Keep the cast original. Do not use real brands, real people, copyrighted characters, or lyrics.
+7. **Deliver:** Present the MP4, the US-English Publish Pack, and the Scored Review (out of 100).
 
-Example: "Gym Membership Week 💪🛋️" with #shorts #comedy #gymhumor #relatable #cartoon #reelsviral.
+## Approved Visual Styles
 
-## Files in this bundle
+### 1. Red-Cap Close-Portrait Style (Bathroom & Viral Loop Default)
 
-- `figure.js`: full-body cartoon rig. Use `stick(o)` with the same options as the stick-figure engine. Includes poses (P), faces, accessories, and `stick.last` for grip points.
-- `render.js`: renders frames or stills from a scene's `render(t)` function.
-- `sfx.py`: synthesizes SFX, mixes the music bed, and writes the WAV track.
-- `scene.html` and `example_scene_gym.html`: an example scene with SETS, SHOTS, a label, and the render loop. Copy it, then replace the sets and shots.
+* **Massive 1x Portrait Framing:** Character fills \~75–85% of the `1080x1920` frame (knees to cap). Pure white cartoon body with thick `#14151A` (`~7px`) outlines, rounded shoulders/torso/thighs seated on toilet (never thin stick legs on a toilet), and a backwards red baseball cap.
+
+* **Expressive Strain & Relief:** `><` squeeze eyes, bloodshot veins + radial red cheek blush on peak strain, tremble/vibration lines, glossy blue sweat drops, `O_O` shock, and `^_^` happy tears.
+
+* **Tight Bathroom Staging:** Large porcelain toilet tank & seat behind torso (\~65–70% width), dark slate-teal tiled wall with subtle grout, and elbow-height blue towel/TP holder on the right edge.
+
+* **Inside-Gut Cutaway:** Warm terracotta-brown concentric-ring tunnel with a dark 5-pointed star exit in the background; thick-outlined brown 3-tier swirl Turd character with stick limbs planted on the tunnel floor.
+
+* **Trending Caption:** Floating bold white `Inter Display` (`800 50px`) + `Noto Color Emoji` at `y = 215 / 282` with thick `#14151A` `strokeText` outline (no heavy box).
+
+### 2. Full-Body Narrative Style (30–60s Multi-Location Stories)
+
+* **Characters:** Full human figure (\~3 heads tall, big-head comedy style), clothed torso/limbs, thick black outline, soft cel shading, simple shoes, one identifying colour/accessory.
+
+* **Full 9:16 Bleed:** Extend sky/ceiling upward and floor/asphalt downward across the full camera span at minimum zoom so no letterbox bands appear.
+
+* **Captions:** One high-contrast top label (`#14151A` outline or black pill) changing at hard cuts.
+
+## Technical & Rigging Rules (Do Not Repeat Past Bugs)
+
+1. **Isolate Outer Silhouettes with `Path2D`:** Store outer head/torso/limb capsules in `new Path2D()` before `ctx.save()/clip()/restore()` cel-shading so `ctx.stroke(path)` never outlines inner details. Set `anticlockwise = true` on outward limb endcaps.
+
+2. **Seamless Two-Segment Limb Joints:** In `twoSegLimb()`, stroke both limb capsule `Path2D`s at `2 * outlineW` first, then fill both capsules inside to eliminate elbow/knee seam circles.
+
+3. **Real-World Scale (1x) & Prop Grips:** Keep props at real size next to the body (phone 15 cm, mug/iced coffee cup 9–12 cm, table 75 cm, chair/toilet seat 45 cm). Anchor hands directly on prop grip points (cup side, straw, handle) and keep props/text away from eyes.
+
+4. **Vehicle Rotation Sign:** Since canvas `+Y` points down, verify rotation signs against screen Y before rendering.
+
+## Final Review & Publish Pack (Every Video)
+
+1. **US-English Publish Pack:**
+
+   * Short SEO title (under 60 characters) + 2–3 emojis
+
+   * 1–2 line description + original/licensed audio attribution line
+
+   * 6–8 hashtags + comma-separated tags list
+
+2. **Score Out of 100 (5 × 20 pts):**
+
+   * **Hook (20):** Strongest/funniest visual + caption in the first 3 s.
+
+   * **Motion (20):** Every shot moves; no static shot > 3 s; shake on impacts.
+
+   * **Effects & Sound (20):** Every visible action has crisp foley; `-30` to `-36 dB` room tone; `-20 dB` music bed; `-14 LUFS` master.
+
+   * **Realism at 1x (20):** Real-scale props and exact hand grips.
+
+   * **Clarity & Story (20):** Phone-readable text, clear escalation, `0.000` seamless loop.
+
+3. **Fix Log:** Note any visual/audio fixes caught during the contact-sheet and MP4 audit.
