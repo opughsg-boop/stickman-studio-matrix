@@ -37,9 +37,9 @@
  {
   "code": "too_bright",
   "rule": "Avoid white objects filling the frame; lower exposure or change angle.",
-  "count": 2,
-  "last_seen": "2026-11-11",
-  "example": "beat 11 washed out (luma 222)"
+  "count": 3,
+  "last_seen": "2026-11-18",
+  "example": "beat 11 washed out (luma 214)"
  },
  {
   "code": "caption_too_long",
@@ -100,9 +100,9 @@
  {
   "code": "dead_beat",
   "rule": "Each beat must add an object, change a character mode, add an effect or change the camera.",
-  "count": 38,
+  "count": 45,
   "last_seen": "2026-11-18",
-  "example": "beat 11 adds nothing new visually"
+  "example": "beat 10 adds nothing new visually"
  },
  {
   "code": "flat_primitive_water",
