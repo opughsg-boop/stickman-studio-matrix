@@ -221,3 +221,11 @@ Rule: when a preview or final video shows a mistake, add one entry here (what wa
 - **Mistake:** a 1.6 m trough between the camera and the farmer hid the kneel beat, and a fence on the camera side cut through two shots. **Fix:** keep the camera side of a pen open; check the line from the camera to the target for props with the NDC probe.
 - **Works:** contact by probe: tongue tip within 1-5 cm of the lick spot, mouth 7-14 cm off the surface, palms on the block top (< 3 cm), muzzle on the water (4 cm), hooves at y 0.
 - Source: runs/salt_cow/sheet_preview.jpg (first pass) plus the NDC/contact probe.
+
+## Hens winter (preview 2026-11-18, plans/hens_winter.mjs)
+- **Mistake:** the voice file held two takes (lines 1-5 from 0 to 20 s, then all 7 lines from 20.1 s); the aligner spread line 2 over 2-27 s. **Fix:** check ASR segments for a repeated hook before planning; the plan uses `runs/hens_winter/voice_take2.wav` (cut at 20.10 s). The render must use that file too.
+- **Mistake:** a lime-washed coop interior was as bright as the yard (luma 169), so "the coop gets dim" did not read: the renderer has no ambient occlusion, so sky light reaches under the roof. **Fix:** an interior shade factor (`shadeK` on coop, floor, nests, and on the hen by position) of .5, lifted to .66 when the lamp comes on. Interior beats now 103-135 vs lit 153-179.
+- **Mistake:** extra check/cross stickers doubled the engine's corner ✓/✗ badges (drawn for every `kind:'solution'|'problem'` beat), and an info beat marked `solution` got a ✓. **Fix:** use `kind` for the verdict badge; add a check/cross sticker only on `info` beats.
+- **Mistake:** a sky arc behind a coop was hidden by the roof from a low yard camera. **Fix:** sky cameras over the roof line (y 2.8-3.5, 6 m out, looking slightly down), arc sized to the 9:16 width (span <= 9 m at 44 m), palms kept out of the sky corridor.
+- Contact by probe: lamp grip 0.055 m from the left palm at mounting, timer grip 0.02 m from the right palm (plug-in and dial turn). A 1.75 m Farmer rig tops out at about 1.73 m palm height, so wall fittings go at 1.5-1.7 m.
+- Source: runs/hens_winter/sheet_preview.jpg (first pass) plus the NDC/contact probe.
