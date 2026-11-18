@@ -3210,7 +3210,12 @@ function skySun(p = {}) { const g = new THREE.Group(), Z = p.z ?? -40, y0 = p.y0
 // ---- hen walker: track [[t, x, z, act, yaw]]; act idle | peck | rest | preen (walk is automatic between different spots)
 function henWalker(p = {}) { const g = new THREE.Group(), mover = new THREE.Group(); g.add(mover);
   const S = (p.height || .4) / 1.43, c = chicken({ seed: p.seed || 3, scale: S }); mover.add(c);
-  const U = c.userData, head = U.head, legs = U.legs, body = U.body, neck = U.neck, h0 = head.position.clone(), b0 = body.scale.clone(), n0 = neck.rotation.clone();
+  const U = c.userData, head = U.head, legs = U.legs, body = U.body, neck = U.neck, h0 = head.position.clone(), b0 = body.scale.clone();
+  // neck = a stretchy link from a fixed base in the shoulders to an attach point at the back of the skull, solved every frame, so the
+  // head can never float off it (it used to be a separately rotated cylinder: up to 12 cm off during preening, 15 cm while pecking)
+  const NL = .55, nAx = new THREE.Vector3(0, 1, 0).applyEuler(neck.rotation), nBase = neck.position.clone().addScaledVector(nAx, -NL / 2),
+    nOff = neck.position.clone().addScaledVector(nAx, NL / 2).sub(h0), Y1 = new THREE.Vector3(0, 1, 0), vT = new THREE.Vector3(), vD = new THREE.Vector3();
+  neck.rotation.set(0, 0, 0);
   const tail = c.children.find(o => o.isGroup && o.position.z < -.4), tx0 = tail ? tail.rotation.x : 0;
   const sh = contactShadow(.13, .17, .42); g.add(sh); const mats = []; c.traverse(o => { if (o.isMesh && !mats.includes(o.material)) mats.push(o.material); }); const c0 = mats.map(m => m.color.clone());
   const K = (p.track || [[0, 0, 0, 'idle']]).map(k => ({ t: k[0], x: k[1], z: k[2], act: k[3] || 'idle', yaw: k[4] })); let yaw = K[0].yaw ?? 0, cum = 0; const seg = [];
@@ -3220,7 +3225,7 @@ function henWalker(p = {}) { const g = new THREE.Group(), mover = new THREE.Grou
   const state = t => { if (!seg.length || t <= K[0].t) return { x: K[0].x, z: K[0].z, yaw: seg[0]?.y0 ?? yaw, act: K[0].act, prev: K[0].act, t0: -9, dist: 0, sp: 0 };
     const i = seg.findIndex(q => t < q.b.t); if (i < 0) { const q = seg[seg.length - 1]; return { x: q.b.x, z: q.b.z, yaw: q.y1, act: q.b.act, prev: actOf(q), t0: q.b.t, dist: cum, sp: 0 }; }
     const q = seg[i], D = Math.max(.01, q.b.t - q.a.t), u = (t - q.a.t) / D, e = q.mv ? trapE(u, .22) : 0;
-    return { x: lerp(q.a.x, q.b.x, e), z: lerp(q.a.z, q.b.z, e), yaw: lerp(q.y0, q.y1, easeIO(u * D / Math.min(D, .3))), act: actOf(q), prev: i ? actOf(seg[i - 1]) : actOf(q), t0: q.a.t, dist: q.cum + q.len * e, sp: q.mv ? q.len / D * trapV(u, .22) : 0 }; };
+    return { x: lerp(q.a.x, q.b.x, e), z: lerp(q.a.z, q.b.z, e), yaw: lerp(q.y0, q.y1, easeIO(u * D / Math.min(D, .5))), act: actOf(q), prev: i ? actOf(seg[i - 1]) : actOf(q), t0: q.a.t, dist: q.cum + q.len * e, sp: q.mv ? q.len / D * trapV(u, .22) : 0 }; };
   const pose = (act, t, st) => { const o = { pitch: 0, hx: 0, hy: 0, hz: 0, hrx: 0, hry: 0, drop: 0, fluff: 0, leg: 1, scr: 0 };
     if (act === 'idle' || act === 'walk') { const per = .75, k = Math.floor((t + sd) / per), f = fr01((t + sd) / per), a0 = (hr(k, sd) - .5) * 1.5, a1 = (hr(k + 1, sd) - .5) * 1.5; // saccades
       o.hry = lerp(a0, a1, clamp((f - .82) / .1)) * (act === 'walk' ? .25 : 1); o.hrx = lerp((hr(k, sd + 1) - .5) * .4, (hr(k + 1, sd + 1) - .5) * .4, clamp((f - .82) / .1)); }
@@ -3229,14 +3234,17 @@ function henWalker(p = {}) { const g = new THREE.Group(), mover = new THREE.Grou
       if (k % 3 === 0 && f > .56) { const s2 = fr01((f - .56) / .44 * 2); o.scr = Math.sin(s2 * Math.PI); } }                                     // foot scratch every third peck
     if (act === 'rest' || act === 'preen') { o.drop = 1; o.fluff = 1; o.leg = .25; o.hy = -.1; o.hz = -.1; o.hrx = .12 + Math.sin(t * .8) * .03;
       if (act === 'preen') { const per = 2.6, k = Math.floor(t / per), f = fr01(t / per), into = f < .12 ? sEase(f / .12) : f < .72 ? 1 : 1 - sEase((f - .72) / .28), sd2 = k % 2 ? 1 : -1;
-        o.hx = .26 * into * sd2; o.hy = -.3 * into; o.hz = -.4 * into; o.hry = 2.1 * into * sd2; o.hrx = .45 * into + Math.sin(t * 21) * .14 * into; o.fluff = 1 + .5 * into; } }
+        o.hx = .26 * into * sd2; o.hy = -.3 * into; o.hz = -.4 * into; o.hry = 2.6 * into * sd2; o.hrx = .12 + .45 * into + Math.sin(t * 21) * .14 * into; o.fluff = 1 + .5 * into; } }
     return o; };
   g.userData.tick = t => { const st = state(t), kb = easeIO((t - st.t0) / .35), A = pose(st.prev, t, st), Bp = pose(st.act, t, st), P = {};
     for (const k in Bp) P[k] = lerp(A[k], Bp[k], kb);
     const ph = st.dist / STR * Math.PI, mvK = clamp(st.sp / .25), u = fr01(st.dist / STR);                                  // walk cycle synced to ground distance
     const stab = (u < .7 ? -u / .7 : -1 + (u - .7) / .3) + .5;                                                               // head holds still, then thrusts
-    head.position.set(h0.x + P.hx, h0.y + P.hy + Math.abs(Math.sin(ph)) * .02 * mvK, h0.z + P.hz + stab * STR / S * .85 * mvK); head.rotation.set(P.hrx, P.hry, 0);
-    neck.rotation.set(n0.x + P.hz * .6 + P.hy * -.3, n0.y, n0.z - P.hx * 1.2);
+    head.position.set(h0.x + P.hx, h0.y + P.hy + Math.abs(Math.sin(ph)) * .02 * mvK, h0.z + P.hz + stab * STR / S * .85 * mvK * clamp(1.8 - st.sp / .45));  // the hold-then-thrust bob fades out at a trot (it strobed at 1.4 m/s)
+    head.rotation.set(P.hrx, P.hry, 0, 'YXZ');                                    // turn first, then nod in the turned frame (XYZ rolled the head when turned back)
+    vT.copy(nOff).applyQuaternion(head.quaternion).add(head.position); vD.subVectors(vT, nBase); let L = vD.length();
+    const Lc = clamp(L, .3, .62); if (Lc !== L) { head.position.addScaledVector(vD, Lc / L - 1); vT.addScaledVector(vD, Lc / L - 1); L = Lc; }  // keep the neck length real
+    neck.position.addVectors(nBase, vT).multiplyScalar(.5); neck.quaternion.setFromUnitVectors(Y1, vD.normalize()); neck.scale.set(1, L / NL, 1);
     c.rotation.x = P.pitch + .05 * mvK; body.scale.copy(b0).multiplyScalar(1 + .06 * P.fluff + .01 * Math.sin(t * 2.7 + sd));
     legs[0].rotation.x = Math.sin(ph) * .55 * mvK - P.scr * .9; legs[1].rotation.x = -Math.sin(ph) * .55 * mvK; legs.forEach(l => l.scale.y = Math.max(.2, P.leg));
     if (tail) { const f = fr01((t + sd) / 3.3), flick = f < .12 ? Math.sin(f / .12 * Math.PI) : 0; tail.rotation.x = tx0 + .25 * flick + .08 * P.fluff; }

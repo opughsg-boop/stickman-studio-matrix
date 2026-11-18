@@ -30,7 +30,7 @@ const stk = (id, name, pos, size = .35, o = {}) => ({ id, type: 'sticker', pos, 
 
 // ---------- key times (word starts); T.lN = start of spoken line N+1 ----------
 const T = { l1: W(1), l2: W(2), l3: W(3), l4: W(4), l5: W(5), l6: W(6),
-  hours2: W(1, 7), lay2: W(1, 12), dark3: W(2, 4), rest4: W(3, 4), lamp5: W(4, 2), on5: W(4, 4), timer5: W(4, 5), morn5: W(4, 6), eve5: W(4, 7), lit5: W(4, 8),
+  hours2: W(1, 7), lay2: W(1, 12), dark3: W(2, 4), rest4: W(3, 4), lamp5: W(4, 2), on5: W(4, 4), timer5: W(4, 5), morn5: W(4, 6), eve5: W(4, 7), lit5: W(4, 9),
   same6: W(5, 6), like7: W(6, 4) };
 
 // ---------- layout (metres). Coop: outer x +-1.75, inner +-1.5, back wall inner face z -2.45, open front at z -.3 ----------
@@ -67,7 +67,8 @@ const hen = { id: 'hen', type: 'hen', pos: [0, 0, 0], anim: 'none', params: { he
   [0, .25, -1.35, 'idle', -PI / 2], [.7, .25, -1.35, 'idle'], [1.3, .1, -1.27, 'idle'], [1.8, .1, -1.27, 'idle'],
   [3.4, .9, .25, 'peck'], [4.9, .9, .25, 'peck'], [5.4, 1.1, .42, 'peck'], [6.3, 1.1, .42, 'peck'],
   [8.4, -.15, -1.8, 'idle'], [9.0, -.15, -1.8, 'idle', -PI / 2], [11.0, -.15, -1.8, 'idle'], [11.6, -.25, -1.72, 'idle'], [12.4, -.25, -1.72, 'rest', -PI / 2],
-  [13.5, -.25, -1.72, 'preen'], [15.5, -.25, -1.72, 'idle'], [16.3, -.6, -1.12, 'idle'], [16.6, -.6, -1.12, 'peck', PI * .35], [T.l5 + 3.9, -.6, -1.12, 'peck'],
+  [13.5, -.25, -1.72, 'preen'], [15.5, -.25, -1.72, 'idle'], [16.3, -.6, -1.12, 'idle'], [16.6, -.6, -1.12, 'peck', PI * .35], [T.lit5, -.6, -1.12, 'peck'],
+  [T.lit5 + 1.0, -.3, -1.65, 'idle'], [T.lit5 + 1.3, -.3, -1.65, 'peck', PI * .55], [T.l5 + 3.9, -.3, -1.65, 'peck'],   // line 5 end: she steps into the lamp's warm pool
   [T.l5 + 4.8, -.4, -1.5, 'idle', -PI / 2], [T.like7, -.4, -1.5, 'rest'], [T.like7 + 1.0, -.4, -1.5, 'preen']] } };
 const farmer = { id: 'farmer', type: 'rig_person', pos: [0, 0, 0], anim: 'none', params: { model: 'modular_men/Farmer', height: 1.75, link: 'farmer', seed: 5, track: [
   [13.2, 3.4, 0, -1.5, -PI / 2, 'carry'], [14.55, 1.62, 0, -1.5, null, 'carry', 'walk'], [15.6, FARM[0], 0, FARM[1], null, 'carry', 'walk'],
@@ -110,10 +111,12 @@ const beats = [
     camera: { target: [.3, 1.45, -2.3], dist: 2.2, elev: .04, az: .5, zoom: 'in' } },
   //   ... morning and evening: from outside, the sun low on the left at dawn and low on the right at dusk, the lamp glowing both times
   { t: T.morn5, kind: 'solution', remove: ['ptT'], camera: { target: [0, 1.3, -13.8], dist: 20, elev: .075, az: .02, fov: 46, spin: .015, push: -.08 } },
-  //   ... so the coop stays lit: inside, warm light on the walls, the hen pecking calmly
-  { t: W(4, 9), kind: 'solution', camera: { target: [-.3, .7, -1.5], dist: 3.0, elev: .1, az: -.25, fov: 40, push: .15 } },
+  //   ... so the coop stays lit: the hen walks out of the dim corner into the lamp's warm pool and pecks there; sparkles by the glowing bulb;
+  //   camera tilted up so the lit lamp (top) and the hen in its light (bottom) share the frame
+  { t: T.lit5, kind: 'solution', add: [stk('sparkL', 'sparkles', [LAMP[0] + .2, LAMP[1] + .08, ZW + .16], .2, { delay: .25 })],
+    camera: { target: [-.1, 1.0, -1.9], dist: 2.6, elev: .05, az: -.2, fov: 40, push: .12 } },
   // 6 careful: close on the timer, his hand turns the pinned dial; circle ring on the dial
-  { t: T.l5, kind: 'info', add: [stk('ringD', 'circle_ring', [TIMER[0], TIMER[1] - .008, ZW + .1], .13, { delay: .3 })],
+  { t: T.l5, kind: 'info', remove: ['sparkL'], add: [stk('ringD', 'circle_ring', [TIMER[0], TIMER[1] - .008, ZW + .1], .13, { delay: .3 })],
     camera: { target: [TIMER[0] - .12, 1.4, -2.38], dist: 1.25, elev: .05, az: .42, zoom: 'in' } },
   //   ... at the same time every day: the days run, the lamp lights at the same dial spot each turn; check
   { t: T.same6, kind: 'info', remove: ['ringD'], add: [stk('ok6', 'check', [TIMER[0] + .17, TIMER[1] + .13, ZW + .12], .12, { delay: .2 })],
