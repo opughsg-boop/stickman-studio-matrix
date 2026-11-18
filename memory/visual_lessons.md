@@ -229,3 +229,7 @@ Rule: when a preview or final video shows a mistake, add one entry here (what wa
 - **Mistake:** a sky arc behind a coop was hidden by the roof from a low yard camera. **Fix:** sky cameras over the roof line (y 2.8-3.5, 6 m out, looking slightly down), arc sized to the 9:16 width (span <= 9 m at 44 m), palms kept out of the sky corridor.
 - Contact by probe: lamp grip 0.055 m from the left palm at mounting, timer grip 0.02 m from the right palm (plug-in and dial turn). A 1.75 m Farmer rig tops out at about 1.73 m palm height, so wall fittings go at 1.5-1.7 m.
 - Source: runs/hens_winter/sheet_preview.jpg (first pass) plus the NDC/contact probe.
+
+## Hens winter v2 (preview 2026-11-18, hen head fix)
+- **Mistake:** the hen's head floated off her neck while preening (12 cm gap) and pecking (15 cm): head and neck were siblings, the neck a cylinder rotated about its middle by a guessed formula, and the head used XYZ Euler order, so a 120-degree turn plus a nod rolled the head sideways. **Fix:** `henWalker` solves the neck every frame as a stretchy link from a fixed shoulder base to an attach point at the back of the skull (length clamped 0.3-0.62 units), head rotation in 'YXZ' order (turn, then nod). Probe: head-to-neck-top 0.016 m in every act; rest/preen max step 3.2 cm per frame.
+- Source: numeric probe (head world position vs neck top, 30 fps, whole track).
