@@ -1,94 +1,98 @@
-# python3 sfx.py cues.json out.wav  - synthesized SFX bed, no music
-# cues.json: {"dur": 9.0, "tone": "room"|"night"|"none", "cues": [[t, "name", gain_db, {opts}], ...]}
-import json, sys, numpy as np, wave
+# python3 -I sfx.py cues.json out.wav
+# cues.json: {"dur": 45.0, "bed_db": -33, "cues": [[t_seconds, "name", gain_db], ...]}
+# Writes 48 kHz true-stereo 16-bit PCM with the wave module (no soundfile).
+import json, sys, wave
+import numpy as np
+
 SR = 48000
-rng = np.random.default_rng(1)
-def env(n, a=.005, r=.1):
-    t = np.arange(n) / SR; return np.minimum(1, t / max(a, 1e-4)) * np.exp(-t / max(r, 1e-4))
-def noise(d): return rng.standard_normal(int(SR * d))
-def lp(x, k=.05):
-    if np.ndim(k) == 0:
-        from scipy.signal import lfilter
-        return lfilter([k], [1, k - 1], x)
-    y = np.empty_like(x); acc = 0.
-    for i in range(len(x)): acc += k[i] * (x[i] - acc); y[i] = acc
-    return y
-def hp(x, k=.05): return x - lp(x, k)
-def tone(f, d, shape='sine'):
-    t = np.arange(int(SR * d)) / SR; ph = 2 * np.pi * np.cumsum(np.broadcast_to(f, t.shape) if np.ndim(f) else np.full(t.shape, f)) / SR
-    return np.sin(ph) if shape == 'sine' else np.sign(np.sin(ph)) * .5 if shape == 'square' else 2 * (ph / (2 * np.pi) % 1) - 1
-L = {}
-def sfx(fn): L[fn.__name__] = fn; return fn
-@sfx
-def pop(o): d = .12; f = np.linspace(900, 300, int(SR * d)); return tone(f, d) * env(int(SR * d), .002, .03)
-@sfx
-def tap(o): d = .05; return hp(noise(d), .3) * env(int(SR * d), .001, .008) * .8
-@sfx
-def tick(o): d = .03; return tone(2500, d) * env(int(SR * d), .0005, .004)
-@sfx
-def whoosh(o):
-    d = o.get('d', .45); n = int(SR * d); x = noise(d); t = np.linspace(0, 1, n)
-    return lp(x, .02 + .25 * np.sin(np.pi * t) ** 2) * np.sin(np.pi * t) ** 2 * 3
-@sfx
-def thud(o): d = .35; f = np.linspace(120, 45, int(SR * d)); return (tone(f, d) + .3 * lp(noise(d), .05)) * env(int(SR * d), .002, .09)
-@sfx
-def clink(o):
-    d = .9; n = int(SR * d); return sum(tone(f, d) * env(n, .001, r) * g for f, r, g in [(2350, .25, 1), (3720, .18, .6), (5310, .1, .4), (1180, .3, .3)]) * .5
-@sfx
-def ding(o): d = 1.2; n = int(SR * d); return (tone(1320, d) + .5 * tone(2640, d) + .2 * tone(3960, d)) * env(n, .002, .35) * .5
-@sfx
-def alarm(o):
-    d = o.get('d', 3); out = np.zeros(int(SR * d)); pat = [(1568, .09), (2093, .09), (1568, .09)]; t = 0.
-    while t < d - .4:
-        for f, ln in pat:
-            s = int(SR * t); seg = (tone(f, ln, 'square') * .6 + tone(f * 2, ln) * .2) * env(int(SR * ln), .003, .2)
-            out[s:s + len(seg)] += seg[:len(out) - s]; t += ln + .03
-        t += .35
-    return out * .7
-@sfx
-def buzz(o):
-    d = o.get('d', 1.5); n = int(SR * d); t = np.arange(n) / SR
-    g = ((t % .6) < .4).astype(float); return tone(160, d, 'saw') * lp(g, .01) * .4
-@sfx
-def snore(o):
-    d = o.get('d', 1.6); n = int(SR * d); t = np.linspace(0, 1, n)
-    am = (1 + np.sin(2 * np.pi * 38 * t * d)) / 2; return lp(noise(d), .04) * am * np.sin(np.pi * t) ** 1.5 * 2.2
-@sfx
-def gasp(o):
-    d = .35; n = int(SR * d); t = np.linspace(0, 1, n); return hp(lp(noise(d), .25), .02) * np.sin(np.pi * t) ** .6 * 1.4
-@sfx
-def boing(o):
-    d = .6; n = int(SR * d); t = np.arange(n) / SR; f = 220 + 90 * np.sin(2 * np.pi * 9 * t) * np.exp(-t * 4); return tone(f, d) * env(n, .003, .25)
-@sfx
-def riser(o):
-    d = o.get('d', 1.5); n = int(SR * d); f = np.geomspace(200, 1400, n); return tone(f, d) * np.linspace(0, 1, n) ** 2 * .35 + lp(noise(d), .1) * np.linspace(0, 1, n) ** 2 * .4
-@sfx
-def heartbeat(o):
-    d = o.get('d', 2); out = np.zeros(int(SR * d)); t = 0.
-    while t < d - .3:
-        for dt in (0, .18):
-            s = int(SR * (t + dt)); seg = thud({})[: int(SR * .25)] * (1 if dt == 0 else .7); out[s:s + len(seg)] += seg[:len(out) - s]
-        t += .8
-    return out
-@sfx
-def scratch(o):
-    d = .45; n = int(SR * d); t = np.linspace(0, 1, n); return hp(noise(d), .2) * np.abs(np.sin(2 * np.pi * 7 * t)) * (1 - t) * 1.2
-@sfx
-def sting(o):
-    d = 1.0; n = int(SR * d); f = np.linspace(330, 180, n); return (tone(f, d, 'saw') * .3 + tone(f / 2, d) * .4) * env(n, .01, .5)
-def bed(kind, d):
-    n = int(SR * d)
-    if kind == 'none': return np.zeros(n)
-    x = lp(noise(d), .008) * (2.5 if kind == 'room' else 3.5)
-    if kind == 'night':
-        t = np.arange(n) / SR; x += tone(4300, d) * (((t * 14) % 1) < .25) * ((t % 2.3) < .9) * .02
-    return x * .25
-def main():
-    cfg = json.load(open(sys.argv[1])); d = cfg['dur']; out = bed(cfg.get('tone', 'room'), d)
-    for c in cfg['cues']:
-        t, name, gdb = c[0], c[1], c[2] if len(c) > 2 else 0; o = c[3] if len(c) > 3 else {}
-        s = L[name](o) * 10 ** (gdb / 20); i = int(SR * t); out[i:i + len(s)] += s[:max(0, len(out) - i)]
-    out = out / max(1e-6, np.abs(out).max()) * .89
-    st = np.stack([out, out], 1); w = wave.open(sys.argv[2], 'wb'); w.setnchannels(2); w.setsampwidth(2); w.setframerate(SR)
-    w.writeframes((st * 32767).astype('<i2').tobytes()); w.close()
-main()
+rng = np.random.default_rng(7)
+
+
+def env(n, a, d):
+    t = np.arange(n) / SR
+    return np.minimum(t / a, 1.0) * np.exp(-t / d)
+
+
+def noise(n):
+    return rng.standard_normal(n)
+
+
+def lowpass(x, k):
+    kern = np.ones(k) / k
+    return np.convolve(x, kern, mode="same")
+
+
+def tone(n, f0, f1=None, d=0.2, a=0.002):
+    t = np.arange(n) / SR
+    f1 = f0 if f1 is None else f1
+    f = np.linspace(f0, f1, n)
+    ph = 2 * np.pi * np.cumsum(f) / SR
+    return np.sin(ph) * env(n, a, d)
+
+
+def synth(name):
+    if name == "tick":
+        n = int(0.03 * SR); return tone(n, 2400, d=0.008) * 0.6 + noise(n) * env(n, 0.001, 0.004) * 0.3
+    if name == "tap":
+        n = int(0.09 * SR); return tone(n, 700, 400, d=0.03) * 0.8 + noise(n) * env(n, 0.001, 0.01) * 0.4
+    if name == "thud":
+        n = int(0.4 * SR); return tone(n, 90, 40, d=0.12) * 1.0 + lowpass(noise(n), 40) * env(n, 0.002, 0.08) * 2
+    if name == "whoosh":
+        n = int(0.5 * SR); return lowpass(noise(n), 60) * env(n, 0.15, 0.18) * 6
+    if name == "boing":
+        n = int(0.6 * SR); return tone(n, 320, 140, d=0.25) * 0.8
+    if name == "gasp":
+        n = int(0.35 * SR); return lowpass(noise(n), 12) * env(n, 0.05, 0.12) * 4
+    if name == "buzz":
+        n = int(0.35 * SR); t = np.arange(n) / SR
+        return np.sign(np.sin(2 * np.pi * 170 * t)) * 0.25 * (0.6 + 0.4 * np.sin(2 * np.pi * 30 * t)) * env(n, 0.005, 0.2)
+    if name == "clink":
+        n = int(0.4 * SR); return (tone(n, 2600, d=0.12) + tone(n, 3900, d=0.08) * 0.6) * 0.6
+    if name == "ding":
+        n = int(1.2 * SR); return (tone(n, 1320, d=0.5) + tone(n, 2640, d=0.2) * 0.3) * 0.7
+    if name == "pop":
+        n = int(0.08 * SR); return tone(n, 520, 260, d=0.03)
+    if name == "scratch":
+        n = int(0.35 * SR); x = noise(n); x = np.diff(x, prepend=0); return x * env(n, 0.02, 0.2) * 1.2
+    if name == "sting":
+        n = int(0.9 * SR); return (tone(n, 392, d=0.5) + tone(n, 523, d=0.5) * 0.7 + tone(n, 659, d=0.5) * 0.5) * 0.45
+    if name == "sigh":
+        n = int(0.9 * SR); return lowpass(noise(n), 30) * env(n, 0.3, 0.3) * 1.5
+    if name == "heartbeat":
+        n = int(0.5 * SR); return tone(n, 60, d=0.06) * 0.9
+    raise SystemExit("unknown cue " + name)
+
+
+def bed(n, db):
+    x = lowpass(noise(n), 90)
+    x = x / (np.std(x) + 1e-9) * 10 ** (db / 20)
+    return x
+
+
+def main(cues_path, out):
+    spec = json.load(open(cues_path))
+    dur = float(spec["dur"])
+    n = int(round(dur * SR))
+    L = bed(n, float(spec.get("bed_db", -33)))
+    R = bed(n, float(spec.get("bed_db", -33))) * 0.97
+    for c in spec["cues"]:
+        t, name, gain = c[0], c[1], c[2] if len(c) > 2 else 0.0
+        s = synth(name) * 10 ** (gain / 20)
+        i = int(round(t * SR))
+        if i >= n:
+            continue
+        m = min(len(s), n - i)
+        pan = 0.5 + 0.2 * np.sin(t)  # slight stereo spread so cues sit in space
+        L[i:i + m] += s[:m] * (1 - pan) * 1.4
+        R[i:i + m] += s[:m] * pan * 1.4
+    stereo = np.stack([L, R], axis=1)
+    peak = np.max(np.abs(stereo)) + 1e-9
+    stereo = stereo / peak * 0.8
+    pcm = (np.clip(stereo, -1, 1) * 32767).astype("<i2").tobytes()
+    with wave.open(out, "wb") as w:
+        w.setnchannels(2); w.setsampwidth(2); w.setframerate(SR); w.writeframes(pcm)
+    print("wrote", out, round(dur, 2), "s")
+
+
+if __name__ == "__main__":
+    main(sys.argv[1], sys.argv[2])

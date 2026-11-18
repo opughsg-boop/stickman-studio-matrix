@@ -1,29 +1,53 @@
-// node render.js scene.html out_dir [fps=30] [workers=3]      -> out_dir/00000.jpg ...
-// node render.js scene.html out_dir --stills 1,4.5,9            -> out_dir/s1.png ... (for checking)
-const { chromium } = require('playwright');
-const path = require('path'), fs = require('fs');
+// node render.js <scene.html> <out_dir> [fps=30] [workers=4]          -> out_dir/00000.jpg ...
+// node render.js <scene.html> <out_dir> --stills 1.5,9,40            -> out_dir/s_<t>.png (contact-sheet checks)
+// Offline: loads a local file with inline script only, no network, proxy disabled.
+const path = require('path');
+const fs = require('fs');
+const { chromium } = require(require.resolve('playwright', { paths: [path.join(__dirname, '..', '..')] }));
+
+const [, , scenePath, outDir, ...rest] = process.argv;
+if (!scenePath || !outDir) { console.error('usage: node render.js scene.html out_dir [fps] [workers] | --stills t1,t2'); process.exit(1); }
+fs.mkdirSync(outDir, { recursive: true });
+const url = 'file://' + path.resolve(scenePath);
+const launch = () => chromium.launch({
+  executablePath: '/opt/pw-browsers/chromium',
+  args: ['--no-sandbox', '--no-proxy-server', '--disable-gpu', '--font-render-hinting=none'],
+});
+
+async function openPage(browser) {
+  const page = await browser.newPage({ viewport: { width: 1080, height: 1920 }, deviceScaleFactor: 1 });
+  await page.goto(url, { waitUntil: 'load' });
+  return page;
+}
+
 (async () => {
-  const [, , html, out, a3, a4] = process.argv;
-  fs.mkdirSync(out, { recursive: true });
-  const stills = a3 === '--stills' ? a4.split(',').map(Number) : null;
-  const fps = stills ? 30 : (+a3 || 30), workers = stills ? 1 : (+a4 || 3);
-  const b = await chromium.launch();
-  const open = async () => {
-    const p = await b.newPage({ viewport: { width: 1080, height: 1920 }, deviceScaleFactor: 1 });
-    await p.goto('file://' + path.resolve(html));
-    await p.evaluate(() => document.fonts.ready); await p.waitForTimeout(300);
-    return p;
-  };
-  const shot = async (p, t, file, png) => {
-    await p.evaluate(t => render(t), t);
-    await (await p.$('#stage')).screenshot({ path: file, ...(png ? {} : { type: 'jpeg', quality: 92 }) });
-  };
-  if (stills) { const p = await open(); for (const t of stills) await shot(p, t, `${out}/s${String(t).replace('.', '_')}.png`, 1); await b.close(); return; }
-  const p0 = await open(); const n = Math.round(await p0.evaluate(() => window.DUR) * fps); await p0.close();
-  let done = 0;
-  await Promise.all([...Array(workers)].map(async (_, w) => {
-    const p = await open();
-    for (let i = w; i < n; i += workers) { await shot(p, i / fps, `${out}/${String(i).padStart(5, '0')}.jpg`); if (++done % 90 === 0) process.stdout.write(`${done}/${n} `); }
+  const browser = await launch();
+  if (rest[0] === '--stills') {
+    const page = await openPage(browser);
+    const times = (rest[1] || '0').split(',').map(Number);
+    for (const t of times) {
+      await page.evaluate(tt => window.renderAt(tt), t);
+      await page.locator('canvas').screenshot({ path: path.join(outDir, `s_${t}.png`) });
+    }
+    console.log('stills', times.length);
+    await browser.close();
+    return;
+  }
+  const fps = Number(rest[0] || 30);
+  const workers = Number(rest[1] || 4);
+  const dur = await (async () => { const p = await openPage(browser); const d = await p.evaluate(() => window.DUR); await p.close(); return d; })();
+  const total = Math.round(dur * fps);
+  const pages = await Promise.all(Array.from({ length: workers }, () => openPage(browser)));
+  let next = 0;
+  await Promise.all(pages.map(async page => {
+    while (true) {
+      const i = next++;
+      if (i >= total) break;
+      const t = i / fps;
+      const b64 = await page.evaluate(tt => { window.renderAt(tt); return window.canvas.toDataURL('image/jpeg', 0.94); }, t);
+      fs.writeFileSync(path.join(outDir, String(i).padStart(5, '0') + '.jpg'), Buffer.from(b64.split(',')[1], 'base64'));
+    }
   }));
-  await b.close(); console.log(`done ${n} frames`);
-})();
+  console.log('frames', total, 'duration', dur);
+  await browser.close();
+})().catch(e => { console.error(e); process.exit(1); });
