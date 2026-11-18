@@ -37,7 +37,7 @@
  {
   "code": "too_bright",
   "rule": "Avoid white objects filling the frame; lower exposure or change angle.",
-  "count": 3,
+  "count": 4,
   "last_seen": "2026-11-18",
   "example": "beat 11 washed out (luma 214)"
  },
