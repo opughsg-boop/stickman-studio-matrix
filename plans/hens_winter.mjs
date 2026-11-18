@@ -84,36 +84,42 @@ const timer = { id: 'timer', type: 'coop_timer', pos: [TIMER[0], TIMER[1], ZW], 
 
 const beats = [
   // 1 hook: the dim coop, a hen standing away from the empty nest boxes; circle ring around them
-  { t: 0, kind: 'intro', add: [...world, hen, { ...farmer, delay: 13.2 }, lamp, timer, stk('ringN', 'circle_ring', [NEST[0], NEST_TOP - .12, NEST[1] + .25], .82, { delay: .35 })],
+  { t: 0, kind: 'intro', add: [...world, hen, { ...farmer, delay: 13.2 }, lamp, timer, stk('ringN', 'circle_ring', [NEST[0], NEST_TOP - .12, NEST[1] + .25], .82, { delay: .35 }),
+    stk('qHen', 'question', [.22, .66, -1.3], .2, { delay: 1.0 })],   // she looks at the empty nest, then a question mark over her head
     camera: { target: [-.3, .32, -1.7], dist: 3.4, elev: .12, az: .25, zoom: 'in' } },
   // 2 because a hen needs about 14 h of light: the sun climbs its long, high summer arc behind the coop, the hen walks out into the yard
-  { t: T.l1, kind: 'info', remove: ['ringN'], camera: { target: [.3, 1.6, -13.5], dist: 20, elev: .096, az: .015, fov: 46, spin: .02, push: -.1 } },   // over the roof: hen in the yard below, arc above
+  { t: T.l1, kind: 'info', remove: ['ringN', 'qHen'], add: [stk('upS', 'arrow_curve_up', [-2.7, 5.4, -13.5], 1.5, { delay: .4 })],   // NEW: curved up-arrow riding the sun's climb
+    camera: { target: [.3, 1.6, -13.5], dist: 20, elev: .096, az: .015, fov: 46, spin: .02, push: -.1 } },   // over the roof: hen in the yard below, arc above
   //   ... hours of light: low close on the hen pecking in full sunlight
-  { t: T.hours2, kind: 'info', camera: { target: [1.1, .12, .42], dist: 1.55, elev: .16, az: -.2, fov: 40, zoom: 'in' } },
+  { t: T.hours2, kind: 'info', remove: ['upS'], add: [stk('hgS', 'hourglass', [1.0, .62, .36], .18, { delay: .3 })],   // NEW: hourglass over the pecking hen = hours of light
+    camera: { target: [1.1, .12, .42], dist: 1.55, elev: .16, az: -.2, fov: 40, zoom: 'in' } },
   //   ... to keep laying: an egg pops into the straw cup, the hen heads back in
-  { t: T.lay2, kind: 'info', add: [stk('spark', 'sparkles', [NEST[0] + .18, NEST_TOP + .15, NEST[1] + .2], .2, { delay: .3 })],
+  { t: T.lay2, kind: 'info', remove: ['hgS'], add: [stk('spark', 'sparkles', [NEST[0] + .18, NEST_TOP + .15, NEST[1] + .2], .2, { delay: .3 })],
     camera: { target: [-.62, .55, -2.1], dist: 1.6, elev: .16, az: .32, zoom: 'out' } },
   // 3 but in winter the day is short: the summer arc fades to a ghost, the sun runs a short, low arc; cross by it
-  { t: T.l2, kind: 'problem', remove: ['spark'],
+  { t: T.l2, kind: 'problem', remove: ['spark'], add: [stk('dnS', 'arrow_down', [-.3, 7.4, -14], 1.3, { delay: 1.2, pulse: true })],   // NEW: down-arrow between the ghost summer peak and the low winter peak
     camera: { target: [-.3, 1.2, -14], dist: 20, elev: .09, az: -.025, fov: 46, spin: -.02, push: .1 } },
   //   ... and the coop goes dim: inside, the hen in the shade, the bright doorway behind
-  { t: T.dark3, kind: 'problem', camera: { target: [-.1, .8, -1.8], dist: 2.9, elev: .1, az: -.38, fov: 40, zoom: 'in' } },
+  { t: T.dark3, kind: 'problem', remove: ['dnS'], add: [stk('eyeH', 'eyes', [-.15, .66, -1.74], .2, { delay: .3 })],   // NEW: eyes over the hen peering in the dim coop
+    camera: { target: [-.1, .8, -1.8], dist: 2.9, elev: .1, az: -.38, fov: 40, zoom: 'in' } },
   // 4 so the hen stops laying: the empty nest, cross over it
-  { t: T.l3, kind: 'info', add: [stk('xNest', 'cross', [NEST[0], NEST_TOP + .2, NEST[1] + .15], .3, { delay: .3, pulse: true })],
+  { t: T.l3, kind: 'info', remove: ['eyeH'], add: [stk('xNest', 'cross', [NEST[0], NEST_TOP + .2, NEST[1] + .15], .3, { delay: .3, pulse: true })],
     camera: { target: [-.55, .52, -2.0], dist: 1.75, elev: .2, az: .35, zoom: 'out' } },
   //   ... and goes into a rest period: she sits down, fluffs up and preens
-  { t: T.rest4, kind: 'info', remove: ['xNest'], camera: { target: [-.25, .06, -1.72], dist: 1.35, elev: .2, az: -.3, zoom: 'in' } },
+  { t: T.rest4, kind: 'info', remove: ['xNest'], add: [stk('hgR', 'hourglass', [-.25, .46, -1.66], .17, { delay: .9 })],   // NEW: hourglass over the sitting hen = a rest period
+    camera: { target: [-.25, .06, -1.72], dist: 1.35, elev: .2, az: -.3, zoom: 'in' } },
   // 5 the fix is simple: the farmer walks in through the doorway with a lamp and a timer; check
-  { t: T.l4, kind: 'solution',
+  { t: T.l4, kind: 'solution', remove: ['hgR'], add: [stk('ideaF', 'idea', [1.55, 2.12, -1.5], .3, { delay: .15 })],   // NEW: light-bulb idea over the farmer as he steps through the doorway
     camera: { target: [.85, 1.0, -1.55], dist: 3.7, elev: .1, az: -.42, zoom: 'out' } },
   //   a small lamp: mounted on the wall, the timer plugged in below it (point-down over the timer), the lamp lights
-  { t: T.lamp5, kind: 'solution', add: [stk('ptT', 'point_down', [TIMER[0] + .02, TIMER[1] + .2, ZW + .12], .16, { delay: T.timer5 - T.lamp5 })],
+  { t: T.lamp5, kind: 'solution', remove: ['ideaF'], add: [stk('ptT', 'point_down', [TIMER[0] + .02, TIMER[1] + .2, ZW + .12], .16, { delay: T.timer5 - T.lamp5 })],
     camera: { target: [.3, 1.45, -2.3], dist: 2.2, elev: .04, az: .5, zoom: 'in' } },
   //   ... morning and evening: from outside, the sun low on the left at dawn and low on the right at dusk, the lamp glowing both times
-  { t: T.morn5, kind: 'solution', remove: ['ptT'], camera: { target: [0, 1.3, -13.8], dist: 20, elev: .075, az: .02, fov: 46, spin: .015, push: -.08 } },
+  { t: T.morn5, kind: 'solution', remove: ['ptT'], add: [stk('clkS', 'alarm_clock', [0, 4.6, -13.8], 1.1, { delay: .3 })],   // NEW: alarm clock over the roof = the timer firing at dawn and dusk
+    camera: { target: [0, 1.3, -13.8], dist: 20, elev: .075, az: .02, fov: 46, spin: .015, push: -.08 } },
   //   ... so the coop stays lit: the hen walks out of the dim corner into the lamp's warm pool and pecks there; sparkles by the glowing bulb;
   //   camera tilted up so the lit lamp (top) and the hen in its light (bottom) share the frame
-  { t: T.lit5, kind: 'solution', add: [stk('sparkL', 'sparkles', [LAMP[0] + .2, LAMP[1] + .08, ZW + .16], .2, { delay: .25 })],
+  { t: T.lit5, kind: 'solution', remove: ['clkS'], add: [stk('sparkL', 'sparkles', [LAMP[0] + .2, LAMP[1] + .08, ZW + .16], .2, { delay: .25 })],
     camera: { target: [-.1, 1.0, -1.9], dist: 2.6, elev: .05, az: -.2, fov: 40, push: .12 } },
   // 6 careful: close on the timer, his hand turns the pinned dial; circle ring on the dial
   { t: T.l5, kind: 'info', remove: ['sparkL'], add: [stk('ringD', 'circle_ring', [TIMER[0], TIMER[1] - .008, ZW + .1], .13, { delay: .3 })],
