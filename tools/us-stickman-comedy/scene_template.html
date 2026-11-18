@@ -1,0 +1,33 @@
+<!doctype html><html><head><meta charset="utf-8">
+<link rel="stylesheet" href="node_modules/@fontsource/alexandria/800.css"><link rel="stylesheet" href="node_modules/@fontsource/alexandria/900.css">
+<style>
+html,body{margin:0;background:#000}
+#stage{position:relative;width:1080px;height:1920px;overflow:hidden;background:#0b0d12}
+#svg{position:absolute;inset:0}
+#label{position:absolute;top:150px;left:50%;transform:translateX(-50%);direction:rtl;font-family:Alexandria;font-weight:800;font-size:64px;line-height:1;color:#fff;background:#0d0d0d;padding:26px 40px 30px;border-radius:26px;white-space:nowrap;box-shadow:0 6px 20px rgba(0,0,0,.35)}
+#label:empty{display:none}
+</style></head><body>
+<div id="stage"><svg id="svg" width="1080" height="1920" viewBox="0 0 1080 1920"></svg><div id="label"></div></div>
+<script src="stick.js"></script>
+<script>
+// ---- SETS: one function per location, world coords, returns SVG ----
+function bedroom(o = {}) { return `...`; }
+// ---- SHOTS: [start, end, label, (lt, t) => ({ world, light, cam })] ----
+const SHOTS = [
+  [0, 3.0, 'قبل النوم بـ 5 دقايق', (lt) => {
+    const c = camLerp({ x: 560, y: 980, z: 1.3 }, { x: 560, y: 1000, z: 1.45 }, span(lt, 0, 3, lin)); // slow push-in
+    const guy = stick({ ...P.phone(lt), x: 560, y: 1150, s: 1.15, dir: -1, lean: -14, face: { mouth: 'smile' }, acc: { cap: '#c8231f' }, hidden: { legs: 1 } });
+    const prop = phone(...stick.last.handL, 15);
+    return { world: bedroom() + guy + prop + blanket(1150), light: light(...stick.last.handL, 900, '#4aa3ff', .7, .5, 'p'), cam: c };
+  }],
+  // ...
+];
+const DUR = 9.0;
+function render(t) {
+  const sh = SHOTS.find(s => t >= s[0] && t < s[1]) || SHOTS[SHOTS.length - 1];
+  const lt = t - sh[0], r = sh[3](lt, t);
+  document.getElementById('svg').innerHTML = defs(Math.floor(t * 30) % 97) + cam(r.cam, r.world + paintTex() + (r.light || '')) + finish();
+  document.getElementById('label').textContent = sh[2] || '';
+}
+window.DUR = DUR; render(0);
+</script></body></html>
