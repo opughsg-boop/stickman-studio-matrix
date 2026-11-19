@@ -257,3 +257,8 @@ Rule: when a preview or final video shows a mistake, add one entry here (what wa
 - **Mistake:** a sun arc sized for a 20 m sky camera (peak 8.5 m at 40 m) left the frame from a 1 m tray camera. **Fix:** peak 6.2, span 5.5; LINK.sun is in the sun group's LOCAL frame (add the group pos before projecting).
 - Works: hen hop with crouch and wing beats; a nest box needs h .40 for a 0.45 m hen (her head hit the .32 roof); eggs ride the gard_hand palm (`anchor:'palm'`), contact 2 mm by probe.
 - Source: runs/hen_laying/sheet_preview.jpg plus the NDC/contact probe.
+
+## Hen laying (final 2026-11-19, score 58)
+- **Mistake (repeated from olive cutting):** the hand looked like a plastic toy: smooth fingers, no knuckle or nail detail, a flat palm that did not curve around the egg. **Fix for next videos:** build the hand with visible knuckles, nails and skin folds, and check the egg-in-palm contact by probe before any render. Do not call the hand "realistic" until it is checked on a close frame.
+- **Mistake:** 8 dead beats in a 14-beat plan. **Fix:** a new camera or a new subject state in each beat; merge the rest.
+- **Mistake:** the review step crashed on a broken `memory/lessons.json` left by a merge (duplicate keys). **Fix:** after any merge, run `python3 -m json.tool` on every memory JSON file before rendering.
