@@ -1020,7 +1020,7 @@ Object.assign(ASSETS, { ant_farm: antFarm, clock24, film_cam: filmCam, sleeper }
 // modes on the object may switch the clip: modes: { cow: { clip: 'Walk' } }
 const GLB = {};
 async function preloadGLB(p) {
-  const names = new Set(); for (const b of p.beats || []) for (const a of b.add || []) { if (a.type === 'glb') names.add(a.params.model); if (a.params?.rider) names.add(a.params.rider); if (a.type === 'raker') names.add(a.params?.man || 'modular_men/Worker'); if (a.type === 'roof_person') names.add(a.params?.model || 'modular_men/Casual'); if (a.type === 'buffalo') names.add('animals_pack/Bull'); if (a.type === 'fellah') names.add('modular_men/Farmer'); if (a.type === 'carpenter') names.add(a.params?.model || 'modular_men/Worker'); if (a.type === 'rig_person') names.add(a.params?.model || 'modular_men/Casual'); if (a.params?.hanger) names.add(a.params.hanger.model || 'modular_women/Casual'); }
+  const names = new Set(); for (const b of p.beats || []) for (const a of b.add || []) { if (a.type === 'glb') names.add(a.params.model); if (a.params?.rider) names.add(a.params.rider); if (a.type === 'raker') names.add(a.params?.man || 'modular_men/Worker'); if (a.type === 'roof_person') names.add(a.params?.model || 'modular_men/Casual'); if (a.type === 'buffalo') names.add(a.params?.model || 'animals_pack/Bull'); if (a.type === 'fellah') names.add('modular_men/Farmer'); if (a.type === 'carpenter') names.add(a.params?.model || 'modular_men/Worker'); if (a.type === 'rig_person') names.add(a.params?.model || 'modular_men/Casual'); if (a.params?.hanger) names.add(a.params.hanger.model || 'modular_women/Casual'); }
   const l = new GLTFLoader();
   await Promise.all([...names].map(async n => { GLB[n] = await l.loadAsync(n.startsWith('ph/') ? `/assets/${n}/${n.slice(3)}.gltf` : n.startsWith('models/') ? `/assets/${n}.glb` : `/assets/lib/${n}.glb`); }));
   // 3D-sky (realistic) plans: smooth the low-poly animal meshes so facets do not show as flat triangles.
@@ -2042,14 +2042,16 @@ function hornGeo(side) { const P = [[.06, .09, -.02], [.16, .125, -.08], [.25, .
   const g2 = new THREE.BufferGeometry(); g2.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g2.setAttribute('color', new THREE.Float32BufferAttribute(colr, 3)); g2.setIndex(idx); g2.computeVertexNormals(); return g2; }
 
 function buffaloA(p = {}) {
-  const g = new THREE.Group(), src = GLB['animals_pack/Bull']; if (!src) return g;
+  // p.model (e.g. 'animals_pack/Cow') = a plain library animal on the same walker: its own colours, no buffalo reshaping, no extra horns
+  const MODEL = p.model || 'animals_pack/Bull', plain = MODEL !== 'animals_pack/Bull';
+  const g = new THREE.Group(), src = GLB[MODEL]; if (!src) return g;
   const H = p.height || 1.65, o = skClone(src.scene); o.updateMatrixWorld(true);
   const bb = new THREE.Box3().setFromObject(o, true), s = H / (bb.max.y - bb.min.y);
   o.scale.setScalar(s); o.position.set(-(bb.min.x + bb.max.x) / 2 * s, -bb.min.y * s, -(bb.min.z + bb.max.z) / 2 * s);
   const mover = new THREE.Group(), roller = new THREE.Group(), shape = new THREE.Group(); g.add(mover); mover.add(roller); roller.position.y = .8; roller.add(shape); shape.position.y = -.8; shape.add(o);
-  shape.scale.set(1.14, .97, 1.05); // buffalo: wider barrel, a little lower, longer than the bull
+  if (!plain) shape.scale.set(1.14, .97, 1.05); // buffalo: wider barrel, a little lower, longer than the bull
   const U = { uWet: { value: 0 }, uMud: { value: 0 }, uMudDry: { value: 0 }, uDust: { value: .6 }, uBaseY: { value: 0 }, uH: { value: H } };
-  o.traverse(m => { if (!m.isMesh) return; m.frustumCulled = false; m.castShadow = m.receiveShadow = true; m.geometry.computeBoundingBox();
+  o.traverse(m => { if (!m.isMesh) return; m.frustumCulled = false; m.castShadow = m.receiveShadow = true; m.geometry.computeBoundingBox(); if (plain) return;
     const k = 1 / Math.max(1e-4, m.geometry.boundingBox.max.y - m.geometry.boundingBox.min.y);
     m.material = [].concat(m.material).map(mt => { const c = mt.clone(), n = mt.name || '';
       if (/Horn/.test(n)) { c.visible = false; return c; }
@@ -2057,19 +2059,20 @@ function buffaloA(p = {}) {
       if (/Main|Muzzle/.test(n)) hideShader(c, U, k); return c; });
     if (m.material.length === 1) m.material = m.material[0]; });
   const hornM = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .5, metalness: 0 }), horns = new THREE.Group(); g.add(horns);
-  for (const sd of [1, -1]) { const hm = new THREE.Mesh(hornGeo(sd), hornM); hm.castShadow = true; horns.add(hm); }
+  if (!plain) for (const sd of [1, -1]) { const hm = new THREE.Mesh(hornGeo(sd), hornM); hm.castShadow = true; horns.add(hm); }
   // animation: every clip plays, weights and times are set from t each frame (stateless, so any frame renders alone)
   const mixer = new THREE.AnimationMixer(o), acts = {};
   for (const c of src.animations) { const a = mixer.clipAction(c); a.play(); a.setEffectiveWeight(0); acts[c.name.replace(/^.*\|/, '')] = a; }
   const B = n => o.getObjectByName(n), bones = { neck: B('Neck1'), head: B('Head'), headEnd: B('Head_end'), t2: B('Torso2'), t3: B('Torso3'), torso: B('Torso'), tail: [1, 2, 3, 4, 5, 6, 7].map(i => B('Tail' + i)) };
   const tweak = [bones.neck, bones.head, ...bones.tail].filter(Boolean), restQ = tweak.map(b => b.quaternion.clone());
   // walk speed of the clip (m per clip second), measured from the planted front hoof, so the gait matches the ground speed (no sliding)
-  let vClip = .95; const foot = B('FrontLowerLegL_end');
+  let vClip = .95; const foot = B('FrontLowerLegL_end') || B('FFL');
   if (acts.Walk && foot) { const T = acts.Walk.getClip().duration, P = []; acts.Walk.setEffectiveWeight(1);
     for (let i = 0; i <= 48; i++) { acts.Walk.time = i / 48 * T; mixer.update(0); g.updateMatrixWorld(true); foot.getWorldPosition(_v1); P.push([_v1.y, _v1.z]); }
     acts.Walk.setEffectiveWeight(0); const ym = Math.min(...P.map(q => q[0])), vs = [];
     for (let i = 1; i <= 48; i++) if (P[i][0] < ym + .02 * H && P[i - 1][0] < ym + .02 * H) vs.push(-(P[i][1] - P[i - 1][1]) / (T / 48));
     vs.sort((a, b2) => a - b2); if (vs.length > 3 && vs[vs.length >> 1] > .2) vClip = vs[vs.length >> 1]; console.warn('buffalo walk clip ground speed', vClip.toFixed(3)); }
+  const LK = plain || p.tongue ? lickRig(g, o, mixer, acts, B, p) : null;
   const TR = makeTrack(p.track || [[0, 0, 0, 0, 0]]), gH = groundOf(p), waters = p.waters || [], muds = p.muds || [];
   const regionAt = (x, z) => { for (const w of waters) if (x > w.box[0] && x < w.box[1] && z > w.box[2] && z < w.box[3]) return { y: w.y, mud: false };
     for (const m of muds) if (((x - m.c[0]) / m.r[0]) ** 2 + ((z - m.c[1]) / m.r[1]) ** 2 < 1) return { y: m.y, mud: true }; return null; };
@@ -2115,6 +2118,7 @@ function buffaloA(p = {}) {
     const amp = lerp(.1, .55, swish), fq = lerp(.3, 1.35, swish);
     bones.tail.forEach((b, k) => { bendBone(b, up, amp * .32 * Math.sin(Math.PI * 2 * fq * t - k * .55)); bendBone(b, lat, .04 * Math.sin(Math.PI * 2 * fq * t * .5 - k * .4)); });
     g.updateMatrixWorld(true);
+    if (LK) LK(t, mo, pm, ma, val, lat, up);
     // horns follow the head bone
     if (bones.head && bones.headEnd) { bones.head.getWorldPosition(hp); bones.headEnd.getWorldPosition(he); const F = he.sub(hp).normalize(), Lw = _v2.set(1, 0, 0).applyQuaternion(roller.getWorldQuaternion(_q1)).normalize();
       const Y = new THREE.Vector3().crossVectors(F, Lw).normalize(), X = new THREE.Vector3().crossVectors(Y, F).normalize(); _m4.makeBasis(X, Y, F); horns.quaternion.setFromRotationMatrix(_m4); horns.position.copy(hp); horns.scale.setScalar(p.hornScale ?? 1.35); }
@@ -2424,7 +2428,7 @@ function finTex() { return SPR.acFin ||= canvasT(64, 64, (c, w, h) => { c.fillSt
 // ---- rig: bone poses for static Quaternius people. Channels are angles about the person's own axes (x right... facing +z):
 // adL/adR arm lowered from the T-pose, fL/fR arm swung forward (0 = hanging), eL/eR elbows, sp/tw torso lean/twist, hd/ht head nod/turn,
 // hL/hR hip flexion, kL/kR knees, oL/oR legs out to the side. Arm and leg angles are measured from the person's vertical, not the torso.
-const RIG0 = { adL: 1.3, adR: 1.3, fL: .05, fR: .05, eL: .15, eR: .15, sp: 0, tw: 0, hd: 0, ht: 0, hL: 0, hR: 0, kL: 0, kR: 0, oL: 0, oR: 0 };
+const RIG0 = { adL: 1.3, adR: 1.3, fL: .05, fR: .05, eL: .15, eR: .15, sp: 0, tw: 0, hd: 0, ht: 0, hL: 0, hR: 0, kL: 0, kR: 0, oL: 0, oR: 0, hold: 0 }; // hold 1 = both hands carry something (no arm swing)
 const RIG_POSES = {
   stand: {}, walk: { sp: .04, eL: .35, eR: .35 }, run: { sp: .24, eL: 1.45, eR: 1.45, hd: -.1 },
   look: { sp: .22, ht: .75, hd: .05, fL: .35, fR: .35, eL: .9, eR: .9 },                       // leaning on a sill, looking to the left
@@ -2477,7 +2481,7 @@ function rigTrack(keys) { const K = keys.map(k => ({ t: k[0], p: new THREE.Vecto
 function gaitAdd(P, st, t) { const G = GAIT[st.gait]; let bob = 0; if (!G) return bob; const a = clamp(st.speed / G.v), ph = st.dist / G.stride * Math.PI * 2, s = Math.sin(ph), c = Math.cos(ph);
   if (st.gait === 'shuffle') { P.oL += G.abd * Math.max(0, s) * a; P.oR += G.abd * Math.max(0, -s) * a; P.hL += .08 * Math.max(0, s) * a; P.hR += .08 * Math.max(0, -s) * a; return G.bob * Math.abs(c) * a; }
   P.hL += G.hip * s * a; P.hR -= G.hip * s * a; P.kL += (st.gait === 'run' ? .25 : .1) * a + G.knee * Math.max(0, c) * a; P.kR += (st.gait === 'run' ? .25 : .1) * a + G.knee * Math.max(0, -c) * a;
-  P.fL -= G.arm * s * a; P.fR += G.arm * s * a; P.tw += .08 * s * a; bob = G.bob * Math.abs(c) * a; return bob; }
+  P.fL -= G.arm * s * a * (1 - P.hold); P.fR += G.arm * s * a * (1 - P.hold); P.tw += .08 * s * a; bob = G.bob * Math.abs(c) * a; return bob; }
 function rigPerson(p = {}) { const g = new THREE.Group(), mover = new THREE.Group(); g.add(mover);
   const rig = makeRig(p.model || 'modular_men/Casual', p.height || 1.75); mover.add(rig.w); const csh = p.shadow === false ? null : contactShadow(.3, .3, .32); if (csh) g.add(csh);
   const TR = rigTrack(p.track || [[0, 0, 0, 0, 0, p.pose || 'stand']]), ph = (p.seed || 1) * .37;
@@ -2486,6 +2490,8 @@ function rigPerson(p = {}) { const g = new THREE.Group(), mover = new THREE.Grou
     if (P.shake) { P.fR += .07 * Math.sin(t * 21) * P.shake; P.eR += .05 * Math.sin(t * 21 + 1) * P.shake; P.sp += .02 * Math.sin(t * 21) * P.shake; }
     const bob = gaitAdd(P, st, t); mover.position.set(st.pos.x, st.pos.y + bob, st.pos.z); mover.rotation.y = st.yaw;
     mover.rotation.z = st.gait === 'shuffle' ? .03 * Math.sin(st.dist / .5 * Math.PI * 2) : 0; rig.apply(P);
+    if (p.link) { rig.w.updateWorldMatrix(true, true); const pa = s => { const h = rig.w.getObjectByName('Hand' + s), m = rig.w.getObjectByName('Middle2' + s); return h ? h.getWorldPosition(new THREE.Vector3()).lerp(m ? m.getWorldPosition(new THREE.Vector3()) : h.getWorldPosition(new THREE.Vector3()), .5) : null; };
+      LINK[p.link] = { L: pa('L'), R: pa('R'), yaw: st.yaw, pos: st.pos.clone() }; } // palms for props carried between the hands (salt block)
     if (csh) { csh.position.set(st.pos.x, st.pos.y + .015, st.pos.z); csh.visible = !p.noShadowAbove || st.pos.y < p.noShadowAbove; } };
   return g; }
 
@@ -2853,3 +2859,601 @@ function stoneWall(p = {}) { const W = p.w || 8, H = p.h || 2.4, r = rng(159);
   const m = new THREE.Mesh(new THREE.BoxGeometry(W, H, .4), new THREE.MeshStandardMaterial({ map: tex, roughness: .9 })); m.position.y = H / 2; return shadowed(m); }
 window.__rigPoses = RIG_POSES; // debug hook: pose tuning probes
 Object.assign(ASSETS, { shop_floor: shopFloor, workbench, plank, nail_split: nailSplit, carpenter, mt_joint: mtJoint, bed_frame: bedFrame, lashed_hull: lashedHull, stone_wall: stoneWall });
+
+// ================= Salt lick pack (2026-11-17, plans/salt_cow.mjs) =================
+// Why a cow licks a salt block. Motion step-up: the library cow walks on the buffalo walker (distance-synced Walk, eased stops with a
+// settle bounce), its neck reaches the lick point (iterative 2-bone reach), and a tongue licks it in a steady rhythm (LICK_P). Each lick
+// knocks salt flakes off (stateless ballistic flakes that settle and fade) and the block wears a smooth hollow and shrinks over time.
+// Graphics/realism: rock-salt block (rounded, crystalline pale pink with veins and glints) on a wooden tray, a mud-brick pen wall with
+// white salt efflorescence and a licked wet patch, a concrete water trough with ripples, a timber pen fence with real grain, a hay pile.
+const LICK_P = .9; // seconds per lick; tongue contact at (k + .5) * LICK_P, shared by the cow and the licked object (stateless sync)
+const fr01 = x => x - Math.floor(x), hr = (a, b = 0) => fr01(Math.sin(a * 127.1 + b * 311.7) * 43758.5453);
+function lickEvents(licks, t, win) { const ev = []; for (const [a, b] of licks || []) { const k0 = Math.ceil(Math.max(a, t - win) / LICK_P - .5), k1 = Math.floor(Math.min(b, t) / LICK_P - .5); for (let k = k0; k <= k1; k++) ev.push(k); } return ev; }
+function glintTex() { return SPR.glint ||= canvasT(64, 64, (c, w) => { const g2 = c.createRadialGradient(32, 32, 0, 32, 32, 32); g2.addColorStop(0, 'rgba(255,255,255,1)'); g2.addColorStop(.18, 'rgba(255,255,255,.55)'); g2.addColorStop(1, 'rgba(255,255,255,0)');
+  c.fillStyle = g2; c.fillRect(0, 0, 64, 64); c.strokeStyle = 'rgba(255,255,255,.9)'; c.lineWidth = 1.6; c.beginPath(); c.moveTo(32, 2); c.lineTo(32, 62); c.moveTo(2, 32); c.lineTo(62, 32); c.stroke(); }); }
+function glints(g, n, spots, size = .04) { const list = []; for (let i = 0; i < n; i++) { const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: glintTex(), color: 0xffffff, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, fog: false }));
+    g.add(sp); list.push({ sp, i, ph: hr(i, 3) * 6.28, w: 1.5 + hr(i, 4) * 2.5, s: size * (.6 + hr(i, 5) * .8) }); }
+  return (t, gain = 1) => list.forEach(o => { const p = spots(o.i); o.sp.position.copy(p); const k = Math.pow(Math.max(0, Math.sin(t * o.w + o.ph)), 10) * gain; o.sp.material.opacity = k; o.sp.scale.setScalar(o.s * (.4 + .6 * k)); o.sp.material.rotation = t * .6 + o.ph; }); }
+// salt flakes knocked off by each lick: spot (local Vector3), kick (local direction they are scraped toward), floor y (local)
+function flakeSystem(g, n, cols) { const im = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: .3 }), n); im.frustumCulled = false; im.castShadow = false;
+  for (let i = 0; i < n; i++) im.setColorAt(i, col(cols[i % cols.length])); g.add(im); const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), S = new THREE.Vector3(), P = new THREE.Vector3(), E = new THREE.Euler(), Z = new THREE.Matrix4().makeScale(0, 0, 0);
+  return (t, licks, spot, kick, floorY, per = 6, life = 3.4) => { let j = 0;
+    for (const k of lickEvents(licks, t, life)) { const age = t - (k + .5) * LICK_P; for (let q = 0; q < per && j < n; q++, j++) {
+      const a = hr(k, q), b = hr(q, k + 9), c = hr(k + q, 17), sz = .006 + a * .011, vx = kick.x * (.25 + b * .3) + (a - .5) * .22, vz = kick.z * (.25 + b * .3) + (c - .5) * .22, vy = .12 + c * .3;
+      const x0 = spot.x + (a - .5) * .06, z0 = spot.z + (c - .5) * .04, y0 = spot.y + (b - .5) * .02;
+      let fy = typeof floorY === 'function' ? floorY(x0 + vx * .2, z0 + vz * .2) : floorY, tl = (vy + Math.sqrt(vy * vy + 2 * 9.81 * Math.max(0, y0 - fy))) / 9.81;
+      if (typeof floorY === 'function') { fy = floorY(x0 + vx * tl, z0 + vz * tl); tl = (vy + Math.sqrt(vy * vy + 2 * 9.81 * Math.max(0, y0 - fy))) / 9.81; } const ta = Math.min(age, tl);
+      P.set(x0 + vx * ta, Math.max(fy + sz / 2, y0 + vy * ta - 4.905 * ta * ta), z0 + vz * ta);
+      E.set(ta * 9 * a, ta * 7 * b, ta * 5); Q.setFromEuler(E); const fade = clamp((life - age) / .8); S.set(sz, sz * .55, sz * (.7 + b * .5)).multiplyScalar(fade);
+      im.setMatrixAt(j, M.compose(P, Q, S)); } }
+    for (; j < n; j++) im.setMatrixAt(j, Z); im.instanceMatrix.needsUpdate = true; }; }
+
+// ---- reach + lick on the walker (called from buffaloA each frame after the clips). Modes: lickAt [x,y,z] world point, rk 0..1 reach weight,
+// lick 0..1 tongue cycles, drink 0..1 (muzzle on the water, no tongue). The plan places the walker at pos [0,0,0] so its frame is the world frame.
+function lickRig(g, o, mixer, acts, B, p) {
+  mixer.update(0); g.updateMatrixWorld(true);
+  const head = B('Head'), n1 = B('Neck1'), n2 = B('Neck2') || n1; if (!head || !n1) return null;
+  const hw = head.getWorldPosition(new THREE.Vector3()), v = new THREE.Vector3(), meshes = []; o.traverse(m => { if (m.isSkinnedMesh) meshes.push(m); });
+  const H = p.height || 1.4; let nose = null, chin = null;
+  for (const m of meshes) { const P = m.geometry.attributes.position; for (let i = 0; i < P.count; i++) { m.getVertexPosition(i, v); v.applyMatrix4(m.matrixWorld); if (v.distanceTo(hw) > .6 * H / 1.4) continue; if (!nose || v.z > nose.p.z) nose = { m, i, p: v.clone() }; } }
+  if (!nose) return null;
+  for (const m of meshes) { const P = m.geometry.attributes.position; for (let i = 0; i < P.count; i++) { m.getVertexPosition(i, v); v.applyMatrix4(m.matrixWorld); if (v.distanceTo(nose.p) > .13 * H / 1.4) continue; if (!chin || v.y < chin.p.y) chin = { m, i, p: v.clone() }; } }
+  const vtx = (q, out) => { q.m.getVertexPosition(q.i, out); return out.applyMatrix4(q.m.matrixWorld); };
+  const mouth = () => vtx(nose, new THREE.Vector3()).lerp(vtx(chin, new THREE.Vector3()), .6);
+  const tm = new THREE.MeshStandardMaterial({ color: col(p.tongueColor || '#b86f7a'), roughness: .38 });
+  const tongue = new THREE.Mesh(new THREE.CapsuleGeometry(.03, 1, 4, 12), tm); tongue.castShadow = true; tongue.visible = false; g.add(tongue);
+  const yAx = new THREE.Vector3(0, 1, 0);
+  return (t, mo, pm, ma, val, lat) => {
+    const rk = val('rk', 0), lk = val('lick', 0), dk = val('drink', 0); tongue.visible = false;
+    let T = mo.lickAt || pm.lickAt || p.lickAt; if (mo.lickAt && pm.lickAt && mo.lickAt !== pm.lickAt) { const k = easeIO(clamp(ma / (mo.dur ?? 1))); T = pm.lickAt.map((q, i) => lerp(q, mo.lickAt[i], k)); }
+    if (!T || rk < .002) { LINK[p.link || 'cow'] = { mouth: mouth(), tip: null }; return; }
+    const tgt = new THREE.Vector3(...T), stand = dk > .5 ? .01 : (p.stand ?? .1);
+    for (let it = 0; it < 4; it++) { g.updateMatrixWorld(true); const M = mouth(), piv = n1.getWorldPosition(new THREE.Vector3());
+      const want = tgt.clone().add(M.clone().sub(tgt).normalize().multiplyScalar(stand)), a = M.sub(piv), b = want.sub(piv), ang = a.angleTo(b); if (ang < .004) break;
+      const ax = a.clone().cross(b).normalize(), A = Math.min(ang, .55) * rk; bendBone(n1, ax, A * .55); g.updateMatrixWorld(true); bendBone(n2, ax, A * .45); }
+    const u = fr01(t / LICK_P), ext = clamp(Math.sin(Math.PI * u) * 1.4) * lk * (1 - dk);
+    bendBone(n1, lat, (dk > .5 ? .012 * Math.sin(t * 2.2) : -.045 * Math.sin(2 * Math.PI * u) * lk) * rk); g.updateMatrixWorld(true); // head dips into each lick / gulps
+    const M = mouth(); let tip = null;
+    if (ext > .02) { const dir = M.clone().sub(tgt); dir.y = 0; if (dir.lengthSq() > 1e-6) dir.normalize();
+      tip = tgt.clone().addScaledVector(dir, .045 * (u - .5) * 2).add(new THREE.Vector3(0, .01, 0)); const end = M.clone().lerp(tip, ext), seg = end.clone().sub(M), L = seg.length();
+      if (L > .02) { tongue.visible = true; tongue.position.copy(M).addScaledVector(seg, .5); tongue.quaternion.setFromUnitVectors(yAx, seg.normalize()); tongue.scale.set(1.25, Math.max(.01, L - .06), .55); } }
+    LINK[p.link || 'cow'] = { mouth: M, tip, ext, gap: M.distanceTo(tgt) }; };
+}
+
+// ---- rock-salt lick block (real size ~0.4 x 0.15 x 0.2 m) on a low wooden tray. Origin on the ground at the tray centre.
+// params: size [x,y,z], tray (true), licks [[t0,t1]] (world), lick [x,y,z] local lick spot, wearK [[t, 0..2]] (0..1 hollow + 15 % smaller,
+// 1..2 worn down to a remnant), carry [t0, t1] + carryBy (LINK key of a rig_person with link) = rides between the palms, set down at t1.
+function rockSaltTex() { return SPR.saltRock ||= (() => { const t = canvasT(512, 512, (c, w, h) => { const r = rng(77); const gr = c.createLinearGradient(0, 0, w, h); gr.addColorStop(0, '#e9b2a2'); gr.addColorStop(.5, '#f0c6b8'); gr.addColorStop(1, '#e3a594'); c.fillStyle = gr; c.fillRect(0, 0, w, h);
+    for (let i = 0; i < 260; i++) { const x = r() * w, y = r() * h, s = 10 + r() * 46, k = r(); c.fillStyle = k < .3 ? `rgba(255,240,234,${.2 + r() * .35})` : k < .75 ? `rgba(236,160,140,${.18 + r() * .3})` : `rgba(214,128,104,${.15 + r() * .25})`;
+      c.beginPath(); const nP = 4 + (r() * 3 | 0); for (let j = 0; j < nP; j++) { const a = j / nP * 6.28 + r() * .6, rr = s * (.5 + r() * .5); j ? c.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr) : c.moveTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); } c.closePath(); c.fill(); }
+    for (let i = 0; i < 28; i++) { c.strokeStyle = `rgba(${200 + r() * 30 | 0},${110 + r() * 40 | 0},${90 + r() * 30 | 0},${.18 + r() * .3})`; c.lineWidth = 1 + r() * 4; c.beginPath(); let x = r() * w, y = r() * h; c.moveTo(x, y);
+      for (let j = 0; j < 7; j++) { x += (r() - .5) * 90; y += (r() - .3) * 70; c.lineTo(x, y); } c.stroke(); }
+    for (let i = 0; i < 2600; i++) { c.fillStyle = r() < .85 ? `rgba(255,255,255,${r() * .6})` : `rgba(120,70,55,${r() * .3})`; c.fillRect(r() * w, r() * h, 1 + r() * 2, 1 + r() * 2); } }, [1, 1]); return t; })(); }
+function saltBlock(p = {}) { const g0 = new THREE.Group(), g = new THREE.Group(), [W, Hh, D] = p.size || [.4, .15, .2], rad = .028, trayH = p.tray === false ? 0 : .06, blk = new THREE.Group(), SH = p.stand || 0; g0.add(g); g.position.y = SH; g.add(blk);
+  if (SH) for (const sx of [-1, 1]) for (const sz of [-1, 1]) { const leg = woodBox([.045, SH, .045], 1, '#7a5c3e', [sx * (W / 2 + .03), SH / 2, sz * (D / 2 + .02)]); leg.rotation.z = -sx * .06; g0.add(leg); }
+  if (SH) for (const sz of [-1, 1]) g0.add(woodBox([W + .1, .04, .03], 0, '#7a5c3e', [0, SH * .35, sz * (D / 2 + .02)])); // stretchers
+  let geo = new THREE.BoxGeometry(W, Hh, D, 22, 9, 12); geo.deleteAttribute('normal'); geo.deleteAttribute('uv'); geo = mergeVertices(geo, 1e-5);
+  const P = geo.attributes.position, v = new THREE.Vector3(), c = new THREE.Vector3(), hx = W / 2 - rad, hy = Hh / 2 - rad, hz = D / 2 - rad, rr = rng(p.seed || 5);
+  for (let i = 0; i < P.count; i++) { v.fromBufferAttribute(P, i); c.set(clamp(v.x, -hx, hx), clamp(v.y, -hy, hy), clamp(v.z, -hz, hz)); const n = v.clone().sub(c); if (n.lengthSq() > 1e-10) v.copy(c).add(n.normalize().multiplyScalar(rad));
+    const bump = (hr(v.x * 40 + v.y * 13, v.z * 31) - .5) * .004; v.addScaledVector(n.lengthSq() > 0 ? n : v.clone().normalize(), bump); P.setXYZ(i, v.x, v.y, v.z); }
+  geo.computeVertexNormals(); const base = P.array.slice(), nrm = geo.attributes.normal.array.slice(), uv = new Float32Array(P.count * 2);
+  for (let i = 0; i < P.count; i++) { uv[i * 2] = (base[i * 3] + base[i * 3 + 2] * .7) / .3 + .5; uv[i * 2 + 1] = (base[i * 3 + 1] + base[i * 3 + 2] * .35) / .3 + .5; } geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+  const vc = new Float32Array(P.count * 3).fill(1); geo.setAttribute('color', new THREE.BufferAttribute(vc, 3));
+  const mat = new THREE.MeshPhysicalMaterial({ vertexColors: true, map: rockSaltTex(), bumpMap: rockSaltTex(), bumpScale: .6, roughness: .42, clearcoat: .3, clearcoatRoughness: .35, sheen: .4, sheenColor: col('#fff4f0'), sheenRoughness: .6 });
+  const mesh = new THREE.Mesh(geo, mat); mesh.castShadow = mesh.receiveShadow = true; blk.add(mesh);
+  if (trayH) { const tint = '#8a6a48'; g.add(woodBox([W + .14, .025, D + .12], 0, tint, [0, .0125, 0])); for (const s of [-1, 1]) { g.add(woodBox([W + .14, trayH, .022], 0, tint, [0, trayH / 2, s * (D / 2 + .05)])); g.add(woodBox([.022, trayH, D + .08], 2, tint, [s * (W / 2 + .06), trayH / 2, 0])); } }
+  const rest = new THREE.Vector3(0, .025 + Hh / 2, 0), spotL = new THREE.Vector3(...(p.lick || [0, Hh / 2, D * .15])); // lick spot, block-centre frame
+  const crumbN = 46, crumbs = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), std('#f6e6e0', { r: .45 }), crumbN); crumbs.frustumCulled = false; g.add(crumbs);
+  const Mx = new THREE.Matrix4(), Qx = new THREE.Quaternion(), Sx = new THREE.Vector3(), Px = new THREE.Vector3(), Zx = new THREE.Matrix4().makeScale(0, 0, 0);
+  const flakes = flakeSystem(g, 40, ['#fff6f2', '#f2c4b6', '#e8ab98']);
+  const cry = p.crystals || 0, cryIM = cry ? new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: .2, clearcoat: .6, map: rockSaltTex() }), cry) : null, cryP = [];
+  if (cryIM) { cryIM.frustumCulled = false; cryIM.castShadow = true; g.add(cryIM); for (let i = 0; i < cry; i++) { const a = rr() * 6.28, d = Math.sqrt(rr()) * .16, s = .018 + rr() * .035; cryP.push(new THREE.Vector3((p.heap || [0, .4])[0] + Math.cos(a) * d * 1.4, s * .45 - SH + (.16 - d) * .25, (p.heap || [0, .4])[1] + Math.sin(a) * d));
+      Qx.setFromEuler(new THREE.Euler(rr() * .5, rr() * 6, rr() * .5)); cryIM.setMatrixAt(i, Mx.compose(cryP[i], Qx, Sx.set(s, s * .9, s * 1.1))); } }
+  const glB = glints(g, 9, i => { const s = blk.scale.x, a = hr(i, 1), b = hr(i, 2); return new THREE.Vector3((a - .5) * W * .85 * s, Hh / 2 * blk.scale.y + .006, (b - .5) * D * .8 * s).add(blk.position); }, .045);
+  const glC = cryIM ? glints(g, Math.min(10, cry), i => cryP[i * 3 % cry].clone().add(new THREE.Vector3(0, .02, 0)), .06) : null;
+  let lastW = -1; const tmpW = new THREE.Vector3(), kick = new THREE.Vector3(...(p.kick || [0, 0, 1]));
+  g.userData.tick = (t) => { const w = kv(p.wearK, t, 0), wd = Math.min(1, w), sf = (1 - .15 * wd) * (w > 1 ? Math.max(.12, 2 - w) : 1);
+    if (Math.abs(w - lastW) > .002) { lastW = w; const dep = .07 * wd;
+      for (let i = 0; i < P.count; i++) { const bx = base[i * 3], by = base[i * 3 + 1], bz = base[i * 3 + 2], dx = bx - spotL.x, dy = (by - spotL.y) * 1.4, dz = (bz - spotL.z), f = Math.exp(-(dx * dx + dy * dy + dz * dz) / (.11 * .11));
+        P.setXYZ(i, bx - nrm[i * 3] * dep * f, by - nrm[i * 3 + 1] * dep * f, bz - nrm[i * 3 + 2] * dep * f);
+        const sh = 1 - .3 * f * wd; vc[i * 3] = sh; vc[i * 3 + 1] = sh * (1 - .06 * f * wd); vc[i * 3 + 2] = sh * (1 - .08 * f * wd); } // wet, darker, smoother hollow
+      P.needsUpdate = true; geo.attributes.color.needsUpdate = true; geo.computeVertexNormals(); }
+    blk.scale.set(sf, sf * (w > 1 ? .8 : 1), sf);
+    // carried between the farmer's palms, set down onto the tray at carry[1]
+    let carried = false; if (p.carry && t < p.carry[1]) { const L = LINK[p.carryBy || 'farmer']; blk.visible = t >= p.carry[0];
+      if (L?.L) { g.updateWorldMatrix(true, false); const mid = L.L.clone().lerp(L.R, .5).add(new THREE.Vector3(0, -.015, 0)), loc = g.worldToLocal(mid), k = sEase((t - (p.carry[1] - .45)) / .45);
+        blk.position.copy(loc).lerp(rest, k); blk.rotation.set(0, lerp(L.yaw, 0, k), 0); carried = true; } }
+    if (!carried) { blk.visible = true; blk.position.copy(rest); blk.position.y = .025 + Hh / 2 * blk.scale.y; blk.rotation.set(0, 0, 0); }
+    // flakes from the lick spot (world-frame time sync with the cow's tongue), crumbs that pile up on the tray as the block wears
+    tmpW.copy(spotL).multiply(blk.scale).add(blk.position); flakes(t, p.licks, tmpW, kick, (x, z) => Math.abs(x) < W / 2 + .07 && Math.abs(z) < D / 2 + .06 ? .025 : -SH, 6);
+    const nc = Math.round(clamp(w / 1.3) * crumbN); for (let i = 0; i < crumbN; i++) { if (i >= nc) { crumbs.setMatrixAt(i, Zx); continue; } const a = hr(i, 31) * 6.283, b = hr(i, 32), s = .006 + hr(i, 33) * .012;
+      Px.set(clamp(Math.cos(a) * (W / 2 + .02 + b * .04) * 1.3, -W / 2 - .055, W / 2 + .055), .025 + s * .4, clamp(Math.sin(a) * (D / 2 + .02 + b * .04) * 1.3, -D / 2 - .045, D / 2 + .045)); Qx.setFromEuler(new THREE.Euler(a * 3, b * 5, 0)); crumbs.setMatrixAt(i, Mx.compose(Px, Qx, Sx.set(s, s * .6, s))); }
+    crumbs.instanceMatrix.needsUpdate = true; glB(t, 1); if (glC) glC(t, 1.2); };
+  return g0; }
+
+// ---- mud-brick pen wall with salt efflorescence (white crust bloom with a wavy tide line, glints) and a licked wet patch.
+// Front face at +z (thickness toward -z). params: len, h, t, crustH (top of the bloom), lick [x, y] on the face, lickK [[t,0..1]], licks (flakes)
+function saltWall(p = {}) { const g = new THREE.Group(), L = p.len || 3.4, H = p.h || 1.8, T = p.t || .3, CH = p.crustH || 1.15, r = rng(p.seed || 9);
+  const PX = 160; // px per metre
+  const draw = (c, w, h, bumpOnly) => { c.fillStyle = bumpOnly ? '#808080' : '#9a7350'; c.fillRect(0, 0, w, h); const bh = .075 * PX, bl = .24 * PX, mo = .016 * PX;
+    for (let y = h, row = 0; y > -bh; y -= bh + mo, row++) for (let x = -(row % 2) * bl / 2; x < w; x += bl + mo) { const v = .85 + r() * .25;
+      c.fillStyle = bumpOnly ? `rgb(${150 + r() * 40 | 0},${150 | 0},150)` : `rgb(${150 * v | 0},${110 * v | 0},${74 * v | 0})`; c.fillRect(x, y - bh, bl, bh);
+      if (!bumpOnly) for (let k = 0; k < 6; k++) { c.fillStyle = `rgba(${r() > .5 ? '205,170,120' : '70,48,30'},${r() * .2})`; c.fillRect(x + r() * bl, y - bh + r() * bh, 2 + r() * 8, 1 + r() * 3); } }
+    if (!bumpOnly) for (let i = 0; i < 9; i++) { c.fillStyle = `rgba(176,140,100,${.55 + r() * .3})`; const x = r() * w, y = r() * h * .5, rw = 30 + r() * 120, rh = 20 + r() * 70; c.beginPath(); c.ellipse(x, y, rw, rh, r(), 0, 6.3); c.fill(); } // old mud plaster patches
+    // efflorescence: white bloom from the ground up to a wavy tide line; denser low down, brown tide mark at the edge
+    const top = x => h - (CH + Math.sin(x / w * 9 + 1) * .09 + Math.sin(x / w * 23) * .04) * PX;
+    for (let x = 0; x < w; x += 2) { const y0 = top(x); if (!bumpOnly) { c.fillStyle = 'rgba(120,85,50,.35)'; c.fillRect(x, y0 - 3, 2, 5); } }
+    if (!bumpOnly) for (let x = 0; x < w; x += 3) { const y0 = top(x), gr2 = c.createLinearGradient(0, y0, 0, h); gr2.addColorStop(0, 'rgba(70,50,32,0)'); gr2.addColorStop(.15, 'rgba(70,50,32,.22)'); gr2.addColorStop(1, 'rgba(60,44,30,.3)'); c.fillStyle = gr2; c.fillRect(x, y0, 3, h - y0); } // damp band
+    for (let i = 0; i < 3800; i++) { const x = r() * w, y0 = top(x), y = y0 + Math.pow(r(), 1.3) * (h - y0) * .9, dens = 1 - (y - y0) / (h - y0 + 1); const a = (.05 + dens * .22) * r();
+      c.fillStyle = bumpOnly ? `rgba(255,255,255,${a * 1.5})` : `rgba(246,244,236,${a})`; c.beginPath(); c.ellipse(x, y, 1 + r() * 3, .6 + r() * 1.6, 0, 0, 6.3); c.fill(); }
+    if (!bumpOnly) for (let x = 0; x < w; x += 2) { const y0 = top(x); c.fillStyle = 'rgba(248,246,240,.55)'; c.fillRect(x, y0 - 1 + Math.sin(x * .3) * 1.5, 2, 4 + r() * 6); } }; // crust is densest along the tide line
+  const tex = canvasT(Math.round(L * PX), Math.round(H * PX), (c, w, h) => draw(c, w, h, false), [1, 1]);
+  const bt = canvasT(Math.round(L * PX), Math.round(H * PX), (c, w, h) => draw(c, w, h, true), [1, 1]); bt.colorSpace = THREE.NoColorSpace;
+  const fm = new THREE.MeshStandardMaterial({ map: tex, bumpMap: bt, bumpScale: 2.2, roughness: .95 }), sm = new THREE.MeshStandardMaterial({ color: col('#8f6a48'), roughness: 1 });
+  const wall = new THREE.Mesh(new THREE.BoxGeometry(L, H, T), [sm, sm, sm, sm, fm, sm]); wall.position.set(0, H / 2, -T / 2); g.add(wall);
+  const cap = new THREE.Mesh(new THREE.CylinderGeometry(T * .55, T * .6, L + .02, 10, 1), std('#8d6847', { r: 1 })); cap.rotation.z = Math.PI / 2; cap.scale.set(1, 1, .55); cap.position.set(0, H, -T / 2); g.add(cap);
+  const lk = p.lick || [0, .85], wetM = new THREE.MeshStandardMaterial({ color: col('#6e5236'), roughness: .25, transparent: true, opacity: 0, depthWrite: false, map: softDiscTex(), alphaMap: null, polygonOffset: true, polygonOffsetFactor: -3 });
+  wetM.map = null; wetM.alphaMap = softDiscTex(); const wet = new THREE.Mesh(new THREE.PlaneGeometry(.42, .3), wetM); wet.position.set(lk[0], lk[1], .003); g.add(wet);
+  const flakes = flakeSystem(g, 30, ['#ffffff', '#f2eee6', '#d9c7b0']), spot = new THREE.Vector3(lk[0], lk[1], .01);
+  const gl = glints(g, 14, i => new THREE.Vector3((hr(i, 7) - .5) * L * .9, .1 + hr(i, 8) * (CH - .2), .012), .05);
+  g.userData.tick = t => { wetM.opacity = .75 * kv(p.lickK, t, 0); flakes(t, p.licks, spot, new THREE.Vector3(0, 0, 1), 0, 5); gl(t, 1); };
+  return shadowed(g); }
+
+// ---- concrete water trough (1.6 x 0.5 m, 0.5 m high), water at .42 m with ripple rings from the drinking muzzle (drinks [[t0,t1]], drinkAt [x,z] local)
+function trough(p = {}) { const g = new THREE.Group(), L = p.len || 1.6, W = p.w || .5, H = p.h || .5, th = .07, r = rng(p.seed || 12);
+  const tex = canvasT(256, 128, (c, w, h) => { c.fillStyle = '#8f8a80'; c.fillRect(0, 0, w, h); for (let i = 0; i < 2200; i++) { c.fillStyle = `rgba(${r() > .5 ? '250,248,240' : '60,58,52'},${r() * .12})`; c.fillRect(r() * w, r() * h, 1 + r() * 3, 1 + r() * 2); }
+    for (let i = 0; i < 14; i++) { c.fillStyle = `rgba(90,95,70,${.05 + r() * .1})`; c.fillRect(r() * w, h * (.1 + r() * .3), 4 + r() * 30, 20 + r() * 60); } c.fillStyle = 'rgba(70,90,50,.25)'; c.fillRect(0, h * .12, w, 6); }, [L / 1.2, H / .6]);
+  const cm = new THREE.MeshStandardMaterial({ map: tex, roughness: .9 });
+  const part = (w, h, d, x, y, z) => { const m = box(w, h, d, cm); m.position.set(x, y, z); g.add(m); };
+  part(L, .08, W, 0, .04, 0); part(L, H, th, 0, H / 2, W / 2 - th / 2); part(L, H, th, 0, H / 2, -W / 2 + th / 2); part(th, H, W - 2 * th, L / 2 - th / 2, H / 2, 0); part(th, H, W - 2 * th, -L / 2 + th / 2, H / 2, 0);
+  const wy = H - .08, wm = new THREE.MeshStandardMaterial({ color: col('#4f6f70'), roughness: .06, metalness: .25, transparent: true, opacity: .9, envMapIntensity: 1.2 });
+  const water = new THREE.Mesh(new THREE.PlaneGeometry(L - 2 * th, W - 2 * th), wm); water.rotation.x = -Math.PI / 2; water.position.y = wy; g.add(water);
+  const ringM = new THREE.MeshBasicMaterial({ map: rippleRingTex(), color: col('#e8f2f2'), transparent: true, opacity: 0, depthWrite: false }), rings = [];
+  for (let i = 0; i < 7; i++) { const m = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), ringM.clone()); m.rotation.x = -Math.PI / 2; m.position.y = wy + .003; g.add(m); rings.push(m); }
+  const wetG = contactShadow(.5, 1.1, .35); wetG.rotation.z = Math.PI / 2; wetG.position.set(0, .012, W / 2 + .35); g.add(wetG); // damp ground in front where cattle drink
+  const da = p.drinkAt || [0, 0], straws = new THREE.InstancedMesh(new THREE.CylinderGeometry(.003, .003, .12, 4), std('#c8a85a'), 6); g.add(straws);
+  const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), S = new THREE.Vector3(1, 1, 1), Pp = new THREE.Vector3();
+  g.userData.tick = t => { const on = (p.drinks || []).some(([a, b]) => t >= a && t < b + 2);
+    rings.forEach((m, i) => { const per = 2.1, age = (t + i * per / rings.length) % per, tb = t - age, act = (p.drinks || []).some(([a, b]) => tb >= a && tb < b);
+      m.visible = act && on; const k = age / per; m.scale.setScalar(.06 + age * .32); m.position.x = da[0]; m.position.z = da[1]; m.material.opacity = Math.pow(1 - k, 1.5) * .55 + (act ? 0 : 0); });
+    for (let i = 0; i < 6; i++) { const x = ((hr(i, 1) * (L - .3) + t * .01 * (hr(i, 2) - .5)) % (L - .3)) - (L - .3) / 2; Pp.set(x, wy + .004 + Math.sin(t * 1.3 + i) * .002, (hr(i, 3) - .5) * (W - .2));
+      Q.setFromEuler(new THREE.Euler(Math.PI / 2, 0, hr(i, 4) * 6 + Math.sin(t * .4 + i) * .2)); straws.setMatrixAt(i, M.compose(Pp, Q, S)); } straws.instanceMatrix.needsUpdate = true; };
+  return shadowed(g); }
+
+// ---- timber pen fence: segs [[x0,z0,x1,z1]] local; square posts (10 cm, 1.3 m) every <= 1.9 m with a slight lean, 3 rails, weathered grain
+function penFence(p = {}) { const g = new THREE.Group(), tints = ['#9b8263', '#8d7458', '#a68c6b'];
+  (p.segs || [[-2, 0, 2, 0]]).forEach(([x0, z0, x1, z1], si) => { const len = Math.hypot(x1 - x0, z1 - z0), n = Math.max(1, Math.ceil(len / 1.9)), seg = new THREE.Group(); seg.position.set(x0, 0, z0); seg.rotation.y = Math.atan2(-(z1 - z0), x1 - x0); g.add(seg);
+    for (let i = 0; i <= n; i++) { const pst = woodBox([.1, 1.3, .1], 1, tints[(si + i) % 3], [i * len / n, .65, 0]); pst.rotation.z = (hr(si, i) - .5) * .05; seg.add(pst); }
+    for (const y of [.38, .78, 1.15]) seg.add(woodBox([len + .1, .09, .035], 0, tints[(si + 1) % 3], [len / 2, y + (hr(si, y) - .5) * .03, .07])); });
+  return g; }
+
+// ---- hay pile (dried straw on the ground): instanced straws in a low mound, golden to grey-brown
+function hayPile(p = {}) { const g = new THREE.Group(), n = p.count || 900, R = p.r || .6, Hh = p.h || .28, im = new THREE.InstancedMesh(new THREE.CylinderGeometry(.0035, .0035, 1, 4), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: .85 }), n);
+  const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), S = new THREE.Vector3(), P = new THREE.Vector3(), cs = ['#d9bd72', '#c9a85c', '#b8975a', '#e3cd8a', '#a88a52'];
+  for (let i = 0; i < n; i++) { const a = hr(i, 1) * 6.28, d = Math.sqrt(hr(i, 2)) * R, hgt = Hh * (1 - (d / R) ** 2) * hr(i, 3); P.set(Math.cos(a) * d, .01 + hgt, Math.sin(a) * d * .8);
+    Q.setFromEuler(new THREE.Euler(Math.PI / 2 + (hr(i, 4) - .5) * 1.2, hr(i, 5) * 6.28, (hr(i, 6) - .5) * .8)); S.set(1, .18 + hr(i, 7) * .22, 1); im.setMatrixAt(i, M.compose(P, Q, S)); im.setColorAt(i, col(cs[i % cs.length])); }
+  im.castShadow = true; im.receiveShadow = true; g.add(im); return g; }
+// ---- trampled pen floor: packed earth with hoof prints and loose straw, soft edges (flat, so the grass cover stays off it)
+function penFloor(p = {}) { const W = p.w || 6, D = p.d || 4, r = rng(p.seed || 17);
+  const tex = canvasT(1024, Math.round(1024 * D / W), (c, w, h) => { c.fillStyle = '#86684a'; c.fillRect(0, 0, w, h);
+    for (let i = 0; i < 9000; i++) { c.fillStyle = `rgba(${r() > .5 ? '170,140,105' : '70,52,36'},${r() * .16})`; c.fillRect(r() * w, r() * h, 1 + r() * 5, 1 + r() * 4); }
+    for (let i = 0; i < 70; i++) { const x = r() * w, y = r() * h, a = r() * 6.28, s = 5 + r() * 3; c.save(); c.translate(x, y); c.rotate(a); c.fillStyle = 'rgba(60,44,30,.38)';
+      for (const dx of [-s * .55, s * .55]) { c.beginPath(); c.ellipse(dx, 0, s * .45, s, 0, 0, 6.3); c.fill(); } c.restore(); }  // cloven hoof prints
+    for (let i = 0; i < 900; i++) { const x = r() * w, y = r() * h, a = r() * 6.28, l = 6 + r() * 22; c.strokeStyle = `rgba(${200 + r() * 40 | 0},${170 + r() * 30 | 0},${100 + r() * 30 | 0},${.35 + r() * .45})`; c.lineWidth = 1 + r();
+      c.beginPath(); c.moveTo(x, y); c.lineTo(x + Math.cos(a) * l, y + Math.sin(a) * l); c.stroke(); } }, [1, 1]);
+  const al = canvasT(256, 256, (c, w, h) => { const g2 = c.createRadialGradient(w / 2, h / 2, w * .3, w / 2, h / 2, w * .5); g2.addColorStop(0, '#fff'); g2.addColorStop(1, '#000'); c.fillStyle = '#000'; c.fillRect(0, 0, w, h); c.fillStyle = g2; c.fillRect(0, 0, w, h);
+    c.fillStyle = '#fff'; c.fillRect(w * .1, h * .1, w * .8, h * .8); }, [1, 1]); al.colorSpace = THREE.NoColorSpace;
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(W, D), new THREE.MeshStandardMaterial({ map: tex, alphaMap: al, transparent: true, roughness: .97, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }));
+  m.rotation.x = -Math.PI / 2; m.position.y = .012; m.receiveShadow = true; m.renderOrder = 1; return m; }
+Object.assign(ASSETS, { salt_block: saltBlock, salt_wall: saltWall, trough, pen_fence: penFence, hay_pile: hayPile, pen_floor: penFloor });
+// carrying / setting down (tuned with a probe on the Farmer so the palms hold the block ends)
+Object.assign(RIG_POSES, { carry: { adL: 1.42, adR: 1.42, fL: .2, fR: .2, eL: .4, eR: .4, sp: .04, hd: .3, hold: 1 },        // palms ~0.99 m high, 0.23 m forward, 0.42 m apart
+  placeKneel: { adL: 1.42, adR: 1.42, fL: .4, fR: .4, eL: .05, eR: .05, sp: 1.5, hd: -.3, kL: 1.55, kR: 1.55, hold: 1 } }); // kneeling (track y -.31): palms .43 m high, .40 m forward
+
+// ================= Winter hens pack (2026-11-18, plans/hens_winter.mjs) =================
+// Why hens stop laying in winter and how a lamp on a timer fixes it.
+// Motion: a hen on a stateless walker (steps synced to distance, head-stabilised bob: the head holds still in space and thrusts forward
+// each step), pecking with a fast strike and slow rise plus a backward foot scratch, saccadic head turns, resting (sits, fluffs up,
+// legs tucked) and preening (head into the wing with nibbles); acts cross-blend. Farmer on the bone rig with new reach poses.
+// Graphics: lime-washed mud-brick coop (flaking wash, dirty base band, mud plaster outside), palm-trunk roof with jareed sticks and
+// straw, straw litter with 3-toe prints, wooden nest boxes with straw cups and eggs, an enamel lamp (warm point light, bulb glow,
+// incandescent warm-up), a plug-in mechanical timer whose pinned dial turns with the day.
+// Realism: one shared day clock (dayK) drives the sun on its real arc (summer ~14 h high and wide, winter ~10 h low and short),
+// the timer dial and the lamp (on before sunrise and after sunset), so the light really follows the timer.
+const dayOn = (segs, d) => { const f = fr01(d); return (segs || []).some(([a, b]) => f >= a && f < b); };
+const stepKey = (keys, t, d = 0) => { let v = d; for (const [tk, x] of keys || []) if (t >= tk) v = x; return v; };
+function limeTex() { return SPR.lime ||= (() => { const PX = 128, r = rng(171); return canvasT(Math.round(2.2 * PX), Math.round(2.2 * PX), (c, w, h) => {
+  c.fillStyle = '#e9e3d4'; c.fillRect(0, 0, w, h); const bh = .085 * PX;
+  for (let y = h; y > 0; y -= bh) { c.fillStyle = 'rgba(150,135,110,.10)'; c.fillRect(0, y - 1, w, 2); for (let x = ((y / bh) % 2) * 15; x < w; x += .25 * PX) c.fillRect(x, y - bh, 2, bh); } // bricks under the wash
+  for (let i = 0; i < 2600; i++) { c.fillStyle = `rgba(${r() > .5 ? '255,252,244' : '120,105,85'},${r() * .09})`; c.fillRect(r() * w, r() * h, 1 + r() * 6, 1 + r() * 5); }
+  for (let i = 0; i < 14; i++) { const x = r() * w, y = h * (.15 + r() * .75), rw = 6 + r() * 26, rh = 4 + r() * 16; c.fillStyle = '#9b7552'; c.beginPath(); // flaked wash shows the mud brick
+    for (let k = 0; k < 9; k++) { const a = k / 9 * 6.283, rr = .6 + r() * .5; c.lineTo(x + Math.cos(a) * rw * rr, y + Math.sin(a) * rh * rr); } c.fill();
+    c.strokeStyle = 'rgba(250,246,236,.8)'; c.lineWidth = 1; c.stroke(); }
+  for (let i = 0; i < 10; i++) { const x = r() * w; const g2 = c.createLinearGradient(0, h * .2, 0, h); g2.addColorStop(0, 'rgba(110,95,70,0)'); g2.addColorStop(1, `rgba(110,95,70,${.08 + r() * .08})`); c.fillStyle = g2; c.fillRect(x, h * .2, 3 + r() * 10, h); } // drip stains
+  const gb = c.createLinearGradient(0, h - .42 * PX, 0, h); gb.addColorStop(0, 'rgba(115,92,62,0)'); gb.addColorStop(.45, 'rgba(115,92,62,.38)'); gb.addColorStop(1, 'rgba(95,74,50,.62)'); c.fillStyle = gb; c.fillRect(0, h - .42 * PX, w, .42 * PX); // soiled base
+  for (let i = 0; i < 160; i++) { c.strokeStyle = `rgba(80,62,40,${.15 + r() * .25})`; c.lineWidth = 1; const x = r() * w, y = h - r() * .3 * PX; c.beginPath(); c.moveTo(x, y); c.lineTo(x + (r() - .5) * 8, y - 3 - r() * 7); c.stroke(); } }, [1, 1]); })(); }
+function mudTex2() { return SPR.mud2 ||= (() => { const PX = 128, r = rng(173); return canvasT(Math.round(2.2 * PX), Math.round(2.2 * PX), (c, w, h) => {
+  c.fillStyle = '#a27c56'; c.fillRect(0, 0, w, h);
+  for (let i = 0; i < 5000; i++) { c.fillStyle = `rgba(${r() > .5 ? '196,160,116' : '92,66,42'},${r() * .16})`; c.fillRect(r() * w, r() * h, 1 + r() * 5, 1 + r() * 4); }
+  for (let i = 0; i < 700; i++) { c.strokeStyle = `rgba(${215 + r() * 30 | 0},${185 + r() * 30 | 0},${120 + r() * 30 | 0},${.3 + r() * .4})`; c.lineWidth = 1; const x = r() * w, y = r() * h, a = r() * 6.28, l = 3 + r() * 9; c.beginPath(); c.moveTo(x, y); c.lineTo(x + Math.cos(a) * l, y + Math.sin(a) * l); c.stroke(); } // straw in the plaster
+  for (let i = 0; i < 6; i++) { const x0 = r() * w, y0 = r() * h; c.strokeStyle = 'rgba(70,50,32,.45)'; c.lineWidth = 1.2; c.beginPath(); c.moveTo(x0, y0); let x = x0, y = y0; for (let k = 0; k < 7; k++) { x += (r() - .5) * 18; y += 4 + r() * 10; c.lineTo(x, y); } c.stroke(); } // cracks
+  for (let i = 0; i < 8; i++) { const x = r() * w, y = r() * h, bw = 30, bh = 10; c.fillStyle = 'rgba(120,80,50,.5)'; for (let k = 0; k < 4; k++) c.fillRect(x + (k % 2) * 15, y + k * (bh + 2), bw, bh); } }, [1, 1]); })(); } // bricks showing
+function strawTex(yard) { const k = yard ? 'yardT' : 'strawT'; return SPR[k] ||= (() => { const r = rng(yard ? 181 : 179); return canvasT(1024, 1024, (c, w, h) => {
+  c.fillStyle = yard ? '#9a7b58' : '#8c6d4b'; c.fillRect(0, 0, w, h);
+  for (let i = 0; i < 9000; i++) { c.fillStyle = `rgba(${r() > .5 ? '185,155,118' : '70,52,36'},${r() * .17})`; c.fillRect(r() * w, r() * h, 1 + r() * 5, 1 + r() * 4); }
+  for (let i = 0; i < (yard ? 260 : 2600); i++) { const x = r() * w, y = r() * h, a = r() * 6.28, l = 8 + r() * 26; c.strokeStyle = `rgba(${205 + r() * 40 | 0},${172 + r() * 35 | 0},${95 + r() * 40 | 0},${.45 + r() * .45})`; c.lineWidth = 1 + r() * 1.4;
+    c.beginPath(); c.moveTo(x, y); c.quadraticCurveTo(x + Math.cos(a + .3) * l * .5, y + Math.sin(a + .3) * l * .5, x + Math.cos(a) * l, y + Math.sin(a) * l); c.stroke(); }
+  for (let i = 0; i < 90; i++) { const x = r() * w, y = r() * h, a = r() * 6.28; c.save(); c.translate(x, y); c.rotate(a); c.strokeStyle = 'rgba(62,46,30,.42)'; c.lineWidth = 1.6; // 3-toe hen prints
+    for (const da of [-.55, 0, .55]) { c.beginPath(); c.moveTo(0, 0); c.lineTo(Math.cos(da) * 11, Math.sin(da) * 11); c.stroke(); } c.beginPath(); c.moveTo(0, 0); c.lineTo(-5, 0); c.stroke(); c.restore(); }
+  for (let i = 0; i < (yard ? 500 : 140); i++) { c.fillStyle = r() > .4 ? `rgba(${200 + r() * 40 | 0},${160 + r() * 30 | 0},${70 + r() * 30 | 0},.9)` : 'rgba(250,248,240,.8)'; c.beginPath(); c.ellipse(r() * w, r() * h, 1.4 + r(), 1 + r() * .6, r() * 3, 0, 6.3); c.fill(); } // grain and droppings flecks
+  for (let i = 0; i < 26; i++) { const x = r() * w, y = r() * h, a = r() * 6.28; c.strokeStyle = r() > .5 ? 'rgba(245,240,230,.85)' : 'rgba(150,90,45,.85)'; c.lineWidth = 2; c.beginPath(); c.arc(x, y, 9, a, a + 1.2); c.stroke(); } }, [1, 1]); })(); } // stray feathers
+function coopFloor(p = {}) { const W = p.w || 3, D = p.d || 2.3, t = strawTex(p.yard), al = canvasT(256, 256, (c, w, h) => { c.fillStyle = '#000'; c.fillRect(0, 0, w, h);
+    const g2 = c.createRadialGradient(w / 2, h / 2, w * .25, w / 2, h / 2, w * .5); g2.addColorStop(0, '#fff'); g2.addColorStop(1, '#000'); c.fillStyle = g2; c.fillRect(0, 0, w, h); if (!p.yard) { c.fillStyle = '#fff'; c.fillRect(w * .04, h * .04, w * .92, h * .92); } }, [1, 1]);
+  al.colorSpace = THREE.NoColorSpace; t.repeat.set(W / 3, D / 3);
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(W, D), new THREE.MeshStandardMaterial({ map: t, alphaMap: al, transparent: true, roughness: .97, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }));
+  m.rotation.x = -Math.PI / 2; m.position.y = .012; m.receiveShadow = true; m.renderOrder = 1; if (p.shadeK) m.userData.tick = t => m.material.color.setScalar(kv(p.shadeK, t, 1)); return m; }
+// ---- village coop: lime-washed inside, mud plaster outside, open front (cutaway), side doorway, small barred window, palm-trunk roof.
+// Interior x in [-W/2+T, W/2-T], back wall inner face at z = zb + T, side walls run to z = zf.
+function henCoop(p = {}) { const g = new THREE.Group(), W = p.w || 3.5, T = p.t || .25, H = p.h || 2.1, zb = p.zb ?? -2.7, zf = p.zf ?? -.3, r = rng(p.seed || 5);
+  const lime = new THREE.MeshStandardMaterial({ map: limeTex(), roughness: .95 }), mud = new THREE.MeshStandardMaterial({ map: mudTex2(), roughness: .97 });
+  g.userData.tick = t => { const k = kv(p.shadeK, t, 1); lime.color.setRGB(k, k * (.97 + .03 * k), k * (.92 + .08 * k)); }; // under-roof sky occlusion (no AO in the renderer)
+  const mats = inner => [0, 1, 2, 3, 4, 5].map(i => i === inner ? lime : mud), su = 2.2;
+  wbox(g, -W / 2, W / 2, 0, H, zb, zb + T, mats(4), su);                                                        // back wall (inner face +z)
+  const win = p.win || [-1.75, -1.25, 1.2, 1.6], door = p.door || [-1.95, -1.15, 0, 1.9];
+  holedWall(g, 'z', zb, zf, 0, H, -W / 2, -W / 2 + T, [win], mats(0), su);                                     // left wall with a window
+  holedWall(g, 'z', zb, zf, 0, H, W / 2 - T, W / 2, [door], mats(1), su);                                       // right wall with a doorway
+  for (const z of [win[0] + .17, win[0] + .33]) g.add(woodBox([.03, win[3] - win[2], .03], 1, '#6e5338', [-W / 2 + T / 2, (win[2] + win[3]) / 2, z]));  // window bars
+  g.add(woodBox([T + .06, .07, win[1] - win[0] + .12], 2, '#7a5c3c', [-W / 2 + T / 2, win[3] + .035, (win[0] + win[1]) / 2]));
+  g.add(woodBox([T + .06, .09, door[1] - door[0] + .2], 2, '#6f5235', [W / 2 - T / 2, door[3] + .045, (door[0] + door[1]) / 2]));  // lintel
+  const leaf = new THREE.Group(); leaf.position.set(W / 2 + .02, 0, door[1]); leaf.rotation.y = -1.95; g.add(leaf);                 // old plank door swung open outside
+  for (let i = 0; i < 4; i++) leaf.add(woodBox([.03, door[3] - .06, .185], 1, ['#8a6c4c', '#7d6145', '#93745a', '#806446'][i], [.015, (door[3] - .06) / 2 + .03, -.1 - i * .19]));
+  for (const y of [.35, 1.45]) leaf.add(woodBox([.03, .1, .76], 2, '#6d5236', [.045, y, -.39]));
+  // roof: palm trunks across x, jareed sticks along z, straw and mud on top, frayed frond ends over the front edge
+  const zr0 = zb - .1, zr1 = zf + .28, trunkM = new THREE.MeshStandardMaterial({ map: canvasT(64, 256, (c, w, h) => { c.fillStyle = '#6b5440'; c.fillRect(0, 0, w, h); const q = rng(3);
+    for (let y = 0; y < h; y += 7) { c.fillStyle = `rgba(${q() > .5 ? '150,120,90' : '40,30,22'},.55)`; c.fillRect(0, y, w, 3); } for (let i = 0; i < 400; i++) { c.fillStyle = `rgba(30,22,15,${q() * .3})`; c.fillRect(q() * w, q() * h, 2, 4); } }, [1, 3]), roughness: .95 });
+  for (let i = 0; i < 5; i++) { const z = lerp(zr0 + .12, zr1 - .1, i / 4), tr = cyl(.075 + r() * .015, .085, W + .3 + r() * .2, trunkM, 12); tr.rotation.z = Math.PI / 2; tr.position.set((r() - .5) * .1, H + .08, z); tr.castShadow = tr.receiveShadow = true; g.add(tr); }
+  { const n = Math.round((W + .2) / .04), im = new THREE.InstancedMesh(new THREE.CylinderGeometry(.013, .016, zr1 - zr0, 6), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: .8 }), n), M = new THREE.Matrix4(), Q = new THREE.Quaternion(), S = new THREE.Vector3(1, 1, 1), P = new THREE.Vector3();
+    for (let i = 0; i < n; i++) { P.set(-W / 2 - .1 + i * .04 + (hr(i, 2) - .5) * .01, H + .175, (zr0 + zr1) / 2 + (hr(i, 3) - .5) * .12); Q.setFromEuler(new THREE.Euler(Math.PI / 2, (hr(i, 4) - .5) * .05, 0)); im.setMatrixAt(i, M.compose(P, Q, S));
+      im.setColorAt(i, col(['#b89a6c', '#a88a5e', '#c4a878', '#9c7f56'][i % 4])); } im.castShadow = im.receiveShadow = true; g.add(im); }
+  const thatch = new THREE.MeshStandardMaterial({ map: strawTex(false), roughness: .95, color: col('#d8c49a') }); thatch.map = thatch.map.clone(); thatch.map.needsUpdate = true; thatch.map.repeat.set(1.3, .9);
+  const top = box(W + .25, .07, zr1 - zr0 - .06, thatch); top.position.set(0, H + .225, (zr0 + zr1) / 2); top.castShadow = top.receiveShadow = true; g.add(top);
+  { const n = 90, im = new THREE.InstancedMesh(new THREE.ConeGeometry(.012, 1, 4), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: .9 }), n), M = new THREE.Matrix4(), Q = new THREE.Quaternion(), S = new THREE.Vector3(), P = new THREE.Vector3();
+    for (let i = 0; i < n; i++) { const L = .12 + hr(i, 5) * .22; P.set(-W / 2 + hr(i, 6) * W, H + .2 - L * .35, zr1 + L * .3); Q.setFromEuler(new THREE.Euler(-2.1 - hr(i, 7) * .5, 0, (hr(i, 8) - .5) * .6)); S.set(1, L, 1); im.setMatrixAt(i, M.compose(P, Q, S));
+      im.setColorAt(i, col(['#b79a62', '#a7864f', '#c9ae78'][i % 3])); } im.castShadow = true; g.add(im); }
+  // terracotta water dish with water (inside, right front)
+  const wd = p.dish || [1.0, -.9], prof = [[0, 0], [.13, 0], [.16, .02], [.17, .07], [.15, .075], [.14, .03], [0, .03]].map(([x, y]) => new THREE.Vector2(x, y));
+  const dish = new THREE.Mesh(new THREE.LatheGeometry(prof, 28), std('#b5603a', { r: .8 })); dish.position.set(wd[0], 0, wd[1]); dish.castShadow = dish.receiveShadow = true; g.add(dish);
+  const wat = new THREE.Mesh(new THREE.CircleGeometry(.14, 24), new THREE.MeshStandardMaterial({ color: col('#5e7470'), roughness: .08, metalness: .2 })); wat.rotation.x = -Math.PI / 2; wat.position.set(wd[0], .062, wd[1]); g.add(wat);
+  return g; }
+// ---- wooden nest boxes (36 x 32 x 38 cm each) on a lime-washed mud bench, straw cups; eggsK [[t, n]] (steps) pops eggs into compartment `eggBox`
+function nestRow(p = {}) { const g = new THREE.Group(), n = p.n || 2, w = .36, h = .32, d = .38, B = p.bench ?? .4, L = n * w, wt = ['#a07e58', '#93724f', '#ab8962'].map(c => '#' + col(c).multiplyScalar(p.shade ?? 1).getHexString());
+  const benchM = new THREE.MeshStandardMaterial({ map: limeTex(), roughness: .95 }); wbox(g, -L / 2 - .06, L / 2 + .06, 0, B, -d / 2 - .02, d / 2 + .04, benchM, 2.2, 2.2, 0, .55);
+  const y0 = B; g.add(woodBox([L + .02, .02, d], 0, wt[0], [0, y0 + .01, 0]));
+  for (let i = 0; i <= n; i++) g.add(woodBox([.02, h, d], 1, wt[i % 3], [-L / 2 + i * w, y0 + h / 2, 0]));
+  g.add(woodBox([L + .02, h, .02], 0, wt[1], [0, y0 + h / 2, -d / 2 + .01]));
+  const roofB = woodBox([L + .08, .02, d + .1], 0, wt[2], [0, y0 + h + .04, .02]); roofB.rotation.x = .18; g.add(roofB);
+  g.add(woodBox([L + .02, .1, .02], 0, wt[1], [0, y0 + .05, d / 2 - .01]));                                             // front lip keeps the straw in
+  const ns = 260 * n, im = new THREE.InstancedMesh(new THREE.CylinderGeometry(.0028, .0028, 1, 4), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: .85 }), ns), M = new THREE.Matrix4(), Q = new THREE.Quaternion(), S = new THREE.Vector3(), P = new THREE.Vector3();
+  for (let i = 0; i < ns; i++) { const b = i % n, a = hr(i, 1) * 6.28, rr = Math.sqrt(hr(i, 2)) * .16, cup = .055 * (rr / .16) ** 1.5 + .012; P.set(-L / 2 + w * (b + .5) + Math.cos(a) * rr, y0 + .02 + cup + hr(i, 3) * .02, Math.sin(a) * rr * 1.05);
+    Q.setFromEuler(new THREE.Euler(Math.PI / 2 + (hr(i, 4) - .5) * .9, hr(i, 5) * 6.28, (hr(i, 6) - .5) * .9)); S.set(1, .07 + hr(i, 7) * .12, 1); im.setMatrixAt(i, M.compose(P, Q, S)); im.setColorAt(i, col(['#dcc27a', '#c9a95e', '#e6d394', '#b8975a'][i % 4])); }
+  im.castShadow = true; im.receiveShadow = true; g.add(im);
+  const eggs = [], em = new THREE.MeshStandardMaterial({ color: col('#ecd2b0'), roughness: .42 }), eb = p.eggBox ?? 1, spots = [[-.03, .02], [.04, -.02], [0, -.06]];
+  for (let i = 0; i < 3; i++) { const e = new THREE.Mesh(new THREE.SphereGeometry(.021, 16, 12), em); e.scale.set(1, 1, 1.32); e.rotation.y = .5 + i; e.castShadow = true; g.add(e); eggs.push(e);
+    e.position.set(-L / 2 + w * (eb + .5) + spots[i][0], y0 + .045, spots[i][1]); }
+  g.userData.tick = t => { benchM.color.setScalar(kv(p.shadeK, t, 1)); const cnt = stepKey(p.eggsK, t, 0); eggs.forEach((e, i) => { let ta = -1; for (const [tk, v] of p.eggsK || []) { if (tk > t) break; if (v > i && ta < 0) ta = tk; if (v <= i) ta = -1; }
+    e.visible = i < cnt; const s = ta >= 0 ? Math.max(.001, easeOutBack(clamp((t - ta) / .4))) : 1; e.scale.set(s, s, 1.32 * s); }); };
+  return g; }
+// ---- carried props: ride a rig_person palm (LINK[carryBy][hand]) from carry[0], then glide to their wall spot (local origin) by carry[1]
+function rideTo(g, inner, p, t, off) { if (!p.carry) { inner.visible = true; inner.position.set(0, 0, 0); inner.rotation.set(0, 0, 0); return; }
+  if (t < p.carry[0]) { inner.visible = false; return; } inner.visible = true;
+  if (t >= p.carry[1]) { inner.position.set(0, 0, 0); inner.rotation.set(0, 0, 0); return; }
+  const L = LINK[p.carryBy || 'farmer'], palm = L?.[p.hand || 'L']; if (!palm) { inner.visible = false; return; }
+  g.updateWorldMatrix(true, false); const loc = g.worldToLocal(palm.clone()).sub(off), k = sEase((t - (p.carry[1] - .45)) / .45);
+  inner.position.copy(loc).lerp(new THREE.Vector3(), k); const gy = g.getWorldQuaternion(new THREE.Quaternion()); const yw = new THREE.Euler().setFromQuaternion(gy).y;
+  inner.rotation.set(0, lerp(L.yaw + Math.PI - yw, 0, k), 0); }
+// ---- wall lamp: bakelite plate, steel arm, enamel shade, bulb; warm point light with warm-up; on = powered && timer segment (dayK, segs) or onK
+function coopLamp(p = {}) { const g = new THREE.Group(), lamp = new THREE.Group(); g.add(lamp);
+  const plate = cyl(.045, .045, .016, std('#3b2a20', { r: .5 }), 20); plate.rotation.x = Math.PI / 2; plate.position.z = .008; lamp.add(plate);
+  const arm = box(.016, .016, .15, steelM()); arm.position.set(0, .01, .085); lamp.add(arm);
+  const sock = cyl(.017, .017, .045, std('#2d2a27', { r: .4 }), 14); sock.position.set(0, -.012, .15); lamp.add(sock);
+  const prof = [[.018, 0], [.03, -.012], [.06, -.04], [.088, -.075], [.092, -.08]].map(([x, y]) => new THREE.Vector2(x, y));
+  const out = new THREE.Mesh(new THREE.LatheGeometry(prof, 28), std('#4f6b5a', { m: .25, r: .38 })); out.position.set(0, -.02, .15); lamp.add(out);
+  const inn = new THREE.Mesh(new THREE.LatheGeometry(prof, 28), new THREE.MeshStandardMaterial({ color: col('#f4f1ea'), roughness: .35, side: THREE.BackSide, emissive: col('#ffd9a0'), emissiveIntensity: 0 })); inn.position.copy(out.position); inn.scale.setScalar(.97); lamp.add(inn);
+  const bm = new THREE.MeshStandardMaterial({ color: col('#fff7e8'), roughness: .1, emissive: col('#ffc77a'), emissiveIntensity: 0, transparent: true, opacity: .92 });
+  const bulb = new THREE.Mesh(new THREE.SphereGeometry(.03, 18, 14), bm); bulb.scale.set(1, 1.15, 1); bulb.position.set(0, -.07, .15); lamp.add(bulb);
+  const neck = cyl(.014, .02, .03, bm, 12); neck.position.set(0, -.042, .15); lamp.add(neck);
+  const light = new THREE.PointLight('#ffcf8f', 0, p.range || 6, 1.5); light.position.set(0, -.11, .2); lamp.add(light);
+  const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glintTex(), color: col('#ffcf8a'), transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false })); glow.position.copy(bulb.position); lamp.add(glow);
+  const pool = contactShadow(.9, .9, 0); pool.material.color.set('#ffd9a0'); pool.material.blending = THREE.AdditiveBlending; pool.position.set(0, -(p.y ?? 1.85) + .02, .9); g.add(pool); // warm light pool on the floor
+  let cable = null; if (p.cableTo) { const [dx, dy] = p.cableTo, pts = [[0, -.04, .012], [dx * .2, dy * .35, .012], [dx * .55, dy * .6, .014], [dx, dy + .06, .014]].map(v => new THREE.Vector3(...v));
+    cable = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 30, .004, 6), std('#1e1d1c', { r: .5 })); cable.castShadow = true; g.add(cable); }
+  const lit = t => (t >= (p.powerAt ?? Infinity) && dayOn(p.segs, kv(p.dayK, t, .5))) || stepKey(p.onK, t, 0) > 0;
+  g.userData.tick = t => { rideTo(g, lamp, p, t, new THREE.Vector3(0, -.02, .05)); if (cable) cable.visible = t >= (p.carry?.[1] ?? 0) + .3;
+    let k = 0; for (let i = 0; i < 6; i++) k += lit(t - i * .035) ? 1 : 0; k /= 6; k = k * k * (3 - 2 * k);                                // incandescent warm-up / cool-down
+    const fl = 1 + Math.sin(t * 23) * .015 + Math.sin(t * 61) * .01, I = k * fl;
+    light.intensity = (p.power || 7) * I; bm.emissiveIntensity = 3.2 * I; inn.material.emissiveIntensity = .35 * I; glow.material.opacity = .6 * I; glow.scale.setScalar(.26 + .03 * I); pool.material.opacity = .16 * I; };
+  return g; }
+// ---- plug-in mechanical timer on a wall socket: dial with 48 push pins (on-segments pushed, orange), turns once per day with dayK
+function coopTimer(p = {}) { const g = new THREE.Group(), tm = new THREE.Group(); g.add(tm);
+  const sk = box(.085, .085, .014, std('#ece7dc', { r: .45 })); sk.position.z = .007; g.add(sk);                                 // wall socket stays on the wall
+  const body = box(.072, .104, .046, std('#f1ede4', { r: .4 })); body.position.z = .037; tm.add(body);
+  const bez = cyl(.037, .037, .006, std('#c9ccce', { r: .35, m: .2 }), 32); bez.rotation.x = Math.PI / 2; bez.position.set(0, -.008, .063); tm.add(bez);
+  const dial = new THREE.Group(); dial.position.set(0, -.008, .067); tm.add(dial);
+  const face = cyl(.031, .031, .005, std('#dfe2e4', { r: .3 }), 32); face.rotation.x = Math.PI / 2; dial.add(face);
+  const ring = new THREE.Mesh(new THREE.RingGeometry(.012, .018, 32), std('#9aa0a4', { r: .4 })); ring.position.z = .0028; dial.add(ring);
+  const pinOn = std('#f07a1a', { r: .4 }), pinOff = std('#fbfbf8', { r: .4 }), pins = [];
+  for (let k = 0; k < 48; k++) { const a = k / 48 * Math.PI * 2, on = dayOn(p.segs, k / 48 + .5 / 48), pn = box(.0034, .008, .006, on ? pinOn : pinOff);
+    pn.position.set(Math.sin(a) * .0275, Math.cos(a) * .0275, on ? .001 : .004); pn.rotation.z = -a; dial.add(pn); pins.push(pn); }
+  const knob = cyl(.009, .01, .012, std('#5d6266', { r: .4 }), 16); knob.rotation.x = Math.PI / 2; knob.position.z = .006; dial.add(knob);
+  const grip = box(.003, .016, .004, std('#3f4346')); grip.position.z = .013; dial.add(grip);
+  const idx = new THREE.Mesh(new THREE.ConeGeometry(.0045, .009, 3), std('#d4281c', { r: .4 })); idx.rotation.z = Math.PI; idx.position.set(0, .032, .062); tm.add(idx);  // index mark
+  const led = new THREE.Mesh(new THREE.SphereGeometry(.003, 8, 6), new THREE.MeshStandardMaterial({ color: col('#ffb38a'), emissive: col('#ff4a1a'), emissiveIntensity: 0 })); led.position.set(.024, .04, .061); tm.add(led);
+  g.userData.tick = t => { rideTo(g, tm, p, t, new THREE.Vector3(0, -.01, .03)); const d = kv(p.dayK, t, .5); dial.rotation.z = d * Math.PI * 2;
+    led.material.emissiveIntensity = t >= (p.powerAt ?? Infinity) && dayOn(p.segs, d) ? 2.5 : 0; };
+  return g; }
+// ---- the sun on its day arc, far behind the scene: summer (rise .21, set .79, high, wide) vs winter (.30-.70, low, short); seasonK blends,
+// dayK = day clock; sumK/winK = how much of each dotted arc is drawn (0..1), sumOp/winOp = their opacity
+function skySun(p = {}) { const g = new THREE.Group(), Z = p.z ?? -40, y0 = p.y0 ?? .5;
+  const AR = { s: { rise: .21, set: .79, peak: p.peakS ?? 16, span: p.spanS ?? 12 }, w: { rise: .30, set: .70, peak: p.peakW ?? 6, span: p.spanW ?? 7.5 } };
+  const at = (A, u) => new THREE.Vector3(-A.span * Math.cos(Math.PI * u), y0 + A.peak * Math.sin(Math.PI * u), Z);
+  const sm = (c, s, o) => { const m = new THREE.Sprite(new THREE.SpriteMaterial({ map: glintTex(), color: col(c), transparent: true, opacity: o, depthWrite: false, fog: false, toneMapped: false, blending: THREE.AdditiveBlending })); m.scale.setScalar(s); return m; };
+  const disc = new THREE.Mesh(new THREE.CircleGeometry(p.r || 1.1, 40), new THREE.MeshBasicMaterial({ color: col('#fff1c8').multiplyScalar(2.2), fog: false, toneMapped: false })); g.add(disc);
+  const halo = sm('#ffcf7a', (p.r || 1.1) * 7, .6), halo2 = sm('#ffe9b8', (p.r || 1.1) * 3.2, .9); g.add(halo, halo2);
+  const trails = {}; for (const k of ['s', 'w']) { trails[k] = []; for (let i = 0; i <= 44; i++) { const d = sm(k === 's' ? '#ffe7a8' : '#ffc070', .55, 0); d.position.copy(at(AR[k], i / 44)); g.add(d); trails[k].push(d); } }
+  g.userData.tick = (t) => { const s = kv(p.seasonK, t, 0), A = {}; for (const f of ['rise', 'set', 'peak', 'span']) A[f] = lerp(AR.s[f], AR.w[f], s);
+    const d = fr01(kv(p.dayK, t, .5)), u = (d - A.rise) / (A.set - A.rise), vis = clamp(Math.min(u + .03, 1.03 - u) * 12);
+    const P = at(A, clamp(u, -.02, 1.02)); disc.position.copy(P); halo.position.copy(P); halo2.position.copy(P);
+    const low = clamp(Math.sin(Math.PI * clamp(u)) * 2); disc.material.color.set(low < 1 ? '#ffb45a' : '#fff1c8').lerp(col('#fff1c8'), low).multiplyScalar(2.2);
+    disc.visible = vis > .01; disc.scale.setScalar(Math.max(.001, vis)); LINK.sun = vis > .01 ? P.clone() : null; halo.material.opacity = .6 * vis; halo2.material.opacity = .9 * vis; disc.lookAt(0, P.y, 0);
+    for (const k of ['s', 'w']) { const ext = kv(p[k === 's' ? 'sumK' : 'winK'], t, 0), op = kv(p[k === 's' ? 'sumOp' : 'winOp'], t, 1); trails[k].forEach((m, i) => { m.material.opacity = i / 44 <= ext + 1e-3 ? .85 * op : 0; }); } };
+  return g; }
+// ---- hen walker: track [[t, x, z, act, yaw]]; act idle | peck | rest | preen (walk is automatic between different spots)
+function henWalker(p = {}) { const g = new THREE.Group(), mover = new THREE.Group(); g.add(mover);
+  const S = (p.height || .4) / 1.43, c = chicken({ seed: p.seed || 3, scale: S }); mover.add(c);
+  const U = c.userData, head = U.head, legs = U.legs, body = U.body, neck = U.neck, h0 = head.position.clone(), b0 = body.scale.clone();
+  // neck = a stretchy link from a fixed base in the shoulders to an attach point at the back of the skull, solved every frame, so the
+  // head can never float off it (it used to be a separately rotated cylinder: up to 12 cm off during preening, 15 cm while pecking)
+  const NL = .55, nAx = new THREE.Vector3(0, 1, 0).applyEuler(neck.rotation), nBase = neck.position.clone().addScaledVector(nAx, -NL / 2),
+    nOff = neck.position.clone().addScaledVector(nAx, NL / 2).sub(h0), Y1 = new THREE.Vector3(0, 1, 0), vT = new THREE.Vector3(), vD = new THREE.Vector3();
+  neck.rotation.set(0, 0, 0);
+  const tail = c.children.find(o => o.isGroup && o.position.z < -.4), tx0 = tail ? tail.rotation.x : 0;
+  const sh = contactShadow(.13, .17, .42); g.add(sh); const mats = []; c.traverse(o => { if (o.isMesh && !mats.includes(o.material)) mats.push(o.material); }); const c0 = mats.map(m => m.color.clone());
+  const K = (p.track || [[0, 0, 0, 'idle']]).map(k => ({ t: k[0], x: k[1], z: k[2], act: k[3] || 'idle', yaw: k[4] })); let yaw = K[0].yaw ?? 0, cum = 0; const seg = [];
+  for (let i = 0; i < K.length - 1; i++) { const a = K[i], b = K[i + 1], len = Math.hypot(b.x - a.x, b.z - a.z), mv = len > .02;
+    const y1 = mv ? angTo(yaw, Math.atan2(b.x - a.x, b.z - a.z)) : (b.yaw != null ? angTo(yaw, b.yaw) : yaw); seg.push({ a, b, len, mv, cum, y0: yaw, y1 }); cum += len; yaw = y1; }
+  const actOf = q => q.mv ? 'walk' : q.a.act, STR = .15, sd = p.seed || 3;
+  const state = t => { if (!seg.length || t <= K[0].t) return { x: K[0].x, z: K[0].z, yaw: seg[0]?.y0 ?? yaw, act: K[0].act, prev: K[0].act, t0: -9, dist: 0, sp: 0 };
+    const i = seg.findIndex(q => t < q.b.t); if (i < 0) { const q = seg[seg.length - 1]; return { x: q.b.x, z: q.b.z, yaw: q.y1, act: q.b.act, prev: actOf(q), t0: q.b.t, dist: cum, sp: 0 }; }
+    const q = seg[i], D = Math.max(.01, q.b.t - q.a.t), u = (t - q.a.t) / D, e = q.mv ? trapE(u, .22) : 0;
+    return { x: lerp(q.a.x, q.b.x, e), z: lerp(q.a.z, q.b.z, e), yaw: lerp(q.y0, q.y1, easeIO(u * D / Math.min(D, .5))), act: actOf(q), prev: i ? actOf(seg[i - 1]) : actOf(q), t0: q.a.t, dist: q.cum + q.len * e, sp: q.mv ? q.len / D * trapV(u, .22) : 0 }; };
+  const pose = (act, t, st) => { const o = { pitch: 0, hx: 0, hy: 0, hz: 0, hrx: 0, hry: 0, drop: 0, fluff: 0, leg: 1, scr: 0 };
+    if (act === 'idle' || act === 'walk') { const per = .75, k = Math.floor((t + sd) / per), f = fr01((t + sd) / per), a0 = (hr(k, sd) - .5) * 1.5, a1 = (hr(k + 1, sd) - .5) * 1.5; // saccades
+      o.hry = lerp(a0, a1, clamp((f - .82) / .1)) * (act === 'walk' ? .25 : 1); o.hrx = lerp((hr(k, sd + 1) - .5) * .4, (hr(k + 1, sd + 1) - .5) * .4, clamp((f - .82) / .1)); }
+    if (act === 'peck') { const per = 1.2, ph = (t + sd * .37) / per, k = Math.floor(ph), f = fr01(ph), sk = f < .13 ? sEase(f / .13) : f < .24 ? 1 : f < .52 ? 1 - sEase((f - .24) / .28) : 0;
+      o.pitch = .42 * sk + .06; o.hy = -.6 * sk; o.hz = .22 * sk; o.hrx = .95 * sk + (f < .24 ? Math.sin(t * 40) * .05 * sk : 0); o.hry = f > .55 ? (hr(k, 5) - .5) * 1.1 : 0;
+      if (k % 3 === 0 && f > .56) { const s2 = fr01((f - .56) / .44 * 2); o.scr = Math.sin(s2 * Math.PI); } }                                     // foot scratch every third peck
+    if (act === 'rest' || act === 'preen') { o.drop = 1; o.fluff = 1; o.leg = .25; o.hy = -.1; o.hz = -.1; o.hrx = .12 + Math.sin(t * .8) * .03;
+      if (act === 'preen') { const per = 2.6, k = Math.floor(t / per), f = fr01(t / per), into = f < .12 ? sEase(f / .12) : f < .72 ? 1 : 1 - sEase((f - .72) / .28), sd2 = k % 2 ? 1 : -1;
+        o.hx = .26 * into * sd2; o.hy = -.3 * into; o.hz = -.4 * into; o.hry = 2.6 * into * sd2; o.hrx = .12 + .45 * into + Math.sin(t * 21) * .14 * into; o.fluff = 1 + .5 * into; } }
+    return o; };
+  g.userData.tick = t => { const st = state(t), kb = easeIO((t - st.t0) / .35), A = pose(st.prev, t, st), Bp = pose(st.act, t, st), P = {};
+    for (const k in Bp) P[k] = lerp(A[k], Bp[k], kb);
+    const ph = st.dist / STR * Math.PI, mvK = clamp(st.sp / .25), u = fr01(st.dist / STR);                                  // walk cycle synced to ground distance
+    const stab = (u < .7 ? -u / .7 : -1 + (u - .7) / .3) + .5;                                                               // head holds still, then thrusts
+    head.position.set(h0.x + P.hx, h0.y + P.hy + Math.abs(Math.sin(ph)) * .02 * mvK, h0.z + P.hz + stab * STR / S * .85 * mvK * clamp(1.8 - st.sp / .45));  // the hold-then-thrust bob fades out at a trot (it strobed at 1.4 m/s)
+    head.rotation.set(P.hrx, P.hry, 0, 'YXZ');                                    // turn first, then nod in the turned frame (XYZ rolled the head when turned back)
+    vT.copy(nOff).applyQuaternion(head.quaternion).add(head.position); vD.subVectors(vT, nBase); let L = vD.length();
+    const Lc = clamp(L, .3, .62); if (Lc !== L) { head.position.addScaledVector(vD, Lc / L - 1); vT.addScaledVector(vD, Lc / L - 1); L = Lc; }  // keep the neck length real
+    neck.position.addVectors(nBase, vT).multiplyScalar(.5); neck.quaternion.setFromUnitVectors(Y1, vD.normalize()); neck.scale.set(1, L / NL, 1);
+    c.rotation.x = P.pitch + .05 * mvK; body.scale.copy(b0).multiplyScalar(1 + .06 * P.fluff + .01 * Math.sin(t * 2.7 + sd));
+    legs[0].rotation.x = Math.sin(ph) * .55 * mvK - P.scr * .9; legs[1].rotation.x = -Math.sin(ph) * .55 * mvK; legs.forEach(l => l.scale.y = Math.max(.2, P.leg));
+    if (tail) { const f = fr01((t + sd) / 3.3), flick = f < .12 ? Math.sin(f / .12 * Math.PI) : 0; tail.rotation.x = tx0 + .25 * flick + .08 * P.fluff; }
+    const bob = Math.abs(Math.sin(ph)) * .008 * mvK; mover.position.set(st.x, -.29 * S * P.drop + bob, st.z); mover.rotation.y = st.yaw; mover.rotation.z = Math.sin(ph) * .05 * mvK;
+    sh.position.set(st.x, .014, st.z); sh.rotation.z = -st.yaw;
+    if (p.inside) { const [x0, x1, z0, z1] = p.inside, e = .35, ins = clamp(Math.min(st.x - x0, x1 - st.x, st.z - z0, z1 - st.z) / e + .5), k = lerp(1, kv(p.shadeK, t, 1), ins); mats.forEach((m, i) => m.color.copy(c0[i]).multiplyScalar(k)); }
+    if (p.link) LINK[p.link] = { pos: new THREE.Vector3(st.x, 0, st.z), head: head.getWorldPosition(new THREE.Vector3()) }; };
+  return g; }
+Object.assign(ASSETS, { hen_coop: henCoop, coop_floor: coopFloor, nest_row: nestRow, coop_lamp: coopLamp, coop_timer: coopTimer, sky_sun: skySun, hen: henWalker });
+// reaching up to a wall (lamp at ~1.85 m) and turning a dial at ~1.25 m (Farmer; tuned with a palm probe, see plans/hens_winter.mjs)
+Object.assign(RIG_POSES, { mountUp: { adL: 1.3, adR: 1.3, fL: 2.15, fR: 2.1, eL: .15, eR: .2, sp: 0, hd: -.45 },     // facing the wall from .37 m: palms ~1.67 m high, .27 m forward
+  dialSet: { fR: 1.2, eR: .85, adR: 1.25, fL: .1, eL: .2, sp: .08, hd: .15, tw: .1 }, dialTurn: { fR: 1.2, eR: .85, adR: 1.25, fL: .1, eL: .2, sp: .08, hd: .15, tw: .1, shake: .35 }, // right palm ~1.5 m, .3 m right
+  lookUp: { hd: -.55, sp: -.06, fL: .15, fR: .15, eL: .3, eR: .3 } });
+
+// ================= Sheep circle pack (2026-11-19, plans/sheep_circle.mjs) =================
+// Why sheep turn in a circle before they lie down. Realism step-up over the hen walker: an Egyptian fat-tailed sheep (Ossimi / Barki
+// type: cream crimped fleece, short brown hair on the head, drooping ears, Roman nose, fat tail), 0.9 m to the poll, 0.75 m at the
+// withers. Motion: four legs on 2-bone IK (carpus forward, hock back) with a lateral-sequence walk whose stance feet stay planted
+// (stride synced to the distance walked, also while circling or turning on the spot), tight circling on a 0.15-0.3 m circle,
+// head scan / sniff / graze / stamp / watch, lying down front knees first then the hindquarters, cud chewing (sideways jaw), ear
+// flicks, blinks, breathing, fat-tail jiggle. Graphics: lumpy displaced fleece with crevice darkening, crimped-wool map + bump,
+// sheen on the fleece rim. Props: grass that flattens under the stamps, a wet mud patch with glossy puddles and drip ripples,
+// a hinged wooden gate, pick-up litter (PET bottle, stick, twig, stone) that rides a farmer's palm and is thrown out on an arc.
+const NZ3 = (x, y, z) => Math.sin(x * 1.7 + Math.sin(y * 2.3 + z)) * Math.sin(y * 1.9 + Math.sin(z * 2.9 + x)) * Math.sin(z * 2.1 + Math.sin(x * 1.3 + y));
+function woolTex() { return SPR.wool ||= (() => { const mk = bump => canvasT(512, 512, (c, w, h) => { const r = rng(211); c.fillStyle = bump ? '#6e6e6e' : '#ddd4c2'; c.fillRect(0, 0, w, h);
+    for (let i = 0; i < 2600; i++) { const x = r() * w, y = r() * h, s = 4 + r() * 8, a = r() * 6.28, v = .9 + r() * .12, gr = c.createRadialGradient(x - s * .3, y - s * .35, s * .1, x, y, s);
+      if (bump) { gr.addColorStop(0, 'rgba(255,255,255,.95)'); gr.addColorStop(.75, 'rgba(150,150,150,.5)'); gr.addColorStop(1, 'rgba(40,40,40,0)'); }
+      else { gr.addColorStop(0, `rgba(${255 * v | 0},${251 * v | 0},${240 * v | 0},.95)`); gr.addColorStop(.7, `rgba(${214 * v | 0},${203 * v | 0},${182 * v | 0},.6)`); gr.addColorStop(1, 'rgba(150,134,108,0)'); }
+      c.fillStyle = gr; c.beginPath(); c.arc(x, y, s, 0, 6.28); c.fill();
+      c.strokeStyle = bump ? 'rgba(20,20,20,.4)' : 'rgba(120,100,72,.3)'; c.lineWidth = 1; c.beginPath(); c.arc(x, y, s * .62, a, a + 3.6); c.stroke(); } }, [4, 3]);
+  const map = mk(false), bump = mk(true); bump.colorSpace = THREE.NoColorSpace; return { map, bump }; })(); }
+function hairTex() { return SPR.sheepHair ||= canvasT(256, 256, (c, w, h) => { const r = rng(213); c.fillStyle = '#9a9a9a'; c.fillRect(0, 0, w, h);
+  for (let i = 0; i < 5000; i++) { const x = r() * w, y = r() * h, l = 2 + r() * 5; c.strokeStyle = `rgba(${r() > .5 ? '255,255,255' : '0,0,0'},${.08 + r() * .14})`; c.lineWidth = 1; c.beginPath(); c.moveTo(x, y); c.lineTo(x + l * .3, y + l); c.stroke(); } }, [2, 2]); }
+function lumpy(rx, ry, rz, seed, amp = .05, belly = true, ws = 44, hs = 30) { const geo = new THREE.SphereGeometry(1, ws, hs), P = geo.attributes.position, v = new THREE.Vector3(), cl = new Float32Array(P.count * 3), o = seed * 3.7;
+  for (let i = 0; i < P.count; i++) { v.fromBufferAttribute(P, i); const n = NZ3(v.x * 4 + o, v.y * 4, v.z * 4) * .25 + NZ3(v.x * 11, v.y * 11 + o, v.z * 11) * .35 + NZ3(v.x * 26, v.y * 26, v.z * 26 + o) * .4, k = 1 + amp * n;
+    const fb = belly && v.y < -.45 ? 1 - (-.45 - v.y) * .3 : 1; P.setXYZ(i, v.x * rx * k, v.y * ry * k * fb, v.z * rz * k);
+    const d = clamp((belly ? .8 + .2 * clamp((v.y + 1) / 1.3) : .96) + n * amp * 2.6, .6, 1.04); cl[i * 3] = d; cl[i * 3 + 1] = d * (belly && v.y < -.2 ? .975 : 1); cl[i * 3 + 2] = d * (belly && v.y < -.2 ? .94 : 1); }
+  geo.setAttribute('color', new THREE.BufferAttribute(cl, 3)); geo.computeVertexNormals(); return geo; }
+const Y_UP = new THREE.Vector3(0, 1, 0);
+function placeSeg(m, a, b) { const d = new THREE.Vector3().subVectors(b, a), L = d.length(); m.position.copy(a).add(b).multiplyScalar(.5); m.quaternion.setFromUnitVectors(Y_UP, d.multiplyScalar(1 / Math.max(1e-5, L))); m.scale.set(1, L, 1); }
+function ik2(hy, hz, fy, fz, L1, L2, sg) { const dz = fz - hz, dy = fy - hy, d = clamp(Math.hypot(dz, dy), .03, L1 + L2 - 1e-4);
+  const a = Math.acos(clamp((L1 * L1 + d * d - L2 * L2) / (2 * L1 * d), -1, 1)), ang = Math.atan2(dy, dz) + sg * a; return [hy + L1 * Math.sin(ang), hz + L1 * Math.cos(ang)]; }
+function sheepMesh(seed = 1, o = {}) { const g = new THREE.Group(), body = new THREE.Group(); g.add(body); const wt = woolTex(), rr = rng(seed * 7 + 3);
+  const wool = new THREE.MeshPhysicalMaterial({ color: col(o.wool || ['#c9bda6', '#c2b59c', '#ccc2ae', '#bfb29a'][seed % 4]), map: wt.map, bumpMap: wt.bump, bumpScale: 3.2, roughness: 1, vertexColors: true, sheen: .45, sheenRoughness: .6, sheenColor: col('#e8dcc4') });
+  const hairC = o.head || ['#7b4b2b', '#6a3f24', '#8c5a34', '#5a3a26'][seed % 4], hair = new THREE.MeshStandardMaterial({ color: col(hairC), roughness: .82, bumpMap: hairTex(), bumpScale: .8 });
+  const legM = new THREE.MeshStandardMaterial({ color: col(o.leg || ['#8a6646', '#7a5a3e', '#93714f', '#6e5038'][seed % 4]), roughness: .85, bumpMap: hairTex(), bumpScale: .6 }), hoofM = std('#2a2420', { r: .45 }), dark = std('#231b17', { r: .35 });
+  const mk = (geo, m, par, pos) => { const x = new THREE.Mesh(geo, m); if (pos) x.position.set(...pos); x.castShadow = x.receiveShadow = true; par.add(x); return x; };
+  mk(lumpy(.27, .235, .5, seed), wool, body);                                                       // barrel of the fleece
+  mk(lumpy(.245, .215, .24, seed + 1), wool, body, [0, .012, -.22]);                                // rump
+  mk(lumpy(.2, .2, .2, seed + 2), wool, body, [0, .03, .26]);                                    // shoulders / brisket
+  const tail = new THREE.Group(); tail.position.set(0, .02, -.47); body.add(tail); const tl = mk(lumpy(.12, .15, .075, seed + 3, .035), wool, tail, [0, -.13, -.02]); // fat tail
+  const neck = mk(lumpy(.115, .5, .125, seed + 4, .05, false, 28, 20), wool, body); const nBase = new THREE.Vector3(0, .06, .34);
+  const head = new THREE.Group(); body.add(head);
+  mk(lumpy(.074, .082, .125, seed + 5, .02, false, 28, 20), hair, head, [0, -.025, .075]);         // skull
+  const muz = mk(lumpy(.054, .058, .085, seed + 6, .015, false, 24, 16), hair, head, [0, -.068, .185]); muz.rotation.x = .25;       // Roman-nosed muzzle
+  const nose = mk(new THREE.SphereGeometry(1, 16, 12), dark, head, [0, -.085, .262]); nose.scale.set(.03, .022, .014);
+  for (const s of [-1, 1]) { const ns = mk(new THREE.SphereGeometry(1, 8, 6), std('#0d0a08', { r: .6 }), head, [s * .014, -.084, .272]); ns.scale.set(.007, .004, .004); ns.rotation.z = s * .5; }
+  const jaw = new THREE.Group(); jaw.position.set(0, -.085, .1); head.add(jaw); mk(lumpy(.04, .022, .075, seed + 7, .01, false, 18, 12), hair, jaw, [0, -.012, .07]);
+  const eyes = []; for (const s of [-1, 1]) { const e = mk(new THREE.SphereGeometry(.0165, 14, 10), std('#2a1c10', { r: .12 }), head, [s * .066, .006, .1]); eyes.push(e);
+    const lid = mk(new THREE.SphereGeometry(.019, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), hair, e, [0, 0, 0]); lid.rotation.x = -.2; e.userData.lid = lid; }
+  const ears = []; for (const s of [-1, 1]) { const ep = new THREE.Group(); ep.position.set(s * .062, .03, .03); head.add(ep); const ear = mk(new THREE.SphereGeometry(1, 16, 10), hair, ep, [s * .068, 0, 0]); ear.scale.set(.075, .014, .036); ears.push([ep, s]); }
+  mk(lumpy(.06, .035, .06, seed + 8, .04, false, 18, 12), wool, head, [0, .05, .0]);              // wool poll tuft where the fleece meets the head
+  // legs: [x, hipY, hipZ, bend sign, phase] in body frame; segments placed in the mover frame each tick
+  const LG = [[.105, -.12, .3, 1, .25], [-.105, -.12, .3, 1, .75], [.1, -.1, -.31, -1, 0], [-.1, -.1, -.31, -1, .5]].map(([x, hy, hz, sg, ph], i) => {
+    const up = mk(new THREE.CylinderGeometry(.052, .034, 1, 12), i < 2 ? legM : wool, g), lo = mk(new THREE.CylinderGeometry(.027, .022, 1, 10), legM, g), kn = mk(new THREE.SphereGeometry(.027, 10, 8), legM, g);
+    const hf = new THREE.Group(); g.add(hf); for (const s of [-1, 1]) { const c2 = mk(new THREE.CylinderGeometry(.013, .019, .045, 8), hoofM, hf, [s * .011, .0225, .006]); c2.rotation.x = .12; }
+    const fet = mk(new THREE.SphereGeometry(.02, 8, 6), legM, g); return { x, hy, hz, sg, ph, up, lo, kn, hf, fet }; });
+  g.userData = { body, head, neck, nBase, jaw, eyes, ears, tail, LG, seed, rr }; return g; }
+// ---- sheep walker: track [[t, x, z, act, yaw, opt]]; act idle | walk | scan | sniff | graze | dip | stamp | watch | spin | lie
+// opt: { turns, r } for spin (body on a circle of radius r, centre to the turning side, ends where it started), { look: [x, z] } for watch
+function sheepWalker(p = {}) { const g = new THREE.Group(), mover = new THREE.Group(); g.add(mover); const S = (p.height || .9) / .9, sd = p.seed || 1;
+  const m = sheepMesh(sd, p); m.scale.setScalar(S); mover.add(m); const U = m.userData, body = U.body, head = U.head;
+  const sh = contactShadow(.3, .55, .5); g.add(sh);
+  const K = (p.track || [[0, 0, 0, 'idle', 0]]).map(k => ({ t: k[0], x: k[1], z: k[2], act: k[3] || 'idle', yaw: k[4], o: k[5] || {} }));
+  let yaw = K[0].yaw ?? 0, cum = 0, px = K[0].x, pz = K[0].z; const seg = [];
+  for (let i = 0; i < K.length - 1; i++) { const a = K[i], b = K[i + 1];
+    if (a.act === 'spin') { const tn = a.o.turns ?? 1, r = a.o.r ?? .25, dir = Math.sign(tn) || 1, cx = px + dir * r * Math.cos(yaw), cz = pz - dir * r * Math.sin(yaw), len = Math.abs(tn) * 2 * Math.PI * Math.max(r, .2);
+      seg.push({ a, b, spin: { tn, r, dir, cx, cz }, len, cum, y0: yaw, y1: yaw + tn * 2 * Math.PI, mv: true, x0: px, z0: pz, x1: px, z1: pz }); cum += len; yaw += tn * 2 * Math.PI; continue; }
+    const bx = b.x ?? px, bz = b.z ?? pz, len = Math.hypot(bx - px, bz - pz), mv = len > .02;
+    const y1 = mv ? angTo(yaw, Math.atan2(bx - px, bz - pz)) : (b.yaw != null ? angTo(yaw, b.yaw) : yaw), turn = Math.abs(y1 - yaw) * .22;
+    seg.push({ a, b, len: len + turn, mv: mv || turn > .03, walk: mv, cum, y0: yaw, y1, x0: px, z0: pz, x1: bx, z1: bz }); cum += len + turn; yaw = y1; px = bx; pz = bz; }
+  const actOf = q => q.spin ? 'spin' : q.walk ? 'walk' : q.a.act;
+  const state = t => { if (!seg.length || t <= K[0].t) return { x: K[0].x, z: K[0].z, yaw: K[0].yaw ?? 0, act: K[0].act, prev: K[0].act, t0: -9, ta: -9, dist: 0, sp: 0, o: K[0].o };
+    let i = seg.findIndex(q => t < q.b.t); if (i < 0) { const q = seg[seg.length - 1]; return { x: q.x1, z: q.z1, yaw: q.y1, act: q.b.act, prev: actOf(q), t0: q.b.t, ta: q.b.t, dist: cum, sp: 0, o: q.b.o }; }
+    const q = seg[i], D = Math.max(.01, q.b.t - q.a.t), u = (t - q.a.t) / D; let ta = q.a.t; for (let j = i; j >= 0 && seg[j].a.act === q.a.act && !seg[j].walk && !seg[j].spin; j--) ta = seg[j].a.t;
+    if (q.spin) { const e = trapE(u, .15), yw = lerp(q.y0, q.y1, e), s = q.spin; return { x: s.cx - s.dir * s.r * Math.cos(yw), z: s.cz + s.dir * s.r * Math.sin(yw), yaw: yw, act: 'spin', prev: i ? actOf(seg[i - 1]) : 'idle', t0: q.a.t, ta, dist: q.cum + q.len * e, sp: q.len / D * trapV(u, .15), o: q.a.o }; }
+    const e = q.mv ? trapE(u, .25) : 0;
+    return { x: lerp(q.x0, q.x1, e), z: lerp(q.z0, q.z1, e), yaw: lerp(q.y0, q.y1, q.walk ? easeIO(u * D / Math.min(D, .7)) : e), act: actOf(q), prev: i ? actOf(seg[i - 1]) : actOf(q), t0: q.a.t, ta, dist: q.cum + q.len * e, sp: q.mv ? q.len / D * trapV(u, .25) : 0, o: q.a.o }; };
+  const pose = (act, t, st) => { const o = { nP: .72, nY: 0, hP: .55, hY: 0, chew: 0, earF: 0, fD: 0, hD: 0, stamp: 0, blinkS: 1 };
+    const per = 1.7, k = Math.floor((t + sd * .9) / per), f = fr01((t + sd * .9) / per), sac = (a, b2) => lerp((hr(k, sd + a) - .5) * b2, (hr(k + 1, sd + a) - .5) * b2, clamp((f - .8) / .14));
+    if (act === 'idle') { o.hY = sac(1, 1.1); o.nY = o.hY * .35; o.hP = .5 + sac(2, .3); o.chew = 1; }
+    if (act === 'walk' || act === 'spin') { o.nP = .55; o.hP = .62 + Math.sin(st.dist / .42 * Math.PI * 2) * .05; o.hY = act === 'spin' ? .35 * Math.sign(st.o?.turns ?? 1) : sac(3, .4); o.nY = o.hY * .5; }
+    if (act === 'scan') { const p2 = 2.1, k2 = Math.floor((t + sd) / p2), f2 = fr01((t + sd) / p2), tgt = j => (j % 2 ? 1 : -1) * (.55 + hr(j, sd + 9) * .4);
+      o.nP = 1.05; o.hP = .22; o.hY = lerp(tgt(k2), tgt(k2 + 1), sEase((f2 - .55) / .3)); o.nY = o.hY * .5; o.earF = 1; o.blinkS = .3; }
+    if (act === 'sniff' || act === 'graze' || act === 'dip') { o.nP = -.95; o.hP = 1.32; o.hY = Math.sin(t * 1.25 + sd) * .22 + Math.sin(t * 13) * .02; o.nY = o.hY * .6; o.fD = .06; o.chew = act === 'graze' ? 1 : 0;
+      if (act === 'sniff') o.hP += Math.max(0, Math.sin(t * 9)) * .04; if (act === 'dip') { o.fD = .45; o.nP = -.45; o.hP = 1.1; } }
+    if (act === 'stamp') { o.nP = .3; o.hP = 1.0; o.hY = -.15; o.stamp = 1; o.earF = .5; }
+    if (act === 'watch') { const L = st.o?.look; let a = 0; if (L) a = clamp(Math.atan2(Math.sin(Math.atan2(L[0] - st.x, L[1] - st.z) - st.yaw), Math.cos(Math.atan2(L[0] - st.x, L[1] - st.z) - st.yaw)), -1.3, 1.3);
+      o.nP = .95; o.hP = .35; o.hY = a * .6; o.nY = a * .4; o.earF = 1; o.chew = .5; }
+    if (act === 'lie') { const a = t - st.ta; o.fD = sEase(a / 1.0); o.hD = sEase((a - .7) / 1.0); o.nP = lerp(.3, .55, clamp((a - 1.5) / 1)); o.hP = .62; o.chew = clamp((a - 2) / 1); o.blinkS = .4;
+      o.hY = sac(4, .7) * clamp((a - 2) / 1); o.nY = o.hY * .4; }
+    return o; };
+  const DROP = .3, mats = []; let lastLink = null;
+  g.userData.tick = t => { const st = state(t), kb = easeIO((t - st.t0) / .45), A = pose(st.prev, t, st), B = pose(st.act, t, st), P = {};
+    for (const k2 in B) P[k2] = lerp(A[k2], B[k2], kb); if (st.act === 'lie') { P.fD = B.fD; P.hD = B.hD; }
+    const mvK = clamp(st.sp / .2), br = Math.sin(t * 1.9 + sd) * .012;
+    // body: front / hind drop (lying, dipping), pitch from the difference, a little roll with the steps
+    const by = .55 - DROP * (P.fD + P.hD) / 2 + Math.abs(Math.sin(st.dist / .42 * Math.PI * 2)) * .008 * mvK, pitch = Math.atan2((P.fD - P.hD) * DROP, .62) + .02;
+    body.position.set(0, by, 0); body.rotation.set(pitch, 0, Math.sin(st.dist / .42 * Math.PI * 2) * .025 * mvK); body.scale.set(1 + br * .6, 1 + br, 1);
+    // neck: stretchy link from the brisket to the poll; head turns then nods (YXZ)
+    const nL = .3, cy = Math.cos(P.nY), sy = Math.sin(P.nY), poll = new THREE.Vector3(sy * Math.cos(P.nP), Math.sin(P.nP), cy * Math.cos(P.nP)).multiplyScalar(nL).add(U.nBase);
+    head.position.copy(poll); head.rotation.set(P.hP - pitch * .5, P.nY + P.hY, 0, 'YXZ'); placeSeg(U.neck, U.nBase.clone().add(new THREE.Vector3(0, -.02, -.04)), poll.clone().add(new THREE.Vector3(0, -.03, -.02)));
+    U.neck.scale.y *= 1.1;
+    U.jaw.rotation.set(.1 * Math.max(0, Math.sin(t * 8.5)) * P.chew, .09 * Math.sin(t * 4.25) * P.chew, 0);
+    const bl = fr01((t + sd * 1.3) / (3.1 * P.blinkS + .9)), blink = bl < .05 ? Math.sin(bl / .05 * Math.PI) : 0, sleepy = st.act === 'lie' ? .45 * clamp((t - st.ta - 3) / 2) : 0;
+    U.eyes.forEach(e => { e.userData.lid.scale.set(1, Math.max(.05, Math.max(blink, sleepy)) * 1.05, 1); e.userData.lid.rotation.x = -.2 - (1 - Math.max(blink, sleepy)) * 1.4; });
+    U.ears.forEach(([ep, s], i) => { const fk = fr01((t + sd * 2.1 + i * .7) / 2.9), flick = fk < .08 ? Math.sin(fk / .08 * Math.PI * 2) * .35 : 0; ep.rotation.set(flick, s * (.35 + .5 * P.earF), s * (-.55 + .35 * P.earF)); });
+    const tk = fr01((t + sd) / 2.3), wag = tk < .15 ? Math.sin(tk / .15 * Math.PI * 3) * .25 : 0; U.tail.rotation.set(Math.sin(st.dist / .42 * Math.PI * 4) * .06 * mvK, 0, wag + Math.sin(st.dist / .42 * Math.PI * 2) * .08 * mvK);
+    // legs: lateral-sequence walk, duty .62, stride .42 m; stamping right fore; lying folds the legs under the body
+    const SL = .42, DU = .62, cP = Math.cos(pitch), sP = Math.sin(pitch), hoofW = [];
+    U.LG.forEach((L, i) => { const front = i < 2, hyl = L.hy * cP - L.hz * sP + by, hzl = L.hy * sP + L.hz * cP, drop = front ? P.fD : P.hD;
+      const c = st.dist / SL + L.ph, f = fr01(c); let fz = L.hz, fy = 0;
+      if (mvK > .01 || st.sp > 0) { const E = DU * SL; if (f < DU) fz += E * (.5 - f / DU); else { const u = (f - DU) / (1 - DU); fz += E * (-.5 + sEase(u)); fy = .075 * Math.sin(Math.PI * u) * clamp(st.sp / .1); } }
+      if (i === 0 && P.stamp > .01) { const sp2 = .8, sf = fr01((t - st.t0) / sp2), lift = sf < .45 ? sEase(sf / .45) : sf < .55 ? 1 - Math.pow((sf - .45) / .1, 2) : 0; fy += .11 * lift * P.stamp; fz += .03 * lift * P.stamp; }
+      const fold = clamp(drop); fz = lerp(fz, L.hz + (front ? -.2 : .2), fold); fy = lerp(fy, .03, fold);
+      const L1 = .23, L2 = .25, fyP = fy + .045 * (1 - fold * .6), [ky, kz] = ik2(hyl, hzl, fyP, fz, L1, L2, L.sg), d = Math.hypot(fz - hzl, fyP - hyl), reach = Math.min(d, L1 + L2 - 1e-4) / Math.max(d, 1e-4);
+      const fpY = hyl + (fyP - hyl) * reach, fpZ = hzl + (fz - hzl) * reach;
+      const H = new THREE.Vector3(L.x, hyl, hzl), Kn = new THREE.Vector3(L.x, ky, kz), F = new THREE.Vector3(L.x, fpY, fpZ);
+      placeSeg(L.up, H, Kn); placeSeg(L.lo, Kn, F); L.kn.position.copy(Kn); L.fet.position.copy(F);
+      L.hf.position.set(L.x, fpY - .045 * (1 - fold * .6), fpZ); L.hf.rotation.x = front ? -fold * 1.2 : fold * 1.1; hoofW.push(L.hf); });
+    mover.position.set(st.x, 0, st.z); mover.rotation.y = st.yaw;
+    const lieK = (P.fD + P.hD) / 2; sh.position.set(st.x, .014, st.z); sh.rotation.z = -st.yaw; sh.scale.set(1 + lieK * .35, 1 + lieK * .15, 1); sh.material.opacity = .45 + .2 * lieK;
+    if (p.link) { mover.updateWorldMatrix(true, true); LINK[p.link] = { pos: new THREE.Vector3(st.x, 0, st.z), yaw: st.yaw, hooves: hoofW.map(h => h.getWorldPosition(new THREE.Vector3())), nose: head.localToWorld(new THREE.Vector3(0, -.085, .27)), lie: lieK }; } };
+  return g; }
+// ---- grass bed: instanced blades (real meadow grass 10-22 cm) that sway, and lie down in a swirl where flatK says (stamped flat)
+function grassBed(p = {}) { const g = new THREE.Group(), n = p.count || 900, R = p.r || .6, r1 = p.r1 ?? R * .7, H = p.h || .16;
+  const geo = new THREE.PlaneGeometry(.014, 1, 1, 4); geo.translate(0, .5, 0); const P = geo.attributes.position, cl = new Float32Array(P.count * 3);
+  for (let i = 0; i < P.count; i++) { const y = P.getY(i); P.setX(i, P.getX(i) * (1 - y * .9)); P.setZ(i, y * y * .08); const k = .5 + .5 * y; cl.set([k, k, k * .95], i * 3); } geo.computeVertexNormals(); geo.setAttribute('color', new THREE.BufferAttribute(cl, 3));
+  const im = new THREE.InstancedMesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, side: THREE.DoubleSide, roughness: .78 }), n); im.castShadow = false; im.receiveShadow = true; im.frustumCulled = false; g.add(im);
+  const cs = ['#6d8a38', '#7c9842', '#5d7a30', '#89a04a', '#93a456', '#a1a865', '#6a8434'], B = [];
+  for (let i = 0; i < n; i++) { const a = hr(i, 41) * 6.283, d = R * Math.sqrt(hr(i, 42)); B.push({ x: Math.cos(a) * d, z: Math.sin(a) * d, h: H * (.6 + hr(i, 43) * .7), yaw: hr(i, 44) * 6.28, lx: (hr(i, 45) - .5) * .5, lz: (hr(i, 47) - .5) * .5, d, a });
+    im.setColorAt(i, col(cs[i % cs.length]).multiplyScalar(.9 + hr(i, 48) * .2)); }
+  const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), Qy = new THREE.Quaternion(), S = new THREE.Vector3(), V = new THREE.Vector3(), AX = new THREE.Vector3();
+  g.userData.tick = t => { const f = kv(p.flatK, t, 0);
+    B.forEach((b, i) => { const fl = f * clamp((r1 + .12 - b.d) / .24), sw = .1 * Math.sin(t * 1.7 + b.x * 4 + b.z * 2) + .04 * Math.sin(t * 4.1 + i);
+      const fa = b.a + 1.1, tx = lerp(b.lx + sw, Math.cos(fa) * 1.38, fl), tz = lerp(b.lz + sw * .4, Math.sin(fa) * 1.38, fl), tilt = Math.hypot(tx, tz), phi = Math.atan2(tz, tx);
+      AX.set(Math.sin(phi), 0, -Math.cos(phi)); Q.setFromAxisAngle(AX, tilt); Qy.setFromAxisAngle(Y_UP, b.yaw); Q.multiply(Qy);
+      M.compose(V.set(b.x, 0, b.z), Q, S.set(1, b.h * (1 - .15 * fl), 1)); im.setMatrixAt(i, M); }); im.instanceMatrix.needsUpdate = true; };
+  return g; }
+// ---- wet mud patch: dark wet earth, glossy puddles in hoof holes, damp dark straw, drips making ripple rings (spilt trough water)
+function mudPatch(p = {}) { const g = new THREE.Group(), W = p.w || 1.3, D = p.d || .9, r = rng(p.seed || 223), PX = 400;
+  const tex = canvasT(Math.round(W * PX), Math.round(D * PX), (c, w, h) => { c.fillStyle = '#4b3524'; c.fillRect(0, 0, w, h);
+    for (let i = 0; i < 7000; i++) { c.fillStyle = `rgba(${r() > .5 ? '110,84,58' : '30,20,12'},${r() * .22})`; c.fillRect(r() * w, r() * h, 1 + r() * 6, 1 + r() * 4); }
+    for (let i = 0; i < 60; i++) { const x = r() * w, y = r() * h, a = r() * 6.28, s = 6 + r() * 4; c.save(); c.translate(x, y); c.rotate(a); c.fillStyle = 'rgba(25,18,12,.55)'; for (const dx of [-s * .55, s * .55]) { c.beginPath(); c.ellipse(dx, 0, s * .45, s, 0, 0, 6.3); c.fill(); } c.restore(); }
+    for (let i = 0; i < 40; i++) { c.strokeStyle = `rgba(200,190,170,${.08 + r() * .1})`; c.lineWidth = 1 + r() * 2; c.beginPath(); const x = r() * w, y = r() * h; c.moveTo(x, y); c.quadraticCurveTo(x + (r() - .5) * 60, y + (r() - .5) * 30, x + (r() - .5) * 90, y + (r() - .5) * 40); c.stroke(); } }, [1, 1]);
+  const al = canvasT(256, 256, (c, w, h) => { c.fillStyle = '#000'; c.fillRect(0, 0, w, h); for (let i = 0; i < 26; i++) { const x = w * (.25 + r() * .5), y = h * (.25 + r() * .5), R = w * (.15 + r() * .17), g2 = c.createRadialGradient(x, y, R * .3, x, y, R);
+    g2.addColorStop(0, 'rgba(255,255,255,1)'); g2.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = g2; c.fillRect(0, 0, w, h); } }, [1, 1]); al.colorSpace = THREE.NoColorSpace;
+  const mud = new THREE.Mesh(new THREE.PlaneGeometry(W, D), new THREE.MeshStandardMaterial({ map: tex, alphaMap: al, transparent: true, roughness: .5, metalness: .05, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }));
+  mud.rotation.x = -Math.PI / 2; mud.position.y = .012; mud.receiveShadow = true; mud.renderOrder = 2; g.add(mud);
+  const pm = new THREE.MeshStandardMaterial({ color: col('#4a4a40'), roughness: .03, metalness: .35, transparent: true, opacity: .88, envMapIntensity: 1.4, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }), pud = [];
+  (p.puddles || [[-.18, .05, .32, .2], [.25, -.12, .2, .13], [.05, .22, .14, .09]]).forEach(([x, z, a, b], i) => { const sh2 = new THREE.Shape(); for (let k = 0; k <= 24; k++) { const an = k / 24 * 6.283, rr2 = 1 + (hr(k % 24, i + 3) - .5) * .35; k ? sh2.lineTo(Math.cos(an) * a * rr2, Math.sin(an) * b * rr2) : sh2.moveTo(Math.cos(an) * a * rr2, Math.sin(an) * b * rr2); }
+    const m2 = new THREE.Mesh(new THREE.ShapeGeometry(sh2), pm); m2.rotation.x = -Math.PI / 2; m2.position.set(x * W, .016, z * D); m2.renderOrder = 3; g.add(m2); pud.push([x * W, z * D, a, b]); });
+  const ringM = new THREE.MeshBasicMaterial({ map: rippleRingTex(), color: col('#dfe8e4'), transparent: true, opacity: 0, depthWrite: false }), rings = [];
+  for (let i = 0; i < 4; i++) { const m2 = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), ringM.clone()); m2.rotation.x = -Math.PI / 2; m2.renderOrder = 4; g.add(m2); rings.push(m2); }
+  const nS = 70, straw = new THREE.InstancedMesh(new THREE.CylinderGeometry(.003, .003, 1, 4), std('#5d4a32', { r: .45 }), nS), Mx = new THREE.Matrix4(), Qx = new THREE.Quaternion(), Px = new THREE.Vector3(), Sx = new THREE.Vector3();
+  for (let i = 0; i < nS; i++) { Px.set((hr(i, 61) - .5) * W * .8, .015, (hr(i, 62) - .5) * D * .8); Qx.setFromEuler(new THREE.Euler(Math.PI / 2, 0, hr(i, 63) * 6.28)); straw.setMatrixAt(i, Mx.compose(Px, Qx, Sx.set(1, .06 + hr(i, 64) * .12, 1))); } g.add(straw);
+  g.userData.tick = t => { rings.forEach((m2, i) => { const per = 1.9, ph = (t + i * per / rings.length) / per, k = fr01(ph), c = Math.floor(ph), pd = pud[(c + i) % pud.length], a = hr(c, i + 7) * 6.28, d = hr(c, i + 9) * .6;
+      m2.position.set(pd[0] + Math.cos(a) * pd[2] * d, .019, pd[1] + Math.sin(a) * pd[3] * d); m2.scale.setScalar(.03 + k * .22); m2.material.opacity = Math.pow(1 - k, 1.6) * .5; });
+    pm.color.setRGB(.29 + .015 * Math.sin(t * 1.3), .29 + .015 * Math.sin(t * 1.3), .25); };
+  return g; }
+// ---- hinged wooden gate (rails match pen_fence: .38 / .78 / 1.15 m), hinge at the local origin, leaf along +x; openK [[t, 0..1]], swing (rad, sign = side)
+function penGate(p = {}) { const g = new THREE.Group(), W = p.w || 1.2, leaf = new THREE.Group(); g.add(leaf); const tint = '#94795a';
+  leaf.add(woodBox([.07, 1.2, .05], 1, tint, [.05, .62, 0]), woodBox([.07, 1.2, .05], 1, tint, [W - .05, .62, 0]));
+  for (const y of [.38, .78, 1.15]) leaf.add(woodBox([W - .02, .09, .035], 0, '#8d7458', [W / 2, y, .04]));
+  const br = woodBox([Math.hypot(W - .16, .77), .08, .03], 0, '#9b8263', [W / 2, .765, .065]); br.rotation.z = Math.atan2(.77, W - .16); leaf.add(br);
+  for (const y of [.3, 1.05]) { const h = box(.1, .025, .012, std('#3b3632', { r: .5, m: .5 })); h.position.set(.06, y, -.03); leaf.add(h); }
+  g.userData.tick = t => { leaf.rotation.y = kv(p.openK, t, 0) * (p.swing ?? -1.5); };
+  return shadowed(g); }
+// ---- litter a farmer picks up: kind bottle (1.5 l PET) | stick | twig | stone. Lies at its origin until pick[0], rides the palm
+// LINK[carryBy][hand] until pick[1], then flies on an arc to throwTo (world) landing at pick[2]
+function pickProp(p = {}) { const g = new THREE.Group(), it = new THREE.Group(); g.add(it); const kind = p.kind || 'stick';
+  if (kind === 'bottle') { const prof = [[0, 0], [.044, 0], [.046, .01], [.046, .2], [.04, .24], [.02, .27], [.014, .29], [.014, .305]].map(([x, y]) => new THREE.Vector2(x, y));
+    const b = new THREE.Mesh(new THREE.LatheGeometry(prof, 20), new THREE.MeshStandardMaterial({ color: col('#cfe6ea'), roughness: .12, metalness: .05, transparent: true, opacity: .55, side: THREE.DoubleSide, envMapIntensity: 1.5 }));
+    b.scale.set(1, 1, .82); const cap = cyl(.016, .016, .02, std('#2d6fb8', { r: .4 }), 12); cap.position.y = .315; const bb = new THREE.Group(); bb.add(b, cap); bb.rotation.set(0, 0, Math.PI / 2); bb.position.set(.155, .04, 0); it.add(bb); b.castShadow = true; }
+  else if (kind === 'stone') { const geo = new THREE.DodecahedronGeometry(p.r || .045, 1), P = geo.attributes.position; for (let i = 0; i < P.count; i++) { const k = 1 + (hr(Math.round(P.getX(i) * 300), Math.round(P.getZ(i) * 300)) - .5) * .25; P.setXYZ(i, P.getX(i) * k, P.getY(i) * k * .7, P.getZ(i) * k); }
+    geo.computeVertexNormals(); const s = new THREE.Mesh(geo, std('#8c8072', { r: .9 })); s.position.y = (p.r || .045) * .6; s.castShadow = true; it.add(s); }
+  else { const L = p.len || (kind === 'twig' ? .26 : .55), R = kind === 'twig' ? .006 : .012, pts = [0, .25, .5, .75, 1].map((u, i) => new THREE.Vector3(-L / 2 + u * L, R + .002, (hr(i, 71) - .5) * .04)), bark = std(kind === 'twig' ? '#7a5e40' : '#6b5038', { r: .9 });
+    const tb = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 16, R, 6), bark); tb.castShadow = true; it.add(tb);
+    const f0 = pts[2].clone(), f1 = f0.clone().add(new THREE.Vector3(L * .22, 0, L * .16)); const fk = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([f0, f0.clone().lerp(f1, .5).add(new THREE.Vector3(0, .004, .01)), f1]), 8, R * .6, 5), bark); fk.castShadow = true; it.add(fk);
+    if (kind === 'twig') for (let i = 0; i < 3; i++) { const lf = new THREE.Mesh(new THREE.SphereGeometry(1, 8, 6), std(['#8a7a3a', '#9a8040', '#6f6a30'][i], { r: .8 })); lf.scale.set(.018, .003, .009); lf.position.set(-L / 2 + L * (.2 + i * .3), .006, .012 * (i - 1)); it.add(lf); } }
+  it.rotation.y = p.rot || 0; const rot0 = p.rot || 0;
+  g.userData.tick = t => { const pk = p.pick; it.visible = true; if (!pk || t < pk[0]) { it.position.set(0, 0, 0); it.rotation.set(0, rot0, 0); return; }
+    const L = LINK[p.carryBy || 'farmer'], palm = L?.[p.hand || 'R']; if (!palm) return; g.updateWorldMatrix(true, false);
+    const off = new THREE.Vector3(0, -.03, 0);
+    if (t < pk[1]) { const k = sEase((t - pk[0]) / .2), loc = g.worldToLocal(palm.clone().add(off)); it.position.copy(new THREE.Vector3().lerp(loc, k)); it.rotation.set(0, lerp(rot0, L.yaw + Math.PI / 2, k), lerp(0, .5, k)); return; }
+    const to = g.worldToLocal(new THREE.Vector3(...p.throwTo)), u = clamp((t - pk[1]) / Math.max(.05, pk[2] - pk[1])), from = g.worldToLocal(palm.clone().add(off));
+    if (u < 1) { it.position.copy(from).lerp(to, u); it.position.y += 4 * (p.arc || .9) * u * (1 - u); it.rotation.set(u * 9, L.yaw + Math.PI / 2 + u * 4, .5 + u * 6); }
+    else { it.position.copy(to); it.rotation.set(0, rot0 + 1.3, 0); } };
+  return g; }
+Object.assign(ASSETS, { sheep: sheepWalker, grass_bed: grassBed, mud_patch: mudPatch, pen_gate: penGate, pick_prop: pickProp });
+// farmer poses for the pen (Farmer, tuned with a palm probe, see plans/sheep_circle.mjs)
+Object.assign(RIG_POSES, {
+  leanGate: { adL: 1.35, adR: 1.35, fL: .55, fR: .55, eL: .95, eR: .95, sp: .3, hd: .25 },                       // forearms on a 1.15 m top rail: palms ~1.24 m high, .41 m forward
+  pushGate: { adL: 1.3, adR: 1.3, fL: 1.2, fR: 1.25, eL: .4, eR: .35, sp: .15, hd: .1 },
+  // squats (track y -.55): palms ~.19 m high, .25 m forward, .18 m to each side
+  squatHold: { adL: 1.4, adR: 1.4, fL: .55, fR: .55, eL: 1.0, eR: 1.0, sp: 1.1, hd: -.35, kL: 2.3, kR: 2.3, hL: 1.0, hR: 1.0 },
+  squatPickR: { adL: 1.4, adR: 1.35, fL: .55, fR: .2, eL: 1.0, eR: 0, sp: 1.3, hd: -.45, kL: 2.3, kR: 2.3, hL: 1.0, hR: 1.0 },
+  squatPickL: { adL: 1.35, adR: 1.4, fL: .2, fR: .55, eL: 0, eR: 1.0, sp: 1.3, hd: -.45, kL: 2.3, kR: 2.3, hL: 1.0, hR: 1.0 },
+  squatPress: { adL: 1.35, adR: 1.35, fL: .1, fR: .1, eL: 0, eR: 0, sp: 1.3, hd: -.45, kL: 2.3, kR: 2.3, hL: 1.0, hR: 1.0, shake: .3 },
+  holdBoth: { adL: 1.4, adR: 1.4, fL: .6, fR: .6, eL: 1.1, eR: 1.1, sp: .05, hd: .1, hold: 1 },
+  tossBack: { adL: 1.3, adR: 1.3, fL: -.55, fR: -.6, eL: .5, eR: .5, sp: -.12, hd: -.15, hold: 1 },
+  tossFwd: { adL: 1.3, adR: 1.3, fL: 1.9, fR: 1.95, eL: .2, eR: .2, sp: .25, hd: -.25, hold: 1 } });

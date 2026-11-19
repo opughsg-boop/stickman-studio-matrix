@@ -1,0 +1,229 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Dead Phone</title>
+<style>html,body{margin:0;background:#000}canvas{display:block}</style></head>
+<body><canvas id="c" width="1080" height="1920"></canvas>
+<script>
+// Dead Phone (45 s). World units in metres. Camera maps metres to pixels.
+const cv=document.getElementById('c'), g=cv.getContext('2d');
+window.canvas=cv; window.DUR=45;
+const INK='#14151A', SKIN='#F2C49B', HOOD='#2F6FD6', PANT='#3B3F4A', HAIR='#5A3A22', SHOE='#1d1d22', TEAL='#2E7D7A';
+const D=Math.PI/180, TAU=Math.PI*2;
+const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
+const lerp=(a,b,k)=>a+(b-a)*k;
+const ease=k=>{k=clamp(k);return k<.5?4*k*k*k:1-Math.pow(-2*k+2,3)/2};
+const back=k=>{k=clamp(k);const c=1.7;return 1+(c+1)*Math.pow(k-1,3)+c*Math.pow(k-1,2)};
+let cam={x:0,y:0.9,k:420};
+const X=x=>540+(x-cam.x)*cam.k, Y=y=>960-(y-cam.y)*cam.k;
+
+// ---- poses (hands and feet are world targets; IK solves the joints) ----
+const P={
+ SIT:  {hip:[-1.25,0.5],tor:-6,hL:[-0.95,0.6],hR:[-1.0,0.6],fN:[-0.75,0.07],fF:[-0.7,0.07],face:'panic'},
+ STAND:{hip:[-1.0,0.92],tor:0,hL:[-0.85,1.05],hR:[-1.15,1.05],fN:[-1.1,0],fF:[-0.9,0],face:'panic'},
+ LEAP: {hip:[-1.0,0.8],tor:0,hL:[-0.8,1.5],hR:[-1.2,1.5],fN:[-1.1,0],fF:[-0.9,0],face:'gasp'},
+ CRAWL:{hip:[-0.9,0.5],tor:85,hL:[-0.42,0],hR:[-0.3,0],fN:[-1.35,0],fF:[-1.25,0],face:'panic',gait:1},
+ REACH:{hip:[4.0,0.5],tor:35,hL:[4.25,0.6],hR:[4.52,0.45],fN:[3.85,0],fF:[4.1,0],face:'smug',brick:true},
+ LIE:  {hip:[4.0,0.13],tor:90,hL:[4.5,0.03],hR:[4.1,0.03],fN:[3.1,0.03],fF:[3.15,0.03],face:'sigh'},
+ SITF: {hip:[4.0,0.1],tor:-10,hL:[3.8,0.12],hR:[4.3,0.35],fN:[4.8,0.07],fF:[4.75,0.07],face:'deadpan',brick:true},
+};
+const crawlAt=x=>({...P.CRAWL,hip:[x,0.5],hL:[x+0.48,0],hR:[x+0.6,0],fN:[x-0.45,0],fF:[x-0.35,0]});
+
+// ---- shots: hard cuts, each with a camera move and a pose move ----
+const SHOTS=[
+ {a:0,  b:3,  label:'2% BATTERY', c0:{x:-1.5,y:1.0,k:700}, c1:{x:-1.5,y:1.0,k:700}, p0:P.SIT, p1:P.SIT},
+ {a:3,  b:6,  label:'PANIC',      c0:{x:-1.0,y:0.95,k:420}, c1:{x:-1.0,y:0.95,k:440}, p0:P.SIT, p1:P.LEAP},
+ {a:6,  b:9,  label:'NEED AN OUTLET', c0:{x:-0.6,y:0.95,k:300}, c1:{x:2.4,y:0.95,k:300}, p0:P.STAND, p1:P.STAND},
+ {a:9,  b:12, label:'CRAWL MODE', c0:{x:0.2,y:0.6,k:360}, c1:{x:0.6,y:0.6,k:360}, p0:P.STAND, p1:crawlAt(-0.9)},
+ {a:12, b:17, label:'CRAWL MODE', c0:{x:0.2,y:0.6,k:360}, c1:{x:2.6,y:0.6,k:360}, p0:crawlAt(-0.9), p1:crawlAt(3.1)},
+ {a:17, b:20, label:'ALMOST',     c0:{x:3.0,y:0.6,k:380}, c1:{x:3.8,y:0.6,k:420}, p0:crawlAt(3.1), p1:P.REACH},
+ {a:20, b:23, label:'PLUGGED IN', c0:{x:4.1,y:0.6,k:520}, c1:{x:4.1,y:0.6,k:520}, p0:P.REACH, p1:P.REACH, check:true},
+ {a:23, b:26, label:'SAVED',      c0:{x:4.0,y:0.5,k:360}, c1:{x:4.0,y:0.5,k:360}, p0:P.REACH, p1:P.LIE},
+ {a:26, b:29, label:'WAIT',       c0:{x:3.8,y:0.6,k:340}, c1:{x:-0.5,y:0.6,k:340}, p0:P.LIE, p1:P.SITF},
+ {a:29, b:33, label:'RIGHT THERE',c0:{x:-0.5,y:0.6,k:320}, c1:{x:-0.5,y:0.6,k:320}, p0:P.SITF, p1:P.SITF},
+ {a:33, b:37, label:'BEHIND COUCH',c0:{x:-1.9,y:0.4,k:900}, c1:{x:-1.9,y:0.4,k:900}, p0:P.SITF, p1:P.SITF},
+ {a:37, b:41, label:'NEVER PLUGGED',c0:{x:3.8,y:0.6,k:360}, c1:{x:3.8,y:0.6,k:360}, p0:P.SITF, p1:P.SITF},
+ {a:41, b:45, label:'NEVER PLUGGED',c0:{x:3.8,y:0.6,k:360}, c1:{x:3.6,y:0.7,k:300}, p0:P.SITF, p1:P.SITF},
+];
+
+// battery: 2% until the phone starts charging at 3 s, full by 29 s
+const battery=t=>t<3?2:Math.round(clamp(2+(t-3)/26*98,2,100));
+
+function ik(a,t,l1,l2,bend){
+  const dx=t[0]-a[0], dy=t[1]-a[1];
+  let d=Math.hypot(dx,dy); d=clamp(d,Math.abs(l1-l2)+1e-3,l1+l2-1e-3);
+  const base=Math.atan2(dy,dx);
+  const A=Math.acos(clamp((l1*l1+d*d-l2*l2)/(2*l1*d),-1,1));
+  const ang=base+bend*A;
+  return [a[0]+l1*Math.cos(ang), a[1]+l1*Math.sin(ang)];
+}
+function pose(a,b,k,t){
+  const o={};
+  for(const key of ['hip','hL','hR','fN','fF']) o[key]=[lerp(a[key][0],b[key][0],k),lerp(a[key][1],b[key][1],k)];
+  o.tor=lerp(a.tor,b.tor,k); o.face=k<.5?a.face:b.face; o.brick=!!(k<.5?a.brick:b.brick);
+  o.gait=(a.gait||0)*(1-k)+(b.gait||0)*k;
+  if(o.gait>0){ // crawl: limbs lift in turn, hands and feet stay planted on their steps
+    const ph=t*TAU*1.1;
+    const lift=v=>0.05*Math.max(0,Math.sin(v));
+    o.hL[1]+=lift(ph); o.hR[1]+=lift(ph+Math.PI);
+    o.fN[1]+=lift(ph+Math.PI*0.5); o.fF[1]+=lift(ph+Math.PI*1.5);
+    o.hip[1]+=0.015*Math.abs(Math.sin(ph));
+  }
+  return o;
+}
+
+function seg(list,w,col,a,b){list.push([a[0],a[1],b[0],b[1],w,col]);}
+function drawSegs(list,shade=1){
+  g.lineCap='round';
+  for(const s of list){g.strokeStyle=INK;g.lineWidth=(s[4]+0.035)*cam.k;g.beginPath();g.moveTo(X(s[0]),Y(s[1]));g.lineTo(X(s[2]),Y(s[3]));g.stroke();}
+  for(const s of list){g.strokeStyle=shadeCol(s[5],shade);g.lineWidth=s[4]*cam.k;g.beginPath();g.moveTo(X(s[0]),Y(s[1]));g.lineTo(X(s[2]),Y(s[3]));g.stroke();}
+}
+function shadeCol(hex,s){if(s===1)return hex;const n=parseInt(hex.slice(1),16);const r=(n>>16)*s|0,gg=((n>>8)&255)*s|0,b=(n&255)*s|0;return `rgb(${r},${gg},${b})`;}
+function dot(p,r,col){g.beginPath();g.arc(X(p[0]),Y(p[1]),r*cam.k,0,TAU);g.fillStyle=col;g.fill();g.lineWidth=0.03*cam.k;g.strokeStyle=INK;g.stroke();}
+
+function man(p){
+  const tor=p.tor*D;
+  const up=[Math.sin(tor),Math.cos(tor)];
+  const hip=p.hip;
+  const neck=[hip[0]+0.55*up[0],hip[1]+0.55*up[1]];
+  const shoulder=[neck[0]-0.03*up[0],neck[1]-0.03*up[1]];
+  const headC=[neck[0]+0.25*up[0],neck[1]+0.25*up[1]];
+  const eF=ik(hip,p.fF,0.46,0.44,1), eN=ik(hip,p.fN,0.46,0.44,1);
+  const kF=eF, kN=eN;
+  const aF=ik(shoulder,p.hR,0.30,0.26,-1), aN=ik(shoulder,p.hL,0.30,0.26,-1);
+  // far side first (darker), then torso, head, near side
+  const far=[], near=[], body=[];
+  seg(far,0.30,HOOD,shoulder,aF); seg(far,0.085,SKIN,aF,p.hR);
+  seg(far,0.14,PANT,hip,kF); seg(far,0.12,PANT,kF,p.fF);
+  seg(body,0.34,HOOD,hip,neck);
+  seg(body,0.16,PANT,[hip[0]-0.02*up[0],hip[1]],[hip[0]+0.1,hip[1]]);
+  seg(near,0.14,PANT,hip,kN); seg(near,0.12,PANT,kN,p.fN);
+  seg(near,0.30,HOOD,shoulder,aN); seg(near,0.085,SKIN,aN,p.hL);
+  drawSegs(far,0.78);
+  // shoes on the far foot
+  g.fillStyle=SHOE; g.beginPath(); g.ellipse(X(p.fF[0]+0.04),Y(p.fF[1]+0.02),0.09*cam.k,0.04*cam.k,0,0,TAU); g.fill();
+  drawSegs(body);
+  drawHead(headC,p.face,tor);
+  drawSegs(near);
+  g.fillStyle=SHOE; g.beginPath(); g.ellipse(X(p.fN[0]+0.04),Y(p.fN[1]+0.02),0.09*cam.k,0.04*cam.k,0,0,TAU); g.fill();
+  dot(p.hR,0.045,SKIN); dot(p.hL,0.045,SKIN);
+  if(p.brick){ // phone charger brick held in the right hand
+    const h=p.hR;
+    g.fillStyle='#24262e'; g.strokeStyle=INK; g.lineWidth=0.02*cam.k;
+    g.beginPath(); g.roundRect(X(h[0]-0.02),Y(h[1]+0.04),0.08*cam.k,0.05*cam.k,0.01*cam.k); g.fill(); g.stroke();
+    g.fillStyle='#c9ccd4'; g.fillRect(X(h[0]+0.06),Y(h[1]+0.03),0.03*cam.k,0.012*cam.k); g.fillRect(X(h[0]+0.06),Y(h[1]+0.05),0.03*cam.k,0.012*cam.k);
+  }
+}
+function drawHead(c,face,tor){
+  const r=0.24;
+  g.beginPath(); g.arc(X(c[0]),Y(c[1]),r*cam.k,0,TAU); g.fillStyle=SKIN; g.fill(); g.lineWidth=0.035*cam.k; g.strokeStyle=INK; g.stroke();
+  // hair on the back-top of the head
+  g.save(); g.beginPath(); g.arc(X(c[0]),Y(c[1]),r*cam.k,0,TAU); g.clip();
+  g.fillStyle=HAIR; g.beginPath(); g.ellipse(X(c[0]-0.05),Y(c[1]+0.13),0.25*cam.k,0.14*cam.k,-0.15,0,TAU); g.fill();
+  g.restore();
+  const ex=0.09, ey=0.03, ew=0.035;
+  const E=(x,y)=>[X(c[0]+x),Y(c[1]+y)];
+  g.strokeStyle=INK; g.fillStyle=INK; g.lineWidth=0.02*cam.k; g.lineCap='round';
+  for(const sx of [-ex,ex]){
+    const [px,py]=E(sx,ey);
+    if(face==='panic'||face==='gasp'){g.beginPath();g.arc(px,py,0.055*cam.k,0,TAU);g.fillStyle='#fff';g.fill();g.stroke();g.beginPath();g.arc(px,py,0.02*cam.k,0,TAU);g.fillStyle=INK;g.fill();}
+    else if(face==='smug'){g.beginPath();g.moveTo(px-0.05*cam.k,py);g.lineTo(px+0.05*cam.k,py);g.stroke();}
+    else if(face==='sigh'){g.beginPath();g.arc(px,py+0.01*cam.k,0.05*cam.k,Math.PI*1.1,Math.PI*1.9);g.stroke();}
+    else {g.beginPath();g.arc(px,py,ew*cam.k,0,TAU);g.fill();}
+  }
+  const [mx,my]=E(0,-0.1);
+  g.beginPath();
+  if(face==='panic'){g.arc(mx,my,0.04*cam.k,0,TAU);g.fillStyle=INK;g.fill();}
+  else if(face==='gasp'){g.arc(mx,my,0.05*cam.k,0,TAU);g.fillStyle='#5a1d1d';g.fill();g.stroke();}
+  else if(face==='smug'){g.moveTo(mx-0.06*cam.k,my-0.01*cam.k);g.quadraticCurveTo(mx,my+0.03*cam.k,mx+0.07*cam.k,my-0.03*cam.k);g.stroke();}
+  else if(face==='sigh'){g.moveTo(mx-0.05*cam.k,my);g.quadraticCurveTo(mx,my-0.02*cam.k,mx+0.05*cam.k,my);g.stroke();}
+  else {g.moveTo(mx-0.04*cam.k,my);g.lineTo(mx+0.04*cam.k,my);g.stroke();}
+}
+
+function phone(cx,cy,bat){
+  const w=0.075,h=0.15;
+  g.fillStyle='#1b1b1f'; g.strokeStyle=INK; g.lineWidth=0.012*cam.k;
+  g.beginPath(); g.roundRect(X(cx-w/2),Y(cy+h/2),w*cam.k,h*cam.k,0.012*cam.k); g.fill(); g.stroke();
+  g.fillStyle='#0b1116'; g.beginPath(); g.roundRect(X(cx-w/2+0.006),Y(cy+h/2-0.006),(w-0.012)*cam.k,(h-0.012)*cam.k,0.008*cam.k); g.fill();
+  // battery icon (no text)
+  const bw=0.04,bh=0.07, bx=cx-bw/2, by=cy-bh/2;
+  g.strokeStyle='#e8e8e8'; g.lineWidth=0.005*cam.k; g.strokeRect(X(bx),Y(by+bh),bw*cam.k,bh*cam.k);
+  g.fillStyle=bat<15?'#e5484d':'#3ad17a';
+  const top=by+0.003+(bh-0.006)*bat/100;
+  g.fillRect(X(bx+0.003),Y(top),(bw-0.006)*cam.k,(top-(by+0.003))*cam.k);
+}
+
+function room(){
+  g.fillStyle='#f1e4cc'; g.fillRect(0,0,1080,1920);
+  // wall boards (anchored to the world)
+  g.fillStyle='rgba(120,90,60,0.07)';
+  for(let x=-8;x<8;x+=0.6){g.fillRect(X(x),0,Math.max(2,0.02*cam.k),Y(0));}
+  // lamp glow from the upper left
+  const rg=g.createRadialGradient(780,260,20,780,260,820);
+  rg.addColorStop(0,'rgba(255,226,160,0.45)'); rg.addColorStop(1,'rgba(255,226,160,0)');
+  g.fillStyle=rg; g.fillRect(0,0,1080,1920);
+  // wainscot and floor
+  g.fillStyle='#c8ab80'; g.fillRect(0,Y(0.9),1080,Y(0)-Y(0.9));
+  g.fillStyle='#8c6b48'; g.fillRect(0,Y(0.9),1080,Math.max(4,0.02*cam.k));
+  g.fillStyle='#7d5b3e'; g.fillRect(0,Y(0),1080,1920-Y(0));
+  g.strokeStyle='rgba(40,25,15,0.25)'; g.lineWidth=2;
+  for(let x=-10;x<10;x+=0.25){g.beginPath();g.moveTo(X(x),Y(0));g.lineTo(X(x)+0.08*cam.k,1920);g.stroke();}
+  // left wall (couch wall) darker
+  if(X(-2.1)>0){g.fillStyle='#b99a70';g.fillRect(0,0,X(-2.1),Y(0));}
+  // outlets
+  plate(-2.1,0.25); plate(4.6,0.45);
+}
+function plate(x,y){
+  g.fillStyle='#f7f7f2'; g.strokeStyle=INK; g.lineWidth=0.01*cam.k;
+  g.beginPath(); g.roundRect(X(x-0.05),Y(y+0.09),0.1*cam.k,0.18*cam.k,0.01*cam.k); g.fill(); g.stroke();
+  g.fillStyle=INK; for(const yy of [y+0.035,y+0.085]){g.beginPath();g.arc(X(x-0.02),Y(yy+0.0),0.01*cam.k,0,TAU);g.fill();g.beginPath();g.arc(X(x+0.02),Y(yy),0.01*cam.k,0,TAU);g.fill();}
+}
+function couchBack(){g.fillStyle=TEAL;g.strokeStyle=INK;g.lineWidth=0.02*cam.k;g.beginPath();g.roundRect(X(-1.9),Y(0.92),0.2*cam.k,0.92*cam.k,0.05*cam.k);g.fill();g.stroke();}
+function couchFront(){
+  g.fillStyle=TEAL;g.strokeStyle=INK;g.lineWidth=0.02*cam.k;
+  g.beginPath();g.roundRect(X(-1.9),Y(0.46),2.0*cam.k,0.46*cam.k,0.04*cam.k);g.fill();g.stroke();
+  g.fillStyle='#3e9a96';g.beginPath();g.roundRect(X(-1.7),Y(0.56),1.8*cam.k,0.1*cam.k,0.05*cam.k);g.fill();g.stroke();
+  g.fillStyle=TEAL;g.beginPath();g.roundRect(X(0.1),Y(0.66),0.16*cam.k,0.66*cam.k,0.05*cam.k);g.fill();g.stroke();
+}
+function cablePath(pts){
+  g.strokeStyle='#222'; g.lineWidth=0.012*cam.k; g.lineCap='round'; g.lineJoin='round';
+  g.beginPath();g.moveTo(X(pts[0][0]),Y(pts[0][1]));for(let i=1;i<pts.length;i++)g.lineTo(X(pts[i][0]),Y(pts[i][1]));g.stroke();
+}
+
+function check(k){
+  const s=back(k);
+  if(s<=0)return;
+  g.save(); g.translate(X(4.15),Y(1.25)); g.scale(s,s);
+  g.beginPath(); g.arc(0,0,70,0,TAU); g.fillStyle='#2ecc71'; g.fill(); g.lineWidth=12; g.strokeStyle=INK; g.stroke();
+  g.beginPath(); g.moveTo(-34,2); g.lineTo(-10,26); g.lineTo(36,-22); g.lineWidth=20; g.strokeStyle='#fff'; g.lineCap='round'; g.lineJoin='round'; g.stroke();
+  g.restore();
+}
+function label(text){
+  g.font='bold 64px "DejaVu Sans"'; g.textAlign='center'; g.textBaseline='middle';
+  const w=g.measureText(text).width+80;
+  g.fillStyle='#0d0d0d'; g.beginPath(); g.roundRect(540-w/2,150,w,120,26); g.fill();
+  g.fillStyle='#fff'; g.fillText(text,540,212);
+}
+
+function renderAt(t){
+  let sh=SHOTS[SHOTS.length-1];
+  for(const s of SHOTS){if(t>=s.a&&t<s.b){sh=s;break;}}
+  const k=ease((t-sh.a)/(sh.b-sh.a));
+  cam={x:lerp(sh.c0.x,sh.c1.x,k),y:lerp(sh.c0.y,sh.c1.y,k),k:lerp(sh.c0.k,sh.c1.k,k)};
+  // handheld wobble on the close shots only
+  if(sh.a<3){cam.x+=0.004*Math.sin(t*40);cam.y+=0.003*Math.cos(t*33);}
+  const p=pose(sh.p0,sh.p1,k,t);
+  const bat=battery(t);
+  g.clearRect(0,0,1080,1920);
+  room();
+  // charging cable: outlet on the wall, behind the couch back, up and over to the phone
+  cablePath([[-2.1,0.25],[-1.8,0.25],[-1.8,0.9]]);
+  couchBack();
+  man(p);
+  couchFront();
+  cablePath([[-1.8,0.9],[-1.5,0.56]]);
+  phone(-1.5,0.635,bat);
+  if(sh.check){check(clamp((t-20)/0.4));}
+  label(sh.label);
+}
+window.renderAt=renderAt;
+renderAt(0);
+</script></body></html>

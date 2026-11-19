@@ -1,0 +1,11 @@
+{ "title": "حجر الملح",
+  "hero": { "model": "animals_pack/Cow", "height": 1.4, "clip": "Eating" },
+  "lines": [
+    { "shot": "close", "question": true },
+    { "shot": "orbit" },
+    { "shot": "found" },
+    { "shot": "object", "prop": { "type": "box", "size": [0.6, 0.3, 0.4], "color": "#e8e4da" } },
+    { "shot": "science" },
+    { "shot": "react", "flash": true },
+    { "shot": "cta" }
+  ] }

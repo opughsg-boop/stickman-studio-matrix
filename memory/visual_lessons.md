@@ -214,3 +214,34 @@ Rule: when a preview or final video shows a mistake, add one entry here (what wa
 - Mistake: crops at real height in a wide shot read as sticks; corn and squash must fill the frame in the hero beat.
 - Mistake: a grey-brown slab for soil looks like a floating block. Fix: continuous ground with the same soil texture as the rest of the scene.
 - Mistake: root nodules as pink balls on a stick. Fix: a branching root system with nodules along the roots, shown in a cut-away.
+## salt_cow (2026-11-17)
+- Mistake: hero model "animals_pack/Cow" was loaded from assets/models and returned 404. Fix: renderer/cine.js loadModel routes names with a slash to assets/lib.
+- Source: the render log (404 on /assets/models/animals_pack/Cow.glb).
+
+## salt_cow v2 (preview 2026-11-17, plans/salt_cow.mjs)
+- **Mistake:** the hook framed the cow from behind: it walked away from the camera. **Fix:** pick the walk direction first, then put the camera on the side the animal faces (camera az close to its heading). Profile shots (cow facing ±x, camera from +z) show the tongue on the block best.
+- **Mistake:** the carried block was missing or in the wrong place: it read the farmer's palms from LINK before the farmer had ticked that frame (objects tick in plan order). **Fix:** list the carrier before the carried prop (add the farmer in beat 0 with `delay`).
+- **Mistake:** the salt efflorescence on the wall read as cotton balls (big opaque white dots). **Fix:** a thin powdery haze, densest along a wavy tide line, with a damp darker band under it. Real crust is faint, not a white coat.
+- **Mistake:** a 1.6 m trough between the camera and the farmer hid the kneel beat, and a fence on the camera side cut through two shots. **Fix:** keep the camera side of a pen open; check the line from the camera to the target for props with the NDC probe.
+- **Works:** contact by probe: tongue tip within 1-5 cm of the lick spot, mouth 7-14 cm off the surface, palms on the block top (< 3 cm), muzzle on the water (4 cm), hooves at y 0.
+- Source: runs/salt_cow/sheet_preview.jpg (first pass) plus the NDC/contact probe.
+
+## Hens winter (preview 2026-11-18, plans/hens_winter.mjs)
+- **Mistake:** the voice file held two takes (lines 1-5 from 0 to 20 s, then all 7 lines from 20.1 s); the aligner spread line 2 over 2-27 s. **Fix:** check ASR segments for a repeated hook before planning; the plan uses `runs/hens_winter/voice_take2.wav` (cut at 20.10 s). The render must use that file too.
+- **Mistake:** a lime-washed coop interior was as bright as the yard (luma 169), so "the coop gets dim" did not read: the renderer has no ambient occlusion, so sky light reaches under the roof. **Fix:** an interior shade factor (`shadeK` on coop, floor, nests, and on the hen by position) of .5, lifted to .66 when the lamp comes on. Interior beats now 103-135 vs lit 153-179.
+- **Mistake:** extra check/cross stickers doubled the engine's corner ✓/✗ badges (drawn for every `kind:'solution'|'problem'` beat), and an info beat marked `solution` got a ✓. **Fix:** use `kind` for the verdict badge; add a check/cross sticker only on `info` beats.
+- **Mistake:** a sky arc behind a coop was hidden by the roof from a low yard camera. **Fix:** sky cameras over the roof line (y 2.8-3.5, 6 m out, looking slightly down), arc sized to the 9:16 width (span <= 9 m at 44 m), palms kept out of the sky corridor.
+- Contact by probe: lamp grip 0.055 m from the left palm at mounting, timer grip 0.02 m from the right palm (plug-in and dial turn). A 1.75 m Farmer rig tops out at about 1.73 m palm height, so wall fittings go at 1.5-1.7 m.
+- Source: runs/hens_winter/sheet_preview.jpg (first pass) plus the NDC/contact probe.
+
+## Hens winter v2 (preview 2026-11-18, hen head fix)
+- **Mistake:** the hen's head floated off her neck while preening (12 cm gap) and pecking (15 cm): head and neck were siblings, the neck a cylinder rotated about its middle by a guessed formula, and the head used XYZ Euler order, so a 120-degree turn plus a nod rolled the head sideways. **Fix:** `henWalker` solves the neck every frame as a stretchy link from a fixed shoulder base to an attach point at the back of the skull (length clamped 0.3-0.62 units), head rotation in 'YXZ' order (turn, then nod). Probe: head-to-neck-top 0.016 m in every act; rest/preen max step 3.2 cm per frame.
+- Source: numeric probe (head world position vs neck top, 30 fps, whole track).
+
+## Sheep circle (preview 2026-11-19, plans/sheep_circle.mjs)
+- **Mistake:** camera distances copied from the hen plan (1.2-2.9 m) framed a 0.9 m sheep far too tight in 9:16 (40 deg fov is only ~23 deg wide): sheep cut at the frame edge, rings clipped, the hook sheep half out of frame. **Fix:** about 1.6-1.8x the distance for a sheep-sized subject (whole sheep: 3.5-4.6 m; flock: 5.5-7 m; farmer walking in: 8.5 m).
+- **Mistake:** a bright white fleece in direct evening sun blew out (up to 44 % of a close-up above 205) and three overlapping lumpy ellipsoids read as cotton balls; white lower legs read as stilts. **Fix:** cream-tan wool (#c9bda6 range), finer lumps (high-frequency noise, small low-frequency share), weaker sheen, brown haired lower legs (Ossimi type), exposure 1.05. Probe stills: every beat 120-156 mean luma.
+- **Mistake:** cameras outside the pen looked through fence posts and an open gate leaf; a grazing sheep stood between the camera and the mud patch. **Fix:** shoot from inside the open (+z) side, raise elev to ~.85 over foreground animals.
+- **Mistake:** rig_track poses: a key's pose is reached right after the PREVIOUS key, so a pose must be repeated on the next key to hold it (the squat-pick palm sat at .57 m instead of .2 m). Squat (track y -.55) reaches .19-.20 m, a 1.55 kneel only .33 m.
+- Contact by probe: stance hooves y 0.000-0.002, sniff nose .045-.055 m above ground, lean palms 1.243 m on a 1.195 m rail top, pick palms .14-.15 m above the litter, press palms .06 m above the straw mound.
+- Source: runs/sheep_circle/sheet_preview.jpg plus probe stills and LINK probe.
