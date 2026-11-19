@@ -245,3 +245,9 @@ Rule: when a preview or final video shows a mistake, add one entry here (what wa
 - **Mistake:** rig_track poses: a key's pose is reached right after the PREVIOUS key, so a pose must be repeated on the next key to hold it (the squat-pick palm sat at .57 m instead of .2 m). Squat (track y -.55) reaches .19-.20 m, a 1.55 kneel only .33 m.
 - Contact by probe: stance hooves y 0.000-0.002, sniff nose .045-.055 m above ground, lean palms 1.243 m on a 1.195 m rail top, pick palms .14-.15 m above the litter, press palms .06 m above the straw mound.
 - Source: runs/sheep_circle/sheet_preview.jpg plus probe stills and LINK probe.
+## Olive cutting (preview 2026-11-19, plans/olive_cutting.mjs)
+- **Mistake:** the procedural olive crown read as bare sticks (64 leaves per spray, 5-7 cm, narrow). **Fix:** 5 sprays per secondary branch, 115 leaves each, wider leaves (6-8.5 cm, width .22); an olive is evergreen, so late winter still means a full grey-green crown.
+- **Mistake:** a gardener standing at the trunk from t=0 showed in the hook and the next close-up. **Fix:** walk him in from off-frame at the wide beat and out again right after it.
+- **Mistake:** a disembodied hand's sleeve (0.7 m along -fingers) filled half the frame when the camera looked along the forearm. **Fix:** put the camera at about 90 degrees to the forearm (bury cam az 1.15) and park a waiting hand well outside the close frame.
+- Works: grabs keyed in the cutting's own frame (pinch never slips), index pad as the contact anchor, palm-to-bark 0.007 m by probe, the front-half cutaway pot for root stages.
+- Source: runs/olive_cutting/sheet_preview.jpg (first pass) plus the NDC/contact probe.
