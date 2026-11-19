@@ -68,3 +68,4 @@
 {"run": "hens_winter", "time": "2026-11-18 01:13", "score": 60, "issues": 8, "codes": ["dead_beat"]}
 {"run": "hens_winter", "time": "2026-11-18 03:30", "score": 60, "issues": 8, "codes": ["dead_beat", "too_bright"]}
 {"run": "hens_winter", "time": "2026-11-18 03:54", "score": 95, "issues": 1, "codes": ["too_bright"]}
+{"run": "sheep_circle", "time": "2026-11-19 18:21", "score": 88, "issues": 3, "codes": ["beat_too_short", "dead_beat"]}
