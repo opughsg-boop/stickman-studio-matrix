@@ -193,37 +193,37 @@ function featherTex(base, edge, bars) { // scalloped overlapping feathers, soft 
 }
 function chicken(p = {}) { // realistic-proportion laying hen, ~0.4 m tall at scale .36: feathered body, layered wings, tail fan, comb, wattles, scaled legs with toes
   const g = new THREE.Group(), r = rng(p.seed || 1);
-  const pal = [['#8c4a22', '#e0a15e', '#3b1d0c'], ['#a3562b', '#f0b878', '#4a2410'], ['#6e3a1c', '#c98a4c', '#24120a'], ['#b96a32', '#f2c48a', '#5a2c12'], ['#d9d2c4', '#ffffff', '#5b564d']][Math.floor(r() * 5)];
+  const pal = p.pal || [['#8c4a22', '#e0a15e', '#3b1d0c'], ['#a3562b', '#f0b878', '#4a2410'], ['#6e3a1c', '#c98a4c', '#24120a'], ['#b96a32', '#f2c48a', '#5a2c12'], ['#d9d2c4', '#ffffff', '#5b564d']][Math.floor(r() * 5)];
   const fm = (c, e, rep = [2, 2], bars) => { const t = featherTex(c, e, bars).clone(); t.repeat.set(...rep); t.needsUpdate = true; return new THREE.MeshStandardMaterial({ map: t, roughness: .88, bumpMap: t, bumpScale: .6 }); };
-  const bodyM = fm(pal[0], pal[1]), wingM = fm(pal[2], pal[1], [1.2, 1.4]);
+  const bodyM = fm(pal[0], pal[1], [2, 2], p.bars), wingM = fm(pal[2], pal[1], [1.2, 1.4], p.bars), wingsA = [];
   const body = new THREE.Mesh(new THREE.SphereGeometry(.5, 28, 22), bodyM); body.scale.set(.74, .7, 1.12); body.position.set(0, .66, -.02); body.rotation.x = -.18; g.add(body);
   const breast = new THREE.Mesh(new THREE.SphereGeometry(.34, 22, 16), bodyM); breast.scale.set(.95, .9, .9); breast.position.set(0, .62, .34); g.add(breast);
   for (const s of [-1, 1]) { // folded wings with 3 stacked feather layers
     for (let i = 0; i < 3; i++) { const w = new THREE.Mesh(new THREE.SphereGeometry(.34, 18, 12), i ? wingM : bodyM); w.scale.set(.16, .5 - i * .08, .95 - i * .12);
-      w.position.set(s * (.37 - i * .005), .68 - i * .05, -.05 - i * .12); w.rotation.set(-.15 + i * .06, 0, s * (.05 + i * .02)); g.add(w); } }
+      w.position.set(s * (.37 - i * .005), .68 - i * .05, -.05 - i * .12); w.rotation.set(-.15 + i * .06, 0, s * (.05 + i * .02)); g.add(w); wingsA.push({ m: w, s, z0: w.rotation.z, x0: w.position.x }); } }
   const tail = new THREE.Group(); tail.position.set(0, .86, -.52); tail.rotation.x = .55; g.add(tail);
   for (let i = -3; i <= 3; i++) { const f = new THREE.Mesh(new THREE.SphereGeometry(.2, 12, 8), fm(i % 2 ? pal[2] : pal[0], pal[1], [.6, 1])); f.scale.set(.07, .5, .02 + .01 * (3 - Math.abs(i)));
     f.position.set(i * .06, .22 - Math.abs(i) * .02, 0); f.rotation.set(0, 0, -i * .16); tail.add(f); }
-  const neck = new THREE.Mesh(new THREE.CylinderGeometry(.13, .24, .55, 16), bodyM); neck.position.set(0, .98, .42); neck.rotation.x = .38; g.add(neck);
-  const hackle = new THREE.Mesh(new THREE.SphereGeometry(.28, 18, 12), fm(pal[1], pal[0], [1.5, 1])); hackle.scale.set(.85, .6, .8); hackle.position.set(0, .86, .38); g.add(hackle);
+  const hackM = fm(p.hackle || pal[1], p.hackle ? '#bdb7ad' : pal[0], [1.5, 1]), neck = new THREE.Mesh(new THREE.CylinderGeometry(.13, .24, .55, 16), p.hackle ? hackM : bodyM); neck.position.set(0, .98, .42); neck.rotation.x = .38; g.add(neck);
+  const hackle = new THREE.Mesh(new THREE.SphereGeometry(.28, 18, 12), hackM); hackle.scale.set(.85, .6, .8); hackle.position.set(0, .86, .38); g.add(hackle);
   const head = new THREE.Group(); head.position.set(0, 1.28, .56); g.add(head);
-  const skin = std('#e8cfc0', { r: .6 }), red = std('#c4161c', { r: .45 });
+  const skin = std(p.skin || '#e8cfc0', { r: .6 }), red = new THREE.MeshPhysicalMaterial({ color: col('#c4161c'), roughness: .42, sheen: .4, sheenColor: col('#ff8a80'), emissive: col('#5a0004'), emissiveIntensity: 0 });
   const hd = new THREE.Mesh(new THREE.SphereGeometry(.15, 20, 16), skin); hd.scale.set(.9, 1, 1.15); head.add(hd);
   for (let i = 0; i < 3; i++) { const c = new THREE.Mesh(new THREE.SphereGeometry(.07 - i * .008, 12, 10), red); c.scale.set(.35, 1.1, 1); c.position.set(0, .17 - Math.abs(i - 1) * .03, -.04 + i * .06); head.add(c); }
   for (const s of [-1, 1]) { const wt = new THREE.Mesh(new THREE.SphereGeometry(.05, 12, 10), red); wt.scale.set(.5, 1.5, .8); wt.position.set(s * .025, -.17, .1); head.add(wt);
     const ear = new THREE.Mesh(new THREE.SphereGeometry(.04, 10, 8), std('#f3efe8')); ear.scale.set(.4, 1, .8); ear.position.set(s * .13, -.04, .0); head.add(ear);
-    const eye = new THREE.Mesh(new THREE.SphereGeometry(.03, 12, 10), std('#e67e22', { r: .2 })); eye.position.set(s * .125, .04, .09); head.add(eye);
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(.03, 12, 10), std(p.eye || '#e67e22', { r: .2 })); eye.position.set(s * .125, .04, .09); head.add(eye);
     const pu = new THREE.Mesh(new THREE.SphereGeometry(.016, 8, 6), std('#050505', { r: .1 })); pu.position.set(s * .15, .04, .1); head.add(pu); }
   const beakM = std('#d9a63a', { r: .45 }); const bu = new THREE.Mesh(new THREE.ConeGeometry(.055, .17, 10), beakM); bu.rotation.x = Math.PI / 2 + .12; bu.position.set(0, -.01, .2); head.add(bu);
   const bl = new THREE.Mesh(new THREE.ConeGeometry(.04, .12, 8), beakM); bl.rotation.x = Math.PI / 2 - .1; bl.position.set(0, -.06, .18); head.add(bl);
-  const legs = [], legM = std('#d6a93c', { r: .55 });
+  const legs = [], legM = std(p.legC || '#d6a93c', { r: .55 });
   for (const s of [-1, 1]) { const lg = new THREE.Group(); lg.position.set(s * .17, .42, .02); g.add(lg);
     const th = new THREE.Mesh(new THREE.SphereGeometry(.14, 14, 10), bodyM); th.scale.set(.8, 1.2, 1); th.position.y = -.02; lg.add(th);
     const tar = cyl(.026, .02, .34, legM, 10); tar.position.y = -.2; lg.add(tar);
     for (const a of [-.45, 0, .45]) { const toe = cyl(.014, .01, .16, legM, 6); toe.rotation.set(Math.PI / 2, 0, a); toe.position.set(Math.sin(a) * .07, -.37, .08); lg.add(toe); }
     const hind = cyl(.012, .01, .09, legM, 6); hind.rotation.x = Math.PI / 2; hind.position.set(0, -.37, -.05); lg.add(hind); legs.push(lg); }
   g.scale.setScalar(p.scale || .36);
-  g.userData.head = head; g.userData.legs = legs; g.userData.body = body; g.userData.neck = neck;
+  g.userData.head = head; g.userData.legs = legs; g.userData.body = body; g.userData.neck = neck; g.userData.beakL = bl; g.userData.red = red; g.userData.wings = wingsA; g.userData.tail = tail;
   return shadowed(g);
 }
 function duck(p = {}) { // white Pekin-style duck, ~0.4 m long at scale .4: feathered body, short neck, flat orange bill, webbed feet
@@ -3126,7 +3126,7 @@ function henCoop(p = {}) { const g = new THREE.Group(), W = p.w || 3.5, T = p.t 
   const wat = new THREE.Mesh(new THREE.CircleGeometry(.14, 24), new THREE.MeshStandardMaterial({ color: col('#5e7470'), roughness: .08, metalness: .2 })); wat.rotation.x = -Math.PI / 2; wat.position.set(wd[0], .062, wd[1]); g.add(wat);
   return g; }
 // ---- wooden nest boxes (36 x 32 x 38 cm each) on a lime-washed mud bench, straw cups; eggsK [[t, n]] (steps) pops eggs into compartment `eggBox`
-function nestRow(p = {}) { const g = new THREE.Group(), n = p.n || 2, w = .36, h = .32, d = .38, B = p.bench ?? .4, L = n * w, wt = ['#a07e58', '#93724f', '#ab8962'].map(c => '#' + col(c).multiplyScalar(p.shade ?? 1).getHexString());
+function nestRow(p = {}) { const g = new THREE.Group(), n = p.n || 2, w = .36, h = p.h || .32, d = .38, B = p.bench ?? .4, L = n * w, wt = ['#a07e58', '#93724f', '#ab8962'].map(c => '#' + col(c).multiplyScalar(p.shade ?? 1).getHexString());
   const benchM = new THREE.MeshStandardMaterial({ map: limeTex(), roughness: .95 }); wbox(g, -L / 2 - .06, L / 2 + .06, 0, B, -d / 2 - .02, d / 2 + .04, benchM, 2.2, 2.2, 0, .55);
   const y0 = B; g.add(woodBox([L + .02, .02, d], 0, wt[0], [0, y0 + .01, 0]));
   for (let i = 0; i <= n; i++) g.add(woodBox([.02, h, d], 1, wt[i % 3], [-L / 2 + i * w, y0 + h / 2, 0]));
@@ -3209,8 +3209,8 @@ function skySun(p = {}) { const g = new THREE.Group(), Z = p.z ?? -40, y0 = p.y0
   return g; }
 // ---- hen walker: track [[t, x, z, act, yaw]]; act idle | peck | rest | preen (walk is automatic between different spots)
 function henWalker(p = {}) { const g = new THREE.Group(), mover = new THREE.Group(); g.add(mover);
-  const S = (p.height || .4) / 1.43, c = chicken({ seed: p.seed || 3, scale: S }); mover.add(c);
-  const U = c.userData, head = U.head, legs = U.legs, body = U.body, neck = U.neck, h0 = head.position.clone(), b0 = body.scale.clone();
+  const S = (p.height || .4) / 1.43, c = chicken({ seed: p.seed || 3, scale: S, ...(p.look || {}) }); mover.add(c);
+  const U = c.userData, beakL = U.beakL, bl0 = beakL.rotation.x, wings = U.wings || [], red = U.red, redC = red.color.clone(), head = U.head, legs = U.legs, body = U.body, neck = U.neck, h0 = head.position.clone(), b0 = body.scale.clone();
   // neck = a stretchy link from a fixed base in the shoulders to an attach point at the back of the skull, solved every frame, so the
   // head can never float off it (it used to be a separately rotated cylinder: up to 12 cm off during preening, 15 cm while pecking)
   const NL = .55, nAx = new THREE.Vector3(0, 1, 0).applyEuler(neck.rotation), nBase = neck.position.clone().addScaledVector(nAx, -NL / 2),
@@ -3218,15 +3218,19 @@ function henWalker(p = {}) { const g = new THREE.Group(), mover = new THREE.Grou
   neck.rotation.set(0, 0, 0);
   const tail = c.children.find(o => o.isGroup && o.position.z < -.4), tx0 = tail ? tail.rotation.x : 0;
   const sh = contactShadow(.13, .17, .42); g.add(sh); const mats = []; c.traverse(o => { if (o.isMesh && !mats.includes(o.material)) mats.push(o.material); }); const c0 = mats.map(m => m.color.clone());
-  const K = (p.track || [[0, 0, 0, 'idle']]).map(k => ({ t: k[0], x: k[1], z: k[2], act: k[3] || 'idle', yaw: k[4] })); let yaw = K[0].yaw ?? 0, cum = 0; const seg = [];
+  const K = (p.track || [[0, 0, 0, 'idle']]).map(k => ({ t: k[0], x: k[1], z: k[2], act: k[3] || 'idle', yaw: k[4], y: k[5] || 0 })); let yaw = K[0].yaw ?? 0, cum = 0; const seg = [];
   for (let i = 0; i < K.length - 1; i++) { const a = K[i], b = K[i + 1], len = Math.hypot(b.x - a.x, b.z - a.z), mv = len > .02;
     const y1 = mv ? angTo(yaw, Math.atan2(b.x - a.x, b.z - a.z)) : (b.yaw != null ? angTo(yaw, b.yaw) : yaw); seg.push({ a, b, len, mv, cum, y0: yaw, y1 }); cum += len; yaw = y1; }
   const actOf = q => q.mv ? 'walk' : q.a.act, STR = .15, sd = p.seed || 3;
-  const state = t => { if (!seg.length || t <= K[0].t) return { x: K[0].x, z: K[0].z, yaw: seg[0]?.y0 ?? yaw, act: K[0].act, prev: K[0].act, t0: -9, dist: 0, sp: 0 };
-    const i = seg.findIndex(q => t < q.b.t); if (i < 0) { const q = seg[seg.length - 1]; return { x: q.b.x, z: q.b.z, yaw: q.y1, act: q.b.act, prev: actOf(q), t0: q.b.t, dist: cum, sp: 0 }; }
-    const q = seg[i], D = Math.max(.01, q.b.t - q.a.t), u = (t - q.a.t) / D, e = q.mv ? trapE(u, .22) : 0;
-    return { x: lerp(q.a.x, q.b.x, e), z: lerp(q.a.z, q.b.z, e), yaw: lerp(q.y0, q.y1, easeIO(u * D / Math.min(D, .5))), act: actOf(q), prev: i ? actOf(seg[i - 1]) : actOf(q), t0: q.a.t, dist: q.cum + q.len * e, sp: q.mv ? q.len / D * trapV(u, .22) : 0 }; };
-  const pose = (act, t, st) => { const o = { pitch: 0, hx: 0, hy: 0, hz: 0, hrx: 0, hry: 0, drop: 0, fluff: 0, leg: 1, scr: 0 };
+  const state = t => { if (!seg.length || t <= K[0].t) return { x: K[0].x, z: K[0].z, y: K[0].y, yaw: seg[0]?.y0 ?? yaw, act: K[0].act, prev: K[0].act, t0: -9, dist: 0, sp: 0, fly: 0, crouch: 0 };
+    const i = seg.findIndex(q => t < q.b.t); if (i < 0) { const q = seg[seg.length - 1]; return { x: q.b.x, z: q.b.z, y: q.b.y, yaw: q.y1, act: q.b.act, prev: actOf(q), t0: q.b.t, dist: cum, sp: 0, fly: 0, crouch: 0 }; }
+    const q = seg[i], D = Math.max(.01, q.b.t - q.a.t), u = (t - q.a.t) / D, yl = easeIO(u * D / Math.min(D, .5)), pv = i ? actOf(seg[i - 1]) : actOf(q);
+    if (q.mv && Math.abs(q.b.y - q.a.y) > .05) {   // hop up/down: crouch (anticipation), flight on an arc with wing beats, landing squash
+      const e = sEase((u - .3) / .4), fl = u > .3 && u < .7 ? 1 : 0, cr = u < .3 ? sEase(u / .3) : u > .7 ? 1 - sEase((u - .7) / .3) : .2;
+      return { x: lerp(q.a.x, q.b.x, e), z: lerp(q.a.z, q.b.z, e), y: lerp(q.a.y, q.b.y, e) + Math.sin(Math.PI * e) * .09, yaw: lerp(q.y0, q.y1, clamp(u / .3)), act: 'idle', prev: pv, t0: q.a.t, dist: q.cum, sp: 0, fly: fl, crouch: cr }; }
+    const e = q.mv ? trapE(u, .22) : 0;
+    return { x: lerp(q.a.x, q.b.x, e), z: lerp(q.a.z, q.b.z, e), y: lerp(q.a.y, q.b.y, e), yaw: lerp(q.y0, q.y1, yl), act: actOf(q), prev: pv, t0: q.a.t, dist: q.cum + q.len * e, sp: q.mv ? q.len / D * trapV(u, .22) : 0, fly: 0, crouch: 0 }; };
+  const pose = (act, t, st) => { const o = { pitch: 0, hx: 0, hy: 0, hz: 0, hrx: 0, hry: 0, drop: 0, fluff: 0, leg: 1, scr: 0, beak: 0, wing: 0, roll: 0 };
     if (act === 'idle' || act === 'walk') { const per = .75, k = Math.floor((t + sd) / per), f = fr01((t + sd) / per), a0 = (hr(k, sd) - .5) * 1.5, a1 = (hr(k + 1, sd) - .5) * 1.5; // saccades
       o.hry = lerp(a0, a1, clamp((f - .82) / .1)) * (act === 'walk' ? .25 : 1); o.hrx = lerp((hr(k, sd + 1) - .5) * .4, (hr(k + 1, sd + 1) - .5) * .4, clamp((f - .82) / .1)); }
     if (act === 'peck') { const per = 1.2, ph = (t + sd * .37) / per, k = Math.floor(ph), f = fr01(ph), sk = f < .13 ? sEase(f / .13) : f < .24 ? 1 : f < .52 ? 1 - sEase((f - .24) / .28) : 0;
@@ -3235,6 +3239,11 @@ function henWalker(p = {}) { const g = new THREE.Group(), mover = new THREE.Grou
     if (act === 'rest' || act === 'preen') { o.drop = 1; o.fluff = 1; o.leg = .25; o.hy = -.1; o.hz = -.1; o.hrx = .12 + Math.sin(t * .8) * .03;
       if (act === 'preen') { const per = 2.6, k = Math.floor(t / per), f = fr01(t / per), into = f < .12 ? sEase(f / .12) : f < .72 ? 1 : 1 - sEase((f - .72) / .28), sd2 = k % 2 ? 1 : -1;
         o.hx = .26 * into * sd2; o.hy = -.3 * into; o.hz = -.4 * into; o.hry = 2.6 * into * sd2; o.hrx = .12 + .45 * into + Math.sin(t * 21) * .14 * into; o.fluff = 1 + .5 * into; } }
+    if (act.startsWith('brood')) { const st8 = Math.exp(-Math.max(0, t - st.t0) / 1.1);                                  // nesting: sink, fluff, spread the wings over the nest
+      o.drop = 1; o.fluff = 1.6; o.leg = .25; o.wing = .55; o.hy = -.06; o.hz = -.04; o.hrx = .1 + Math.sin(t * .9) * .03; o.roll = Math.sin(t * 9) * .07 * st8; o.pitch = -.04 * st8 * Math.sin(t * 7); }
+    if (act.endsWith('call')) { const f = fr01((t - st.t0) / 1.7), pulse = [0, .2, .4].reduce((m, a) => Math.max(m, f > a && f < a + .13 ? Math.sin((f - a) / .13 * Math.PI) : 0), 0),
+        long = f > .62 && f < 1 ? Math.sin((f - .62) / .38 * Math.PI) : 0;                                                     // buk-buk-buk-baKAAK
+      o.beak = Math.max(pulse * .6, long); o.hy += .1 + .06 * long; o.hz += .1 + .05 * long; o.hrx = -.2 - .25 * long; o.hry = Math.sin(t * 1.3) * .25; }
     return o; };
   g.userData.tick = t => { const st = state(t), kb = easeIO((t - st.t0) / .35), A = pose(st.prev, t, st), Bp = pose(st.act, t, st), P = {};
     for (const k in Bp) P[k] = lerp(A[k], Bp[k], kb);
@@ -3245,13 +3254,18 @@ function henWalker(p = {}) { const g = new THREE.Group(), mover = new THREE.Grou
     vT.copy(nOff).applyQuaternion(head.quaternion).add(head.position); vD.subVectors(vT, nBase); let L = vD.length();
     const Lc = clamp(L, .3, .62); if (Lc !== L) { head.position.addScaledVector(vD, Lc / L - 1); vT.addScaledVector(vD, Lc / L - 1); L = Lc; }  // keep the neck length real
     neck.position.addVectors(nBase, vT).multiplyScalar(.5); neck.quaternion.setFromUnitVectors(Y1, vD.normalize()); neck.scale.set(1, L / NL, 1);
+    beakL.rotation.x = bl0 + .5 * P.beak; const wg = Math.max(P.wing, st.fly * (.7 + .3 * Math.sin(t * 42)));
+    wings.forEach(w => { w.m.rotation.z = w.z0 + w.s * (.35 * wg + .9 * st.fly * (.5 + .5 * Math.sin(t * 42))); w.m.position.x = w.x0 + w.s * .05 * wg; });
+    if (p.combK) { const ck = kv(p.combK, t, 0); red.color.copy(redC).lerp(col('#e3141e'), ck); red.emissiveIntensity = .5 * ck; }
+    P.drop += .45 * st.crouch;
     c.rotation.x = P.pitch + .05 * mvK; body.scale.copy(b0).multiplyScalar(1 + .06 * P.fluff + .01 * Math.sin(t * 2.7 + sd));
     legs[0].rotation.x = Math.sin(ph) * .55 * mvK - P.scr * .9; legs[1].rotation.x = -Math.sin(ph) * .55 * mvK; legs.forEach(l => l.scale.y = Math.max(.2, P.leg));
     if (tail) { const f = fr01((t + sd) / 3.3), flick = f < .12 ? Math.sin(f / .12 * Math.PI) : 0; tail.rotation.x = tx0 + .25 * flick + .08 * P.fluff; }
-    const bob = Math.abs(Math.sin(ph)) * .008 * mvK; mover.position.set(st.x, -.29 * S * P.drop + bob, st.z); mover.rotation.y = st.yaw; mover.rotation.z = Math.sin(ph) * .05 * mvK;
-    sh.position.set(st.x, .014, st.z); sh.rotation.z = -st.yaw;
+    const bob = Math.abs(Math.sin(ph)) * .008 * mvK; mover.position.set(st.x, st.y - .29 * S * P.drop + bob, st.z); mover.rotation.y = st.yaw; mover.rotation.z = Math.sin(ph) * .05 * mvK + P.roll;
+    if (st.fly) legs.forEach(l => { l.rotation.x = .9; l.scale.y = .6; });
+    sh.position.set(st.x, st.y + .014, st.z); sh.rotation.z = -st.yaw;
     if (p.inside) { const [x0, x1, z0, z1] = p.inside, e = .35, ins = clamp(Math.min(st.x - x0, x1 - st.x, st.z - z0, z1 - st.z) / e + .5), k = lerp(1, kv(p.shadeK, t, 1), ins); mats.forEach((m, i) => m.color.copy(c0[i]).multiplyScalar(k)); }
-    if (p.link) LINK[p.link] = { pos: new THREE.Vector3(st.x, 0, st.z), head: head.getWorldPosition(new THREE.Vector3()) }; };
+    if (p.link) { const bw = body.getWorldPosition(new THREE.Vector3()); LINK[p.link] = { pos: new THREE.Vector3(st.x, st.y, st.z), head: head.getWorldPosition(new THREE.Vector3()), body: bw, belly: bw.clone().setY(bw.y - .35 * S * b0.y / .7), beak: beakL.getWorldPosition(new THREE.Vector3()), yaw: st.yaw }; } };
   return g; }
 Object.assign(ASSETS, { hen_coop: henCoop, coop_floor: coopFloor, nest_row: nestRow, coop_lamp: coopLamp, coop_timer: coopTimer, sky_sun: skySun, hen: henWalker });
 // reaching up to a wall (lamp at ~1.85 m) and turning a dial at ~1.25 m (Farmer; tuned with a palm probe, see plans/hens_winter.mjs)
@@ -3661,14 +3675,16 @@ const HPOSE = { open: { f: [[.15, .15, .1], [.12, .15, .1], [.15, .18, .1], [.2,
   pinch: { f: [[.5, .75, .45], [.85, 1.05, .6], [.95, 1.1, .65], [1.05, 1.15, .7]], th: 'pinch' },
   point: { f: [[.1, .08, .05], [1.35, 1.6, .9], [1.4, 1.65, .9], [1.4, 1.6, .9]], th: 'tuck' },
   press: { f: [[.25, .3, .15], [.3, .35, .2], [.35, .4, .2], [.4, .4, .2]], th: 'rest' },
-  fist: { f: [[1.25, 1.5, .9], [1.3, 1.6, .95], [1.35, 1.6, .95], [1.35, 1.55, .9]], th: 'wrap' } };
+  fist: { f: [[1.25, 1.5, .9], [1.3, 1.6, .95], [1.35, 1.6, .95], [1.35, 1.55, .9]], th: 'wrap' },
+  cup: { f: [[.32, .42, .28], [.36, .46, .3], [.4, .5, .32], [.46, .52, .34]], th: 'rest' },          // palm up, fingers round an egg
+  slide: { f: [[.06, .05, .03], [.05, .05, .03], [.07, .06, .04], [.1, .08, .05]], th: 'rest' } };   // flat, slid under a hen
 function fabricTex() { return SPR.oFab ||= (() => { const r = rng(415); return canvasT(128, 128, (c, w, h) => { c.fillStyle = '#58697a'; c.fillRect(0, 0, w, h);
   for (let i = -h; i < w; i += 3) { c.strokeStyle = `rgba(${r() > .5 ? '120,140,160' : '40,50,62'},.35)`; c.lineWidth = 1; c.beginPath(); c.moveTo(i, 0); c.lineTo(i + h, h); c.stroke(); }
   for (let i = 0; i < 900; i++) { c.fillStyle = `rgba(230,235,240,${r() * .12})`; c.fillRect(r() * w, r() * h, 1, 1); } }, [4, 6]); })(); }
 function gardHand(p = {}) { const g = new THREE.Group(), inner = new THREE.Group(); g.add(inner); const sx = p.side === 'L' ? -1 : 1;
-  const skin = new THREE.MeshPhysicalMaterial({ color: col(p.skin || '#b98262'), roughness: .5, sheen: .5, sheenColor: col('#ffc9a8'), sheenRoughness: .5 }), nailM = std('#e0b4a0', { r: .3 });
+  const skin = new THREE.MeshPhysicalMaterial({ color: col(p.skin || '#b98262'), map: skinTex(), bumpMap: skinBump(), bumpScale: .35, roughness: .55, sheen: .5, sheenColor: col('#ffc9a8'), sheenRoughness: .5 }), nailM = new THREE.MeshPhysicalMaterial({ color: col('#e3bba8'), roughness: .3, clearcoat: .4, clearcoatRoughness: .3 });
   const ell = (a, b, c, m = skin) => { const e = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 16), m); e.scale.set(a, b, c); return e; };
-  const palm = ell(.043, .0155, .051); palm.position.set(.002 * sx, 0, .046); inner.add(palm);
+  const palm = ell(.043, .0155, .051); palm.position.set(.002 * sx, 0, .046); inner.add(palm); const palmO = new THREE.Object3D(); palmO.position.set(.002 * sx, -.0155, .05); inner.add(palmO);
   const pad = ell(.041, .0135, .017); pad.position.set(0, -.002, .084); inner.add(pad);
   const thenar = ell(.02, .016, .033); thenar.position.set(-.02 * sx, -.007, .03); thenar.rotation.y = .45 * sx; inner.add(thenar);
   const hyp = ell(.016, .013, .036); hyp.position.set(.026 * sx, -.005, .04); inner.add(hyp);
@@ -3707,9 +3723,70 @@ function gardHand(p = {}) { const g = new THREE.Group(), inner = new THREE.Group
     for (const gr of p.grabs || []) { const w = kv(gr.k, t, 0); if (w <= 0 || !OC[gr.obj]) continue; const M = OC[gr.obj].at(t), cq = new THREE.Quaternion().setFromRotationMatrix(M), s = Array.isArray(gr.s) ? kv(gr.s, t, .1) : gr.s ?? .1;
       const hq = cq.clone().multiply(basisQ(V3(...gr.f), V3(...gr.u))), Ps = V3(...(gr.at || [0, 0, 0])).add(V3(0, s, 0)).applyMatrix4(M), off = V3(...(gr.off || [0, -.0058, 0])).applyQuaternion(hq), A = Ps.sub(off);
       P.lerp(A, w); Q.slerp(hq, w); if (gr.pose) { if (w > .5) { pa = gr.pose; pb = gr.pose; pu = 1; } } }
-    const kn = kv(p.knifeK, t, 0) > .5; knife.visible = kn; pose(pa, pb, pu); const an = kn ? loc(edgeO) : loc(fingers[0].tip), th = loc(thumb.tip);
+    const kn = kv(p.knifeK, t, 0) > .5; knife.visible = kn; pose(pa, pb, pu); const an = kn ? loc(edgeO) : p.anchor === 'palm' ? loc(palmO) : loc(fingers[0].tip), th = loc(thumb.tip);
     inner.position.copy(an).negate(); g.position.copy(P); g.quaternion.copy(Q);
-    if (p.link) LINK[p.link] = { anchor: P.clone(), thumb: th.sub(an).applyQuaternion(Q).add(P), index: loc(fingers[0].tip).sub(an).applyQuaternion(Q).add(P) }; };
+    if (p.link) LINK[p.link] = { anchor: P.clone(), q: Q.clone(), pn: V3(0, -1, 0).applyQuaternion(Q), palm: loc(palmO).sub(an).applyQuaternion(Q).add(P), thumb: th.sub(an).applyQuaternion(Q).add(P), index: loc(fingers[0].tip).sub(an).applyQuaternion(Q).add(P) }; };
   return shadowed(g); }
 Object.assign(ASSETS, { olive_tree: oliveTree, olive_cut: oliveCut, olive_pot: olivePot, potting_table: pottingTable, gard_hand: gardHand });
 Object.assign(RIG_POSES, { barkTouch: { fR: .42, eR: .75, adR: 1.3, fL: .1, eL: .25, sp: .1, hd: .05, tw: .05 } });
+
+// ================= Laying hen pack (2026-11-19, plans/hen_laying.mjs) =================
+// skin detail for the gardener's / farmer's hand: knuckle and palm-crease redness, freckles (map) and pores + fine creases (bump)
+function skinTex() { return SPR.skinT ||= (() => { const r = rng(511); return canvasT(256, 256, (c, w, h) => { c.fillStyle = '#ffffff'; c.fillRect(0, 0, w, h);
+  for (let i = 0; i < 60; i++) { const x = r() * w, y = r() * h, R = 8 + r() * 26, g2 = c.createRadialGradient(x, y, 0, x, y, R); g2.addColorStop(0, `rgba(${r() > .5 ? '226,170,160' : '250,226,210'},.35)`); g2.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = g2; c.fillRect(x - R, y - R, R * 2, R * 2); }
+  for (let i = 0; i < 500; i++) { c.fillStyle = `rgba(150,96,70,${r() * .18})`; c.fillRect(r() * w, r() * h, 1 + r(), 1 + r()); } }, [3, 3]); })(); }
+function skinBump() { return SPR.skinB ||= (() => { const r = rng(512); const t = canvasT(256, 256, (c, w, h) => { c.fillStyle = '#808080'; c.fillRect(0, 0, w, h);
+  for (let i = 0; i < 2600; i++) { c.fillStyle = `rgba(40,40,40,${.15 + r() * .25})`; c.beginPath(); c.arc(r() * w, r() * h, .6 + r() * .7, 0, 6.3); c.fill(); }   // pores
+  c.strokeStyle = 'rgba(30,30,30,.22)'; for (let i = 0; i < 140; i++) { const x = r() * w, y = r() * h, a = (r() - .5) * .6; c.lineWidth = .6 + r() * .8; c.beginPath(); c.moveTo(x, y); c.lineTo(x + Math.cos(a) * (6 + r() * 14), y + Math.sin(a) * (6 + r() * 14)); c.stroke(); } }, [3, 3]); t.colorSpace = THREE.NoColorSpace; return t; })(); }
+// real egg: asymmetric ovoid lathe (blunt end up), 5.6 x 4.2 cm (a small Fayoumi egg); cream shell with pores and faint speckle
+const EGG_L = .056, EGG_W = .042;
+function eggGeo() { return SPR.eggG ||= (() => { const pts = []; for (let i = 0; i <= 28; i++) { const u = -1 + 2 * i / 28, r = EGG_W / 2 * Math.sqrt(Math.max(0, 1 - u * u)) * (1 + .1 * u) / 1.02;
+  pts.push(new THREE.Vector2(Math.max(1e-4, r), u * EGG_L / 2)); } return new THREE.LatheGeometry(pts, 36); })(); }
+function shellTex() { return SPR.shellT ||= (() => { const r = rng(521); return canvasT(256, 256, (c, w, h) => { c.fillStyle = '#ffffff'; c.fillRect(0, 0, w, h);
+  for (let i = 0; i < 40; i++) { const x = r() * w, y = r() * h, R = 10 + r() * 40, g2 = c.createRadialGradient(x, y, 0, x, y, R); g2.addColorStop(0, 'rgba(225,205,175,.35)'); g2.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = g2; c.fillRect(x - R, y - R, R * 2, R * 2); }
+  for (let i = 0; i < 260; i++) { c.fillStyle = `rgba(160,120,90,${r() * .25})`; c.fillRect(r() * w, r() * h, 1, 1); } }, [2, 1]); })(); }
+function shellBump() { return SPR.shellB ||= (() => { const r = rng(522); const t = canvasT(256, 256, (c, w, h) => { c.fillStyle = '#808080'; c.fillRect(0, 0, w, h);
+  for (let i = 0; i < 3500; i++) { c.fillStyle = `rgba(50,50,50,${.2 + r() * .3})`; c.fillRect(r() * w, r() * h, 1, 1); } }, [3, 2]); t.colorSpace = THREE.NoColorSpace; return t; })(); }
+const eggMat = (c = '#efe2cc') => new THREE.MeshPhysicalMaterial({ color: col(c), map: shellTex(), bumpMap: shellBump(), bumpScale: .25, roughness: .6, clearcoat: 0, clearcoatRoughness: .06, sheen: .2, sheenColor: col('#fff4e0') });
+// a single egg with a path of places: keys [t, place]; place = [x,y,z] (lying on its side) | 'hand:<link>' (on that gard_hand palm, along the
+// fingers) | 'rig:<link>:L|R' (in a rig_person palm). Blends between places over .3 s. wetK = fresh cuticle sheen, warmK = body-warm glow + wisps.
+function layEgg(p = {}) { const g = new THREE.Group(), m = eggMat(p.color), e = new THREE.Mesh(eggGeo(), m); e.castShadow = true; e.receiveShadow = true; g.add(e);
+  const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: glintTex(), color: col('#ffb070'), transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending })); halo.scale.setScalar(.11); g.add(halo);
+  const wisps = [0, 1, 2, 3].map(i => { const w = new THREE.Sprite(new THREE.SpriteMaterial({ map: glintTex(), color: col('#ffffff'), transparent: true, opacity: 0, depthWrite: false })); g.add(w); return w; });
+  const K = p.path || [[0, [0, 0, 0]]], BL = p.blend ?? .3, Ry = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, p.rotY || 0, Math.PI / 2)), RX = new THREE.Quaternion().setFromAxisAngle(V3(1, 0, 0), Math.PI / 2);
+  const place = (pl) => { if (Array.isArray(pl)) return { p: V3(pl[0], pl[1] + EGG_W / 2 * .97, pl[2]), q: Ry.clone() };
+    const [kind, id, hand] = pl.split(':'), L = LINK[id]; if (!L) return null;
+    if (kind === 'hand') return { p: L.palm.clone().addScaledVector(L.pn, EGG_W / 2 + .002), q: L.q.clone().multiply(RX) };
+    const pa = L[hand || 'R']; return pa ? { p: pa.clone().add(V3(0, (p.rigDy ?? -.01), 0)), q: new THREE.Quaternion().setFromEuler(new THREE.Euler(0, L.yaw || 0, Math.PI / 2)) } : null; };
+  g.userData.tick = t => { const vis = t >= (p.show?.[0] ?? -1) && t < (p.show?.[1] ?? 1e9); e.visible = vis; let i = 0; for (let k = 0; k < K.length; k++) if (K[k][0] <= t) i = k;
+    let A = place(K[i][1]); if (!A) { e.visible = false; return; }
+    if (i > 0 && t - K[i][0] < BL) { const B = place(K[i - 1][1]); if (B) { const u = sEase((t - K[i][0]) / BL); A.p = B.p.lerp(A.p, u); A.q = B.q.slerp(A.q, u); } }
+    e.position.copy(A.p); e.quaternion.copy(A.q);
+    const wet = kv(p.wetK, t, 0), warm = kv(p.warmK, t, 0); m.clearcoat = wet; m.roughness = lerp(.62, .3, wet); m.color.set(p.color || '#efe2cc').multiplyScalar(1 - .06 * wet);
+    m.emissive = m.emissive || col('#000'); m.emissive.set('#ff8a40'); m.emissiveIntensity = .05 * warm;
+    halo.position.copy(A.p); halo.material.opacity = vis ? .14 * warm : 0;
+    wisps.forEach((w, k) => { const f = fr01(t * .35 + k / 4), x = Math.sin(t * 1.3 + k * 2) * .008 * f; w.position.copy(A.p).add(V3(x, .02 + f * .07, 0)); w.scale.setScalar(.018 + f * .04); w.material.opacity = vis ? warm * .1 * Math.sin(Math.PI * f) : 0; }); };
+  return g; }
+// moulded-pulp egg tray (5 x 5 cups, 0.29 m), eggs upright (blunt end up). eggsK [[t, n]]: n eggs shown in fill order; new ones drop in with a bounce.
+// heap:{r} = no tray, eggs lie in a loose pile of radius r (a basket's inside).
+function pulpTex() { return SPR.pulpT ||= (() => { const r = rng(531); return canvasT(256, 256, (c, w, h) => { c.fillStyle = '#b8b0a2'; c.fillRect(0, 0, w, h);
+  for (let i = 0; i < 1600; i++) { c.strokeStyle = `rgba(${r() > .5 ? '90,84,76' : '226,220,208'},${.1 + r() * .2})`; c.lineWidth = .7; const x = r() * w, y = r() * h, a = r() * 6.3; c.beginPath(); c.moveTo(x, y); c.lineTo(x + Math.cos(a) * 4, y + Math.sin(a) * 4); c.stroke(); } }, [3, 3]); })(); }
+function eggTray(p = {}) { const g = new THREE.Group(), N = p.n || 5, P = .058, eggs = [], order = [];
+  if (!p.heap) { const pm = new THREE.MeshStandardMaterial({ map: pulpTex(), roughness: .97, side: THREE.DoubleSide }); const base = box(N * P + .01, .006, N * P + .01, pm); base.position.y = .003; g.add(base);
+    const prof = [[.006, .006], [.017, .012], [.024, .03], [.027, .034]].map(([x, y]) => new THREE.Vector2(x, y));
+    for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) { const cup = new THREE.Mesh(new THREE.LatheGeometry(prof, 16), pm); cup.position.set((i - (N - 1) / 2) * P, 0, (j - (N - 1) / 2) * P); g.add(cup); order.push([cup.position.x, .03, cup.position.z]); }
+    for (let i = 0; i <= N; i++) for (let j = 0; j <= N; j++) { const cn = new THREE.Mesh(new THREE.ConeGeometry(.012, .04, 4), pm); cn.rotation.y = Math.PI / 4; cn.position.set((i - N / 2) * P, .022, (j - N / 2) * P); g.add(cn); } }
+  else { const r = rng(533); for (let i = 0; i < 14; i++) { const a = i * 2.4, rr = Math.sqrt(i / 14) * p.heap.r; order.push([Math.cos(a) * rr, EGG_W / 2 + Math.floor(i / 7) * .03, Math.sin(a) * rr, r() * 6, 1]); } }
+  const seq = (p.fill || order.map((_, i) => i)).map(i => order[i]); const mats = [eggMat('#efe2cc'), eggMat('#f3e8d6'), eggMat('#e9d8bd')];
+  seq.forEach((o, k) => { const e = new THREE.Mesh(eggGeo(), mats[k % 3]); e.castShadow = true; e.position.set(o[0], o[1], o[2]); if (o[4]) e.rotation.set(0, o[3], Math.PI / 2 - .2); else e.rotation.y = k; g.add(e); eggs.push({ e, y: o[1] }); });
+  g.userData.tick = t => { const cnt = stepKey(p.eggsK, t, 0); eggs.forEach(({ e, y }, i) => { let ta = -1; for (const [tk, v] of p.eggsK || []) { if (tk > t) break; if (v > i && ta < 0) ta = tk; if (v <= i) ta = -1; }
+    e.visible = i < cnt; const u = ta > 0 ? clamp((t - ta) / .45) : 1, fall = u < .55 ? 1 - (u / .55) ** 2 : 0, bnc = u >= .55 ? Math.sin((u - .55) / .45 * Math.PI) * .12 * (1 - u) : 0;
+    e.position.y = y + fall * .07 + bnc * .05; const sq = u >= .55 && u < .7 ? 1 - .08 * Math.sin((u - .55) / .15 * Math.PI) : 1; e.scale.set(1 / Math.sqrt(sq), sq, 1 / Math.sqrt(sq)); }); };
+  return g; }
+// sound arcs ")))" from a calling hen's beak, in the vertical plane of her heading; on while onK > 0
+function callArcs(p = {}) { const g = new THREE.Group(), arcs = [0, 1, 2].map(() => { const m = new THREE.Mesh(new THREE.TorusGeometry(1, .018, 6, 28, Math.PI / 2), new THREE.MeshBasicMaterial({ color: col('#fff4d6'), transparent: true, opacity: 0, depthWrite: false })); m.rotation.z = -Math.PI / 4; const h = new THREE.Group(); h.add(m); g.add(h); return { h, m }; });
+  g.userData.tick = t => { const L = LINK[p.link || 'hen'], on = kv(p.onK, t, 0); if (!L || !L.beak) { g.visible = false; return; } g.visible = on > .01;
+    const fw = V3(Math.sin(L.yaw || 0), 0, Math.cos(L.yaw || 0)), rx = V3().setFromMatrixColumn(camera.matrixWorld, 0), side = Math.sign(fw.dot(rx)) || 1;   // camera-facing fan, tilted toward her heading
+    arcs.forEach(({ h, m }, i) => { const f = fr01(t * 1.2 + i / 3); h.position.copy(L.beak); h.quaternion.copy(camera.quaternion); m.rotation.z = Math.PI / 4 - side * .55; h.scale.setScalar(.035 + f * .1); m.material.opacity = on * .75 * Math.sin(Math.PI * f) ** .7; }); };
+  return g; }
+Object.assign(ASSETS, { lay_egg: layEgg, egg_tray: eggTray, call_arcs: callArcs });
