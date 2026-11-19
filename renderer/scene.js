@@ -2492,7 +2492,8 @@ function rigPerson(p = {}) { const g = new THREE.Group(), mover = new THREE.Grou
     mover.rotation.z = st.gait === 'shuffle' ? .03 * Math.sin(st.dist / .5 * Math.PI * 2) : 0; rig.apply(P);
     if (p.link) { rig.w.updateWorldMatrix(true, true); const pa = s => { const h = rig.w.getObjectByName('Hand' + s), m = rig.w.getObjectByName('Middle2' + s); return h ? h.getWorldPosition(new THREE.Vector3()).lerp(m ? m.getWorldPosition(new THREE.Vector3()) : h.getWorldPosition(new THREE.Vector3()), .5) : null; };
       LINK[p.link] = { L: pa('L'), R: pa('R'), yaw: st.yaw, pos: st.pos.clone() }; } // palms for props carried between the hands (salt block)
-    if (csh) { csh.position.set(st.pos.x, st.pos.y + .015, st.pos.z); csh.visible = !p.noShadowAbove || st.pos.y < p.noShadowAbove; } };
+    const hid = kv(p.hideK, t, 0) > .5; mover.visible = !hid;
+    if (csh) { csh.position.set(st.pos.x, st.pos.y + .015, st.pos.z); csh.visible = !hid && (!p.noShadowAbove || st.pos.y < p.noShadowAbove); } };
   return g; }
 
 // ---- window glass, sashes, curtains, shutters
@@ -3690,6 +3691,13 @@ function gardHand(p = {}) { const g = new THREE.Group(), inner = new THREE.Group
   const blade = new THREE.Mesh(new THREE.BoxGeometry(.068, .0016, .017), new THREE.MeshStandardMaterial({ color: col('#d9dde0'), metalness: .9, roughness: .22 })); blade.position.set(-(.05 + .034) * sx, -.026, .0765); knife.add(blade);
   const bol = cyl(.006, .006, .008, std('#c9b27a', { m: .8, r: .3 }), 10); bol.rotation.z = Math.PI / 2; bol.position.set(-.052 * sx, -.026, .074); knife.add(bol);
   const edgeO = new THREE.Object3D(); edgeO.position.set(-(.05 + .036) * sx, -.026, .0852); knife.add(edgeO);
+  // small pollination brush in the fist (same grip as the knife): wooden handle, brass ferrule, a soft tuft dusted yellow at the tip
+  const brush = new THREE.Group(); inner.add(brush); const bh = cyl(.0075, .0085, .12, std('#a0703e', { r: .5 }), 12); bh.rotation.z = Math.PI / 2; bh.position.set(.012 * sx, -.026, .074); brush.add(bh);
+  const fer = cyl(.0085, .0075, .018, std('#c9a557', { m: .8, r: .35 }), 12); fer.rotation.z = Math.PI / 2; fer.position.set(-.056 * sx, -.026, .074); brush.add(fer);
+  const tuft = new THREE.Mesh(new THREE.ConeGeometry(.0105, .034, 14, 3), new THREE.MeshStandardMaterial({ color: col('#e9d9b5'), roughness: .9 })); tuft.rotation.z = Math.PI / 2 * sx; tuft.position.set(-(.065 + .017) * sx, -.026, .074); brush.add(tuft);
+  const tdust = new THREE.Mesh(new THREE.SphereGeometry(.0075, 10, 8), std('#e6bf3c', { r: .8 })); tdust.scale.set(1.2, .9, .9); tdust.position.set(-.092 * sx, -.026, .074); brush.add(tdust);
+  const brushO = new THREE.Object3D(); brushO.position.set(-.1 * sx, -.026, .074); brush.add(brushO);
+  const pinchDust = new THREE.Mesh(new THREE.SphereGeometry(.0068, 10, 8), std('#e8c547', { r: .85 })); pinchDust.scale.set(1.3, .8, 1.1); inner.add(pinchDust);
   const TRK = keyTrack(p.track || [[0, 0, -5, 0, 0, 0, 1, 0, 1, 0, 'open']], decHand), tmpq = new THREE.Quaternion();
   const loc = o => inner.worldToLocal(o.getWorldPosition(new THREE.Vector3()));
   const thumbTarget = (mode, ip) => mode === 'pinch' ? ip.clone().add(V3(.001 * sx, -.0105, -.002)) : mode === 'tuck' ? loc(fingers[1].segs[1]).add(V3(-.004 * sx, -.014, .002))
@@ -3707,9 +3715,179 @@ function gardHand(p = {}) { const g = new THREE.Group(), inner = new THREE.Group
     for (const gr of p.grabs || []) { const w = kv(gr.k, t, 0); if (w <= 0 || !OC[gr.obj]) continue; const M = OC[gr.obj].at(t), cq = new THREE.Quaternion().setFromRotationMatrix(M), s = Array.isArray(gr.s) ? kv(gr.s, t, .1) : gr.s ?? .1;
       const hq = cq.clone().multiply(basisQ(V3(...gr.f), V3(...gr.u))), Ps = V3(...(gr.at || [0, 0, 0])).add(V3(0, s, 0)).applyMatrix4(M), off = V3(...(gr.off || [0, -.0058, 0])).applyQuaternion(hq), A = Ps.sub(off);
       P.lerp(A, w); Q.slerp(hq, w); if (gr.pose) { if (w > .5) { pa = gr.pose; pb = gr.pose; pu = 1; } } }
-    const kn = kv(p.knifeK, t, 0) > .5; knife.visible = kn; pose(pa, pb, pu); const an = kn ? loc(edgeO) : loc(fingers[0].tip), th = loc(thumb.tip);
+    const kn = kv(p.knifeK, t, 0) > .5, br = kv(p.brushK, t, 0) > .5; knife.visible = kn; brush.visible = br; pose(pa, pb, pu); const an = kn ? loc(edgeO) : br ? loc(brushO) : loc(fingers[0].tip), th = loc(thumb.tip);
+    pinchDust.visible = kv(p.dustK, t, 0) > .05; if (pinchDust.visible) { pinchDust.position.copy(loc(fingers[0].tip)).lerp(th, .5).add(V3(0, -.002, 0)); pinchDust.scale.setScalar(Math.max(.3, kv(p.dustK, t, 0))).multiply(V3(1.3, .8, 1.1)); }
     inner.position.copy(an).negate(); g.position.copy(P); g.quaternion.copy(Q);
     if (p.link) LINK[p.link] = { anchor: P.clone(), thumb: th.sub(an).applyQuaternion(Q).add(P), index: loc(fingers[0].tip).sub(an).applyQuaternion(Q).add(P) }; };
   return shadowed(g); }
 Object.assign(ASSETS, { olive_tree: oliveTree, olive_cut: oliveCut, olive_pot: olivePot, potting_table: pottingTable, gard_hand: gardHand });
 Object.assign(RIG_POSES, { barkTouch: { fR: .42, eR: .75, adR: 1.3, fL: .1, eL: .25, sp: .1, hd: .05, tw: .05 } });
+
+// ================= Date palm pollination pack (2026-11-19, plans/palm_pollen.mjs) =================
+// date_palm: Phoenix dactylifera at real size: a 5-6 m trunk of stacked leaf-base scars (diamond pattern, bump), pruned leaf-base stubs and
+//   fibre under the crown, ~40 pinnate fronds (2.4-3.4 m, induplicate V-folded leaflets in irregular groups, spines near the base) from erect
+//   young light-green spring fronds to drooping old ones and a few dry brown ones; per-frond sway plus a wind gust (windK).
+//   clusters [{az, sex:'f'|'m', dy}]: female = opened boat spathe + ~34 cream rachillae with ~650 globular greenish flowers that turn
+//   pollen-yellow by dustK [[t, frac]]; male = gold-tan split spathe packed with short creamy strands. cut [[i, t0, t1]] flies cluster i
+//   into the bag in LINK[cutBy][cutHand] (cut with the sickle). Cluster i local tip (crown frame, outward +z after az): see CL_TIP.
+// palm_ladder: wooden leaning ladder, rails + rungs every .3 m, from its foot (origin) to top [dx,dy,dz].
+// palm_tool: sickle / cloth bag (fillK) carried on a rig palm (LINK[carryBy][hand]), shown by showK.
+// pollen: deterministic dust. 'drift' (wind carries puffs from src, most fall short to the ground) or 'sprinkle' (from a keyed hand
+//   path srcK onto the flowers of PALM[palm].cl[ci], where the grains stay stuck).
+const PALM = {}; window.__palm = () => PALM;
+const CL_TIP = { f: [0, -.44, .7], m: [0, -.3, .54] }; // cluster tip relative to the trunk top, outward along az
+function palmTrunkTex() { return SPR.pTrunk ||= (() => { const r = rng(501); return canvasT(256, 512, (c, w, h) => { c.fillStyle = '#5c4a37'; c.fillRect(0, 0, w, h);
+  const rows = 22, rh = h / rows, cw = w / 6;
+  for (let j = 0; j < rows; j++) for (let i = -1; i < 7; i++) { const x = (i + (j % 2) * .5) * cw, y = j * rh, sh = (r() - .5) * 18;
+    const g = c.createLinearGradient(0, y, 0, y + rh); g.addColorStop(0, `rgb(${120 + sh},${100 + sh},${76 + sh})`); g.addColorStop(.55, `rgb(${96 + sh},${78 + sh},${58 + sh})`); g.addColorStop(1, '#2e241a');
+    c.fillStyle = g; c.beginPath(); c.moveTo(x - cw * .52, y + rh * .15); c.quadraticCurveTo(x, y - rh * .35, x + cw * .52, y + rh * .15); c.lineTo(x + cw * .4, y + rh * 1.02); c.quadraticCurveTo(x, y + rh * .7, x - cw * .4, y + rh * 1.02); c.closePath(); c.fill();
+    c.strokeStyle = 'rgba(30,22,15,.5)'; c.lineWidth = 1; for (let k = 0; k < 5; k++) { const xx = x + (r() - .5) * cw * .7; c.beginPath(); c.moveTo(xx, y + rh * .1); c.lineTo(xx + (r() - .5) * 4, y + rh * .9); c.stroke(); } }
+  for (let i = 0; i < 1400; i++) { c.fillStyle = `rgba(${r() > .5 ? '170,150,120' : '30,24,18'},${r() * .12})`; c.fillRect(r() * w, r() * h, 1 + r() * 2, 1 + r() * 3); } }, [3, 5]); })(); }
+function palmLeafletTex() { return SPR.pLeaf ||= canvasT(32, 256, (c, w, h) => { const g = c.createLinearGradient(0, 0, w, 0); g.addColorStop(0, '#c9cfc0'); g.addColorStop(.46, '#f2f5ea'); g.addColorStop(.5, '#ffffff'); g.addColorStop(.54, '#f2f5ea'); g.addColorStop(1, '#c4cbb9');
+  c.fillStyle = g; c.fillRect(0, 0, w, h); c.strokeStyle = 'rgba(90,100,80,.18)'; for (let x = 3; x < w; x += 4) { c.beginPath(); c.moveTo(x, 0); c.lineTo(x, h); c.stroke(); } }); }
+function burlapTex() { return SPR.pBurlap ||= (() => { const r = rng(507); return canvasT(64, 64, (c, w, h) => { c.fillStyle = '#b39a72'; c.fillRect(0, 0, w, h);
+  for (let i = 0; i < w; i += 2) { c.fillStyle = `rgba(80,62,40,${.18 + r() * .15})`; c.fillRect(i, 0, 1, h); c.fillRect(0, i, w, 1); }
+  for (let i = 0; i < 300; i++) { c.fillStyle = `rgba(230,215,180,${r() * .25})`; c.fillRect(r() * w, r() * h, 1, 1); } }, [3, 3]); })(); }
+function ladderTex() { return SPR.pLadder ||= (() => { const r = rng(509); return canvasT(32, 256, (c, w, h) => { c.fillStyle = '#7d6247'; c.fillRect(0, 0, w, h);
+  for (let i = 0; i < 40; i++) { c.strokeStyle = `rgba(${r() > .5 ? '150,125,95' : '50,38,26'},${.25 + r() * .3})`; c.lineWidth = 1; c.beginPath(); const x = r() * w; c.moveTo(x, 0); c.bezierCurveTo(x + 3, h * .3, x - 3, h * .6, x + 1, h); c.stroke(); }
+  for (let i = 0; i < 6; i++) { c.fillStyle = 'rgba(40,28,18,.5)'; c.beginPath(); c.ellipse(r() * w, r() * h, 2, 5, 0, 0, 7); c.fill(); } }, [1, 4]); })(); }
+function dotTex() { return SPR.pDot ||= canvasT(32, 32, (c, w) => { const g = c.createRadialGradient(16, 16, 0, 16, 16, 16); g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(.45, 'rgba(255,255,255,.85)'); g.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = g; c.fillRect(0, 0, 32, 32); }); }
+
+function palmFrond(r, L, e, droop, kind) { const g = new THREE.Group(), d0 = V3(0, Math.sin(e), Math.cos(e)), k = droop / (L * L);
+  const at = s => d0.clone().multiplyScalar(s).add(V3(0, -k * s * s, 0)), tan = s => d0.clone().add(V3(0, -2 * k * s, 0)).normalize();
+  const dry = kind === 'dry', young = kind === 'young';
+  const pts = []; for (let i = 0; i <= 10; i++) pts.push(at(L * i / 10));
+  const rach = new THREE.Mesh(taperTube(pts, u => lerp(.034, .005, u), 16, 6), std(dry ? '#8a6e48' : young ? '#a7ad6a' : '#8f9658', { r: .7 })); rach.castShadow = true; g.add(rach);
+  const list = [], s0 = .17 * L;
+  for (let s = .05 * L; s < s0; s += .045) for (const sd of [-1, 1]) list.push({ s: s + r() * .02, sd, len: .05 + r() * .06, spine: true });
+  const n = Math.round(L * 21); for (let i = 0; i < n; i++) { const u = i / (n - 1), s = s0 + u * (L - s0) * .985; for (const sd of [-1, 1]) {
+    const len = (.12 + .34 * Math.pow(Math.sin(Math.PI * (.12 + u * .8)), .7)) * (.85 + r() * .3); list.push({ s: s + (r() - .5) * .02, sd, len, u, grp: (i % 3) - 1 }); } }
+  const im = new THREE.InstancedMesh(leafGeo(.042), twoTone(new THREE.MeshStandardMaterial({ map: palmLeafletTex(), roughness: .62, side: THREE.DoubleSide }), dry ? 'vec3(.45,.36,.24)' : 'vec3(.42,.47,.36)', .6), list.length);
+  const m4 = new THREE.Matrix4(), cc = new THREE.Color(), base = col(dry ? '#8d7350' : young ? '#86a35e' : '#5d7848'), glau = col(dry ? '#a58a60' : '#7f9478');
+  list.forEach((q, i) => { const P = at(q.s), T = tan(q.s), side = new THREE.Vector3().crossVectors(T, YUP).normalize().multiplyScalar(q.sd), up = new THREE.Vector3().crossVectors(side.clone().multiplyScalar(q.sd), T).normalize();
+    const fa = q.spine ? .55 : .62 + r() * .2, lift = q.spine ? .1 : (dry ? -.5 : .25 + q.grp * .3 + (r() - .5) * .2);
+    const dir = T.clone().multiplyScalar(Math.cos(fa)).add(side.clone().multiplyScalar(Math.sin(fa))).add(up.clone().multiplyScalar(lift)).normalize();
+    const uh = up.clone().multiplyScalar(.8).add(side.clone().multiplyScalar(-.4 * q.sd)), qq = basisQ(dir, uh), w = q.spine ? .25 : 1;
+    m4.compose(P, qq, V3(w, 1, q.len)); im.setMatrixAt(i, m4);
+    cc.copy(base).lerp(glau, r() * .45).multiplyScalar(.88 + r() * .2); if (q.spine) cc.set(dry ? '#9a8058' : '#b8b07a'); if (!dry && !young && q.u > .93 && r() < .4) cc.lerp(col('#a3935e'), .5); im.setColorAt(i, cc); });
+  im.castShadow = true; im.receiveShadow = true; im.userData.frond = rach.userData.frond = true; g.add(im); return g; }
+
+function palmCluster(r, sex) { const g = new THREE.Group(), tip = V3(...CL_TIP[sex]), fem = sex === 'f';
+  const stalk = [V3(0, -.04, .16), V3(0, -.1, fem ? .36 : .3), V3(0, tip.y * .7, tip.z * .85), tip];
+  g.add(shadowed(new THREE.Mesh(taperTube(stalk, u => lerp(.024, .016, u), 12, 7), std(fem ? '#c9a95c' : '#c4a356', { r: .6 }))));
+  // the opened spathe (boat-shaped sheath), split along one side and pushed back
+  const L = fem ? .55 : .42, prof = []; for (let i = 0; i <= 14; i++) { const u = i / 14; prof.push(new THREE.Vector2(Math.max(.002, (fem ? .075 : .085) * Math.pow(Math.sin(Math.PI * u), .7)), u * L)); }
+  const shM = new THREE.MeshStandardMaterial({ color: col(fem ? '#b48f52' : '#cfa848'), roughness: .55, side: THREE.DoubleSide });
+  const sh = new THREE.Mesh(new THREE.LatheGeometry(prof, 18, fem ? 2.4 : 1.6, fem ? 3.6 : 3.2), shM), sp = new THREE.Group(); sp.add(sh);
+  const dir = tip.clone().sub(stalk[0]).normalize(); sp.quaternion.setFromUnitVectors(YUP, dir.clone().multiplyScalar(-1).negate()); sp.position.copy(stalk[0]).add(V3(fem ? -.035 : 0, .01, 0));
+  if (!fem) { sp.position.copy(stalk[1]).add(V3(0, .0, -.02)); sp.quaternion.setFromUnitVectors(YUP, dir); }
+  g.add(shadowed(sp));
+  const N = fem ? 34 : 64, perF = fem ? 19 : 11, strandM = std(fem ? '#d6b768' : '#efe0a4', { r: .6 }), seg = new THREE.CylinderGeometry(1, 1, 1, 5);
+  const sIm = new THREE.InstancedMesh(seg, strandM, N * 4), fGeo = new THREE.IcosahedronGeometry(1, 1);
+  const fIm = new THREE.InstancedMesh(fGeo, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: .55 }), N * perF), flowers = [], m4 = new THREE.Matrix4(), cc = new THREE.Color();
+  const fCol = col(fem ? '#c3cc8a' : '#f3e6b0');
+  for (let i = 0; i < N; i++) { const a = r() * 6.283, sprd = fem ? .5 + r() * .45 : .25 + r() * .2;
+    const d = fem ? V3(Math.cos(a) * sprd, -1, .45 + Math.sin(a) * sprd * .6).normalize() : dir.clone().add(V3((r() - .5) * .5, -.35 - r() * .3, (r() - .5) * .3)).normalize();
+    const len = fem ? .28 + r() * .14 : .1 + r() * .07, p0 = tip.clone().add(V3((r() - .5) * .04, (r() - .5) * .03, (r() - .5) * .04)), sag = fem ? .1 : .02;
+    const P = u => p0.clone().add(d.clone().multiplyScalar(len * u)).add(V3(0, -sag * u * u, 0));
+    for (let k = 0; k < 4; k++) { const a0 = P(k / 4), a1 = P((k + 1) / 4), mid = a0.clone().add(a1).multiplyScalar(.5), dd = a1.clone().sub(a0);
+      m4.compose(mid, new THREE.Quaternion().setFromUnitVectors(YUP, dd.clone().normalize()), V3(fem ? .0032 : .003, dd.length(), fem ? .0032 : .003)); sIm.setMatrixAt(i * 4 + k, m4); }
+    for (let k = 0; k < perF; k++) { const u = .12 + .88 * k / (perF - 1), q = P(u), sd = new THREE.Vector3(r() - .5, r() - .5, r() - .5).normalize().multiplyScalar(.004); q.add(sd);
+      const rr = fem ? .0042 + r() * .001 : .0052 + r() * .0015; flowers.push({ p: q, r: rr }); m4.compose(q, new THREE.Quaternion(), V3(rr, rr, rr)); fIm.setMatrixAt(flowers.length - 1, m4); fIm.setColorAt(flowers.length - 1, cc.copy(fCol).multiplyScalar(.9 + r() * .18)); } }
+  sIm.castShadow = fIm.castShadow = true; g.add(sIm, fIm);
+  // dust order: a sweep from the side nearest the farmer plus noise, so the yellow spreads a few flowers at a time
+  const order = flowers.map((f, i) => [i, f.p.x * 3 + f.p.y * .5 + r() * .6]).sort((a, b) => a[1] - b[1]).map(a => a[0]);
+  return { g, flowers, fIm, order, fCol, tip, sex, last: -1 }; }
+
+function datePalm(p = {}) { const g = new THREE.Group(), r = rng(p.seed || 31), H = p.h || 5.6, lean = p.lean || [.08, .04];
+  const trunkPts = [V3(0, 0, 0), V3(lean[0] * .3, H * .35, lean[1] * .3), V3(lean[0] * .75, H * .7, lean[1] * .75), V3(lean[0], H, lean[1])];
+  const tm = new THREE.MeshStandardMaterial({ map: palmTrunkTex(), bumpMap: palmTrunkTex(), bumpScale: 3.5, roughness: .95 });
+  const trunk = new THREE.Mesh(taperTube(trunkPts, u => u < .06 ? lerp(.36, .27, u / .06) : lerp(.27, .23, (u - .06) / .94), 30, 18, .03, 1, .55), tm); g.add(shadowed(trunk));
+  const top = trunkPts[3], crown = new THREE.Group(); crown.position.copy(top); g.add(crown);
+  // pruned leaf-base stubs (karab) in a spiral under the crown, fibre wrap
+  const stubM = std('#8a6f4c', { r: .9 }), fibM = std('#4a3a2a', { r: 1 });
+  for (let i = 0; i < 46; i++) { const a = i * 2.39996, y = -.15 - (i / 46) * 1.15, st = box(.12, .05, .2, stubM); st.position.set(Math.sin(a) * .25, y, Math.cos(a) * .25); st.rotation.set(-.6, a, 0); st.position.y += .05; crown.add(st); }
+  const fib = cyl(.26, .25, .45, fibM, 18); fib.position.y = -.1; crown.add(fib);
+  const fronds = [], N = p.fronds || 40;
+  for (let i = 0; i < N; i++) { const a = i / N, az = i * 2.39996 + r() * .2, dry = a > .93, young = a < .22 && p.spring !== false;
+    if ((p.clear || []).some(([a0, a1, amin]) => { const z = Math.atan2(Math.sin(az), Math.cos(az)); return z > a0 && z < a1 && a >= amin; })) continue; // pruned for access (farmers cut the lower fronds round the bunches)
+    const e = dry ? -1.15 - r() * .2 : lerp(1.2, -.3, Math.pow(a, .9)) + (r() - .5) * .15, L = (dry ? 2.6 : lerp(2.3, 3.4, Math.min(1, a * 1.7))) * (p.scaleF || 1);
+    const fr = palmFrond(r, L, e, dry ? .2 : .25 + a * 1.1, dry ? 'dry' : young ? 'young' : ''), pv = new THREE.Group(); pv.add(fr);
+    pv.position.set(Math.sin(az) * (.1 + a * .14), .22 - a * .55, Math.cos(az) * (.1 + a * .14)); pv.rotation.y = az; crown.add(pv); fronds.push({ pv, e, ph: r() * 6.28, a }); }
+  const cl = (p.clusters || []).map((c, i) => { const o = palmCluster(rng((p.seed || 31) * 7 + i), c.sex || 'f'); const hold = new THREE.Group(); hold.rotation.y = c.az || 0; hold.position.y = c.dy || 0; hold.add(o.g); crown.add(hold); o.hold = hold; o.home = o.g.position.clone(); return o; });
+  if (p.link) PALM[p.link] = { cl, crown, g };
+  const tmpV = new THREE.Vector3();
+  g.userData.tick = t => { const W = kv(p.windK, t, 0), base = p.sway ?? .012;
+    crown.rotation.z = base * .6 * Math.sin(t * .55) + W * .05 * Math.sin(t * 2.1); crown.rotation.x = base * .5 * Math.sin(t * .43 + 1) + W * .03;
+    for (const f of fronds) { const amp = base * (1 + f.a) + W * (.05 + .07 * f.a); f.pv.children[0].rotation.x = -amp * Math.sin(t * (1.1 + f.a * .5) + f.ph) - W * .06 * (1 - Math.abs(f.e) * .3); f.pv.children[0].rotation.z = amp * .6 * Math.sin(t * .9 + f.ph * 1.7); }
+    cl.forEach((o, i) => { const dk = kv(p.dustK?.[i], t, 0), nD = Math.floor(dk * o.flowers.length);
+      if (nD !== o.last) { const m4 = new THREE.Matrix4(), cc = new THREE.Color(), dustC = col('#e7bf3f'), set = new Set(o.order.slice(0, nD));
+        o.flowers.forEach((f, j) => { const on = set.has(j), s = f.r * (on ? 1.3 : 1); m4.compose(f.p, new THREE.Quaternion(), V3(s, s, s)); o.fIm.setMatrixAt(j, m4); o.fIm.setColorAt(j, on ? dustC : o.fCol); });
+        o.fIm.instanceMatrix.needsUpdate = true; o.fIm.instanceColor.needsUpdate = true; o.last = nD; }
+      o.g.position.copy(o.home); o.g.scale.setScalar(1); o.g.rotation.set(.02 * Math.sin(t * 1.3 + i) + W * .06 * Math.sin(t * 3 + i), 0, 0); // reset: frames render out of order
+      const ct = (p.cut || []).find(c => c[0] === i); o.g.visible = true; if (!ct) return;
+      const [, t0, t1] = ct; if (t >= t1) { o.g.visible = false; return; }
+      if (t > t0 - .5 && t < t0) o.g.rotation.z = .05 * Math.sin(t * 40);
+      if (t >= t0) { const L = LINK[p.cutBy || 'farmer'], palm = L?.[p.cutHand || 'L']; if (!palm) return; const u = clamp((t - t0) / (t1 - t0)), e = u * u * (3 - 2 * u);
+        o.hold.updateWorldMatrix(true, false); const tgtL = o.hold.worldToLocal(tmpV.copy(palm).add(V3(0, .08, 0))), tipP = o.tip.clone().add(o.home).lerp(tgtL, e); tipP.y += Math.sin(Math.PI * u) * .12;
+        o.g.rotation.set(-e * .9, 0, 0); o.g.scale.setScalar(1 - .35 * e); o.g.position.copy(tipP).sub(o.tip.clone().applyEuler(o.g.rotation).multiplyScalar(1 - .35 * e)); } });
+    PALM[p.link || '_'] && (PALM[p.link].t = t); };
+  return g; }
+
+function palmLadder(p = {}) { const g = new THREE.Group(), T = V3(...(p.top || [0, 5.3, -1.2])), w = p.w || .46, len = T.length(), dir = T.clone().normalize();
+  const lat = new THREE.Vector3().crossVectors(dir, YUP).normalize(), m = new THREE.MeshStandardMaterial({ map: ladderTex(), roughness: .85 }), q = new THREE.Quaternion().setFromUnitVectors(YUP, dir);
+  for (const s of [-1, 1]) { const rail = box(.045, len, .07, m); rail.quaternion.copy(q); rail.position.copy(dir.clone().multiplyScalar(len / 2)).add(lat.clone().multiplyScalar(s * w / 2)); g.add(rail); }
+  const n = Math.floor((T.y - .2) / (p.step || .3)) + 1; for (let i = 0; i < n; i++) { const y = .25 + i * (p.step || .3), P = dir.clone().multiplyScalar(y / dir.y), rg = cyl(.019, .019, w, m, 8); rg.rotation.z = Math.PI / 2; rg.rotation.y = Math.atan2(-lat.z, lat.x); rg.position.copy(P); g.add(rg); }
+  const cs = contactShadow(.35, .15, .4); cs.position.y = .01; g.add(cs);
+  return shadowed(g); }
+
+function palmTool(p = {}) { const g = new THREE.Group(), inner = new THREE.Group(); g.add(inner); const kind = p.kind || 'bag';
+  if (kind === 'sickle') { const wood = std('#6d4a2b', { r: .6 }), steel = new THREE.MeshStandardMaterial({ color: col('#b9bcbc'), metalness: .85, roughness: .32 });
+    const h = cyl(.016, .018, .14, wood, 10); h.position.y = .02; inner.add(h);
+    const bl = new THREE.Mesh(new THREE.TorusGeometry(.11, .012, 4, 22, 2.6), steel); bl.scale.set(1, 1, .25); bl.position.set(-.11, .1, 0); bl.rotation.z = -.35; inner.add(bl);
+    const tipO = new THREE.Object3D(); tipO.position.set(-.11 + Math.cos(2.6 - .35) * .11, .1 + Math.sin(2.6 - .35) * .11, 0); inner.add(tipO); g.userData.tipO = tipO; }
+  else { const prof = [[.0, -.3], [.09, -.29], [.12, -.22], [.125, -.12], [.11, -.05], [.075, -.01], [.06, .03], [.075, .06]].map(([x, y]) => new THREE.Vector2(x, y));
+    const sack = new THREE.Mesh(new THREE.LatheGeometry(prof, 20), new THREE.MeshStandardMaterial({ map: burlapTex(), roughness: .95, side: THREE.DoubleSide })); inner.add(sack);
+    const pa = sack.geometry.attributes.position; for (let i = 0; i < pa.count; i++) { const x = pa.getX(i), y = pa.getY(i), z = pa.getZ(i), a = Math.atan2(z, x); const k = 1 + .08 * Math.sin(a * 5 + y * 20); pa.setX(i, x * k); pa.setZ(i, z * k); } sack.geometry.computeVertexNormals();
+    const tie = new THREE.Mesh(new THREE.TorusGeometry(.062, .006, 5, 16), std('#7a5a36')); tie.rotation.x = Math.PI / 2; tie.position.y = .03; inner.add(tie);
+    const fill = new THREE.Mesh(new THREE.SphereGeometry(.06, 12, 8), std('#e9cf72', { r: .7 })); fill.scale.y = .5; fill.position.y = .04; inner.add(fill); g.userData.fill = fill; }
+  shadowed(g);
+  g.userData.tick = t => { const on = kv(p.showK, t, 1) > .5; inner.visible = on; if (g.userData.fill) g.userData.fill.visible = kv(p.fillK, t, 0) > .5;
+    const L = LINK[p.carryBy || 'farmer'], palm = L?.[p.hand || 'L']; if (!palm || !on) return; const yaw = L.yaw || 0;
+    const off = V3(...(p.off || [0, 0, 0])).applyAxisAngle(YUP, yaw); g.parent.updateWorldMatrix(true, false);
+    g.position.copy(g.parent.worldToLocal(palm.clone().add(off))); g.rotation.set(p.rx || 0, yaw + (p.ry || 0), p.rz || 0, 'YXZ'); };
+  return g; }
+
+function pollenDust(p = {}) { const g = new THREE.Group(), r = rng(p.seed || 77), mode = p.mode || 'drift', N = p.n || 400;
+  // births: integrate rateK (particles per s) until N
+  const births = [], rk = p.rateK || [[0, 0]]; { let acc = 0; for (let t = rk[0][0]; t < rk[rk.length - 1][0] && births.length < N; t += .01) { acc += kv(rk, t, 0) * .01; while (acc >= 1 && births.length < N) { births.push(t + r() * .01); acc -= 1; } } }
+  const P = births.map(b => ({ b, j: V3(r() - .5, r() - .5, r() - .5), s: r(), k: r() }));
+  const geo = new THREE.BufferGeometry(), pos = new Float32Array(P.length * 3); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  const mat = new THREE.PointsMaterial({ size: p.size || .012, map: dotTex(), color: col(p.color || '#f0cc4e'), transparent: true, opacity: p.opacity ?? .95, depthWrite: false, alphaTest: .05 });
+  const pts = new THREE.Points(geo, mat); pts.frustumCulled = false; g.add(pts);
+  let haze = null, hpos = null; if (mode === 'drift') { const hg = new THREE.BufferGeometry(); hpos = new Float32Array(P.length * 3); hg.setAttribute('position', new THREE.BufferAttribute(hpos, 3));
+    haze = new THREE.Points(hg, new THREE.PointsMaterial({ size: p.hazeSize || .22, map: puffTex(), color: col('#f2dc8c'), transparent: true, opacity: .32, depthWrite: false })); haze.frustumCulled = false; g.add(haze); }
+  const srcAt = t => { if (p.srcK) { const k = p.srcK; if (t <= k[0][0]) return V3(k[0][1], k[0][2], k[0][3]); for (let i = 0; i < k.length - 1; i++) if (t < k[i + 1][0]) { const u = sEase((t - k[i][0]) / (k[i + 1][0] - k[i][0])); return V3(lerp(k[i][1], k[i + 1][1], u), lerp(k[i][2], k[i + 1][2], u), lerp(k[i][3], k[i + 1][3], u)); } const l = k[k.length - 1]; return V3(l[1], l[2], l[3]); } return V3(...(p.src || [0, 1, 0])); };
+  g.userData.tick = t => { const W = V3(...(p.wind || [-1.2, 0, 0])), cl = mode === 'sprinkle' ? PALM[p.palm]?.cl[p.ci || 0] : null, ttl = p.life || 6, fl = p.flight || .6;
+    const hide = p.hideAfter != null && t > p.hideAfter;
+    P.forEach((q, i) => { const a = t - q.b; let x = 0, y = -999, z = 0, hy = -999;
+      if (a >= 0 && !hide) { const s = srcAt(q.b);
+        if (mode === 'drift' && a < ttl) { const fall = (p.fall || .35) * (.6 + q.k * .9), sp = .7 + q.s * .6, turb = Math.sin(a * 2.3 + i) * .25;
+          x = s.x + q.j.x * .25 + W.x * a * sp + turb * .3; z = s.z + q.j.z * .25 + W.z * a * sp + Math.cos(a * 1.7 + i) * .15; y = Math.max(.02, s.y + q.j.y * .2 - fall * a * a * .5 - fall * .4 * a + Math.sin(a * 3 + i) * .05);
+          hy = y > .05 && a < ttl * .7 ? y : -999; }
+        if (mode === 'sprinkle' && cl) { const f = cl.flowers[Math.floor(q.k * cl.flowers.length)], land = cl.g.localToWorld(f.p.clone().add(V3(0, f.r * 1.2, 0))), u = clamp(a / (fl * (.7 + q.s * .6)));
+          const st = s.clone().add(q.j.clone().multiplyScalar(p.spread || .02)); x = lerp(st.x, land.x, 1 - (1 - u) * (1 - u)); z = lerp(st.z, land.z, 1 - (1 - u) * (1 - u)); y = lerp(st.y, land.y, u * u) + Math.sin(Math.PI * u) * .015; } }
+      pos[i * 3] = x; pos[i * 3 + 1] = y; pos[i * 3 + 2] = z; if (hpos) { hpos[i * 3] = x; hpos[i * 3 + 1] = hy; hpos[i * 3 + 2] = z; } });
+    geo.attributes.position.needsUpdate = true; if (haze) haze.geometry.attributes.position.needsUpdate = true; };
+  return g; }
+Object.assign(ASSETS, { date_palm: datePalm, palm_ladder: palmLadder, palm_tool: palmTool, pollen: pollenDust });
+Object.assign(RIG_POSES, { // date palm pollination: on a leaning ladder facing the trunk (palms on the rails ~1.3 m above the feet), work at the crown
+  ladderA: { adL: 1.25, adR: 1.25, fL: 1.75, eL: .5, fR: 1.3, eR: .75, sp: .12, hL: .95, kL: 1.45, hR: .08, kR: .15, hd: -.25 },
+  ladderB: { adL: 1.25, adR: 1.25, fL: 1.3, eL: .75, fR: 1.75, eR: .5, sp: .12, hR: .95, kR: 1.45, hL: .08, kL: .15, hd: -.25 },
+  ladderHold: { adL: 1.25, adR: 1.25, fL: 1.5, eL: .6, fR: 1.5, eR: .6, sp: .1, hL: .12, kL: .2, hR: .04, kR: .08, hd: -.2 },
+  ladderLook: { adL: 1.25, adR: 1.25, fL: 1.5, eL: .6, fR: 1.5, eR: .6, sp: .02, hL: .12, kL: .2, hd: -.55, ht: -.5 },
+  cutReach: { adR: .95, fR: 1.75, eR: .2, adL: 1.2, fL: 1.2, eL: 1.15, sp: .08, tw: -.2, hd: -.3, ht: -.35, hL: .12, kL: .2 },
+  cutPull: { adR: 1.05, fR: 1.35, eR: .75, adL: 1.2, fL: 1.2, eL: 1.15, sp: .1, tw: -.25, hd: -.15, ht: -.35, hL: .12, kL: .2 },
+  bagDrop: { adR: 1.2, fR: 1.15, eR: .9, adL: 1.15, fL: 1.25, eL: 1.05, sp: .12, tw: -.15, hd: .15, ht: -.2, hL: .12, kL: .2 },
+  sprinkleR: { adR: .8, fR: 1.75, eR: 0, adL: 1.25, fL: 1.5, eL: .6, sp: .35, hd: -.2, ht: -.45, hL: .12, kL: .2, shake: .3 },   // right palm ~.4 m forward, .25 m right, 1.46 m above the feet
+  presentR: { adR: .95, fR: .85, eR: .35, fL: .1, eL: .2, ht: .35, sp: -.02 } });

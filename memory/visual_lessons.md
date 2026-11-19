@@ -251,3 +251,11 @@ Rule: when a preview or final video shows a mistake, add one entry here (what wa
 - **Mistake:** a disembodied hand's sleeve (0.7 m along -fingers) filled half the frame when the camera looked along the forearm. **Fix:** put the camera at about 90 degrees to the forearm (bury cam az 1.15) and park a waiting hand well outside the close frame.
 - Works: grabs keyed in the cutting's own frame (pinch never slips), index pad as the contact anchor, palm-to-bark 0.007 m by probe, the front-half cutaway pot for root stages.
 - Source: runs/olive_cutting/sheet_preview.jpg (first pass) plus the NDC/contact probe.
+
+## Palm pollen (preview 2026-11-19, plans/palm_pollen.mjs)
+- **Mistake:** close-ups of the flower clusters (cameras 1-4 m from the crown) looked through the drooping lower fronds: 8-22 of 25 central rays hit a frond before the subject. **Fix:** prune the older fronds (`clear: [[azMin, azMax, minAge]]` on `date_palm`) on the work side, as farmers do round the bunches before pollination; 0/25 blocked after. Check with a raycast grid from the beat camera, not by eye.
+- **Mistake:** leaflets 7.5 cm wide read as broad banana-like blades in a close-up. **Fix:** 4.2 cm (real date palm pinnae are 2-4 cm wide, 20-45 cm long).
+- **Mistake:** a cut prop moved in its tick kept its moved transform when frames were rendered out of order (probe, chunk workers). **Fix:** reset every animated part to its home transform at the top of each tick.
+- Exposure 1.05 clipped 5-10 % of the non-sky pixels in a sunny palm grove; .95 keeps every beat at mean luma 100-154 with under 5 % above 205.
+- Contact by probe: ladder hands .05-.15 m from the rails, sickle palm .09 m from the male spathe stalk at the cut, the spathe tip .1 m above the bag palm when it vanishes into the bag, sprinkling palm .15 m from the second female cluster.
+- Source: runs/palm_pollen/sheet_preview.jpg (first pass) plus the raycast/NDC/contact probe.
