@@ -209,3 +209,8 @@ Rule: when a preview or final video shows a mistake, add one entry here (what wa
 - Mistake: the realistic library works for props (table, barrels, bags, cauldron, palm), but flat round loaves made of spheres and terracotta cylinders read as plain shapes. Fix: use a textured bread or a jug model when one exists; otherwise add a clear colour and crust detail.
 - Mistake: a 10 s hold on the "question" beat with no new idea. Fix: split holds over 4.5 s with a camera change (already in the critic's rule).
 - Source for the look: Nile-side countryside uses `env.horizon:'nile'` (CLAUDE.md rule).
+
+## 2026-11-19 three-sisters (score 55)
+- Mistake: crops at real height in a wide shot read as sticks; corn and squash must fill the frame in the hero beat.
+- Mistake: a grey-brown slab for soil looks like a floating block. Fix: continuous ground with the same soil texture as the rest of the scene.
+- Mistake: root nodules as pink balls on a stick. Fix: a branching root system with nodules along the roots, shown in a cut-away.

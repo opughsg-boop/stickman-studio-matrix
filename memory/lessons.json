@@ -16,9 +16,9 @@
  {
   "code": "beat_too_long",
   "rule": "Split long sentences into two beats with a camera change.",
-  "count": 6,
-  "last_seen": "2026-11-17",
-  "example": "beat 6 lasts 10.2s without a new idea"
+  "count": 8,
+  "last_seen": "2026-11-19",
+  "example": "beat 7 lasts 10.4s without a new idea"
  },
  {
   "code": "caption_flash",
