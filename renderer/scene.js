@@ -3486,13 +3486,13 @@ const OC = {}; window.__oc = () => OC; // olive pack registry: cutting transform
 const V3 = (a, b, c) => new THREE.Vector3(a, b, c), YUP = V3(0, 1, 0);
 function keyTrack(keys, dec) { const K = keys.map(k => ({ t: k[0], ...dec(k) })), n = K.length;
   return t => { if (t <= K[0].t) return { ...K[0], A: K[0], B: K[0], u: 0 }; if (t >= K[n - 1].t) return { ...K[n - 1], A: K[n - 1], B: K[n - 1], u: 1 };
-    let i = 0; while (i < n - 2 && t >= K[i + 1].t) i++; const a = K[i], b = K[i + 1], u = sEase((t - a.t) / Math.max(1e-4, b.t - a.t));
+    let i = 0; while (i < n - 2 && t >= K[i + 1].t) i++; const a = K[i], b = K[i + 1], u0 = clamp((t - a.t) / Math.max(1e-4, b.t - a.t)), u = b.e === 'in' ? Math.pow(u0, 2.2) : sEase(u0); // 'in' = accelerating blow
     return { p: a.p.clone().lerp(b.p, u), q: a.q.clone().slerp(b.q, u), A: a, B: b, u }; }; }
 const decCut = k => { const a = V3(k[4] ?? 0, k[5] ?? 1, k[6] ?? 0).normalize(), q = new THREE.Quaternion().setFromUnitVectors(YUP, a);
   q.multiply(new THREE.Quaternion().setFromAxisAngle(YUP, k[7] || 0)); return { p: V3(k[1], k[2], k[3]), q }; };
 const basisQ = (f, u) => { const z = f.clone().normalize(), y = u.clone().sub(z.clone().multiplyScalar(u.dot(z))).normalize(), x = new THREE.Vector3().crossVectors(y, z);
   return new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(x, y, z)); };
-const decHand = k => ({ p: V3(k[1], k[2], k[3]), q: basisQ(V3(k[4], k[5], k[6]), V3(k[7], k[8], k[9])), pose: k[10] || 'open' });
+const decHand = k => ({ p: V3(k[1], k[2], k[3]), q: basisQ(V3(k[4], k[5], k[6]), V3(k[7], k[8], k[9])), pose: k[10] || 'open', e: k[11] || null });
 function taperTube(pts, rf, seg = 20, rad = 9, gn = 0, sd = 1, vs = 2) {
   const cv = new THREE.CatmullRomCurve3(pts.map(q => q.isVector3 ? q : V3(...q)), false, 'centripetal'), fr = cv.computeFrenetFrames(seg, false), L = cv.getLength(), pos = [], uv = [], idx = [];
   for (let i = 0; i <= seg; i++) { const u = i / seg, P = cv.getPointAt(u), N = fr.normals[i], B = fr.binormals[i], R = rf(u);
@@ -3677,13 +3677,20 @@ const HPOSE = { open: { f: [[.15, .15, .1], [.12, .15, .1], [.15, .18, .1], [.2,
   press: { f: [[.25, .3, .15], [.3, .35, .2], [.35, .4, .2], [.4, .4, .2]], th: 'rest' },
   fist: { f: [[1.25, 1.5, .9], [1.3, 1.6, .95], [1.35, 1.6, .95], [1.35, 1.55, .9]], th: 'wrap' },
   cup: { f: [[.32, .42, .28], [.36, .46, .3], [.4, .5, .32], [.46, .52, .34]], th: 'rest' },          // palm up, fingers round an egg
-  slide: { f: [[.06, .05, .03], [.05, .05, .03], [.07, .06, .04], [.1, .08, .05]], th: 'rest' } };   // flat, slid under a hen
+  slide: { f: [[.06, .05, .03], [.05, .05, .03], [.07, .06, .04], [.1, .08, .05]], th: 'rest' },     // flat, slid under a hen
+  grip: { f: [[1.05, 1.2, .8], [1.1, 1.25, .85], [1.15, 1.3, .85], [1.15, 1.25, .8]], th: 'wrap' },  // a looser fist round a 3 cm roll
+  flat: { f: [[.02, .02, .01], [.02, .02, .01], [.03, .02, .01], [.05, .03, .02]], th: 'rest' } };   // palm flat on a surface
 function fabricTex() { return SPR.oFab ||= (() => { const r = rng(415); return canvasT(128, 128, (c, w, h) => { c.fillStyle = '#58697a'; c.fillRect(0, 0, w, h);
   for (let i = -h; i < w; i += 3) { c.strokeStyle = `rgba(${r() > .5 ? '120,140,160' : '40,50,62'},.35)`; c.lineWidth = 1; c.beginPath(); c.moveTo(i, 0); c.lineTo(i + h, h); c.stroke(); }
   for (let i = 0; i < 900; i++) { c.fillStyle = `rgba(230,235,240,${r() * .12})`; c.fillRect(r() * w, r() * h, 1, 1); } }, [4, 6]); })(); }
 function gardHand(p = {}) { const g = new THREE.Group(), inner = new THREE.Group(); g.add(inner); const sx = p.side === 'L' ? -1 : 1;
   const skin = new THREE.MeshPhysicalMaterial({ color: col(p.skin || '#b98262'), map: skinTex(), bumpMap: skinBump(), bumpScale: .35, roughness: .55, sheen: .5, sheenColor: col('#ffc9a8'), sheenRoughness: .5 }), nailM = new THREE.MeshPhysicalMaterial({ color: col('#e3bba8'), roughness: .3, clearcoat: .4, clearcoatRoughness: .3 });
   const ell = (a, b, c, m = skin) => { const e = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 16), m); e.scale.set(a, b, c); return e; };
+  // detail pass (2026-11-20, after the "toy hand" review): skin folds over every finger joint, joint swells, cuticle, lunula and white free
+  // edge on the nails, extensor tendons and two veins on the back of the hand
+  const det = p.detail !== false, sk0 = col(p.skin || '#b98262'), foldM = new THREE.MeshStandardMaterial({ color: sk0.clone().multiplyScalar(.7), roughness: .75 }),
+    lunM = new THREE.MeshPhysicalMaterial({ color: col('#efd9cf'), roughness: .35, clearcoat: .3 }), edgeM = new THREE.MeshStandardMaterial({ color: col('#f1e8dc'), roughness: .5 }),
+    veinM = new THREE.MeshPhysicalMaterial({ color: sk0.clone().lerp(col('#6f7a96'), .28), roughness: .55, sheen: .3, sheenColor: col('#ffc9a8') });
   const palm = ell(.043, .0155, .051); palm.position.set(.002 * sx, 0, .046); inner.add(palm); const palmO = new THREE.Object3D(); palmO.position.set(.002 * sx, -.0155, .05); inner.add(palmO);
   const pad = ell(.041, .0135, .017); pad.position.set(0, -.002, .084); inner.add(pad);
   const thenar = ell(.02, .016, .033); thenar.position.set(-.02 * sx, -.007, .03); thenar.rotation.y = .45 * sx; inner.add(thenar);
@@ -3697,10 +3704,29 @@ function gardHand(p = {}) { const g = new THREE.Group(), inner = new THREE.Group
   const FL = [[.044, .026, .021], [.048, .029, .022], [.045, .027, .021], [.035, .021, .019]], FR = [.0092, .0095, .009, .0078], KX = [-.026, -.0085, .009, .0255], KZ = [.086, .091, .088, .08], SPR0 = [-.07, -.015, .035, .09];
   const chain = (par, base, ls, r0) => { const segs = []; let pr = par, pos = base; ls.forEach((l, k) => { const j = new THREE.Group(); j.position.copy(pos); pr.add(j); const rr = r0 * (1 - k * .09);
       const c = new THREE.Mesh(new THREE.CapsuleGeometry(rr, Math.max(.002, l - rr * .6), 5, 12), skin); c.rotation.x = Math.PI / 2; c.position.z = l / 2; c.scale.set(1.06, 1, .86); j.add(c);
-      if (k === ls.length - 1) { const nl = ell(rr * .8, rr * .22, l * .36, nailM); nl.position.set(0, rr * .74, l * .62); j.add(nl); }
+      if (k === ls.length - 1) { const nl = ell(rr * .8, rr * .22, l * .36, nailM); nl.position.set(0, rr * .74, l * .62); j.add(nl);
+        if (det) { const lu = ell(rr * .4, rr * .1, l * .09, lunM); lu.position.set(0, rr * .86, l * .33); j.add(lu);                  // pale lunula at the nail root
+          const fe = ell(rr * .74, rr * .12, l * .06, edgeM); fe.position.set(0, rr * .66, l * .95); j.add(fe);                         // white free edge
+          const cu = ell(rr * .84, rr * .16, l * .045, foldM); cu.position.set(0, rr * .8, l * .25); j.add(cu); } }                   // cuticle fold
+      if (det && k > 0) { for (const dz of [-.0026, 0, .0026]) { const cr = new THREE.Mesh(new THREE.TorusGeometry(rr * 1.01, rr * .055, 4, 14, Math.PI * .85), foldM); // dorsal skin folds
+          cr.rotation.z = Math.PI / 2 - Math.PI * .425; cr.position.z = dz + .001; cr.scale.set(1.06, 1, 1); j.add(cr); }
+        const kb = ell(rr * .92, rr * .5, rr * .95); kb.position.set(0, rr * .5, .001); j.add(kb); }                                  // joint knuckle swell
       segs.push(j); pr = j; pos = V3(0, 0, l); }); const tipO = new THREE.Object3D(); tipO.position.set(0, -r0 * .62, ls[ls.length - 1] * .82 + r0 * .2); pr.add(tipO); return { segs, tip: tipO }; };
   const fingers = FL.map((ls, i) => chain(inner, V3(KX[i] * sx, .002, KZ[i]), ls, FR[i]));
   const TL = [.04, .032, .027], thumb = chain(inner, V3(-.025 * sx, -.011, .022), TL, .0125);
+  if (det) { const surf = (x, z) => .0155 * Math.sqrt(Math.max(0, 1 - ((x - .002 * sx) / .043) ** 2 - ((z - .046) / .051) ** 2)) - .0009;
+    KX.forEach((kx, i) => { const pts = [0, .5, 1].map(u => { const x = lerp(kx * .4, kx, u) * sx, z = lerp(.004, KZ[i] - .014, u); return V3(x, Math.max(surf(x, z), .004), z); });
+      inner.add(new THREE.Mesh(taperTube(pts, u => .0027 * (1 - .35 * u), 8, 7), skin)); });                                                  // extensor tendons
+    [[[.018, -.02], [.012, .012], [-.004, .045], [-.012, .062]], [[.006, -.02], [.014, .02], [.026, .05]]].forEach(vp => {
+      const pts = vp.map(([x, z]) => V3(x * sx, z < 0 ? .0205 : Math.max(surf(x * sx, z), .006) + .0004, z));
+      inner.add(new THREE.Mesh(taperTube(pts, u => .0019 * (1 - .3 * u), 12, 6, .15), veinM)); }); }                                          // veins
+  // claw hammer (33 cm, hickory handle, forged head): held at the end of the handle, head beyond the thumb side, face toward the fingers
+  const hammer = new THREE.Group(); inner.add(hammer); hammer.visible = false;
+  { const hw = std('#c79a62', { r: .5 }), st = std('#5c6166', { m: .85, r: .3 }), hd = cyl(.0105, .013, .3, hw, 14); hd.rotation.z = Math.PI / 2; hd.position.set(-.105 * sx, -.026, .074); hammer.add(hd);
+    const hb = box(.024, .026, .085, st); hb.position.set(-.245 * sx, -.026, .088); hammer.add(hb); const fc = cyl(.0135, .0135, .02, st, 18); fc.rotation.x = Math.PI / 2; fc.position.set(-.245 * sx, -.026, .136); hammer.add(fc);
+    [-1, 1].forEach(s => { const cl = box(.009, .02, .07, st); cl.position.set(-.245 * sx + s * .006, -.03, .03); cl.rotation.x = -.35; hammer.add(cl); }); }
+  const faceO = new THREE.Object3D(); faceO.position.set(-.245 * sx, -.026, .146); hammer.add(faceO);
+  const gripO = new THREE.Object3D(); gripO.position.set(.004 * sx, -.026, .074); inner.add(gripO);
   // grafting knife in the fist: handle across the curled fingers, blade out of the thumb side, edge forward
   const knife = new THREE.Group(); inner.add(knife); const hm = new THREE.MeshStandardMaterial({ color: col('#7a4e2c'), roughness: .55 }), hd = cyl(.0095, .0095, .105, hm, 14); hd.rotation.z = Math.PI / 2; hd.position.set(.004 * sx, -.026, .074); knife.add(hd);
   const blade = new THREE.Mesh(new THREE.BoxGeometry(.068, .0016, .017), new THREE.MeshStandardMaterial({ color: col('#d9dde0'), metalness: .9, roughness: .22 })); blade.position.set(-(.05 + .034) * sx, -.026, .0765); knife.add(blade);
@@ -3723,9 +3749,11 @@ function gardHand(p = {}) { const g = new THREE.Group(), inner = new THREE.Group
     for (const gr of p.grabs || []) { const w = kv(gr.k, t, 0); if (w <= 0 || !OC[gr.obj]) continue; const M = OC[gr.obj].at(t), cq = new THREE.Quaternion().setFromRotationMatrix(M), s = Array.isArray(gr.s) ? kv(gr.s, t, .1) : gr.s ?? .1;
       const hq = cq.clone().multiply(basisQ(V3(...gr.f), V3(...gr.u))), Ps = V3(...(gr.at || [0, 0, 0])).add(V3(0, s, 0)).applyMatrix4(M), off = V3(...(gr.off || [0, -.0058, 0])).applyQuaternion(hq), A = Ps.sub(off);
       P.lerp(A, w); Q.slerp(hq, w); if (gr.pose) { if (w > .5) { pa = gr.pose; pb = gr.pose; pu = 1; } } }
-    const kn = kv(p.knifeK, t, 0) > .5; knife.visible = kn; pose(pa, pb, pu); const an = kn ? loc(edgeO) : p.anchor === 'palm' ? loc(palmO) : loc(fingers[0].tip), th = loc(thumb.tip);
+    const kn = kv(p.knifeK, t, 0) > .5, hm = kv(p.hammerK, t, 0) > .5; knife.visible = kn; hammer.visible = hm; pose(pa, pb, pu);
+    const an = kn ? loc(edgeO) : hm ? loc(faceO) : p.anchor === 'palm' ? loc(palmO) : p.anchor === 'grip' ? loc(gripO) : loc(fingers[0].tip), th = loc(thumb.tip);
     inner.position.copy(an).negate(); g.position.copy(P); g.quaternion.copy(Q);
-    if (p.link) LINK[p.link] = { anchor: P.clone(), q: Q.clone(), pn: V3(0, -1, 0).applyQuaternion(Q), palm: loc(palmO).sub(an).applyQuaternion(Q).add(P), thumb: th.sub(an).applyQuaternion(Q).add(P), index: loc(fingers[0].tip).sub(an).applyQuaternion(Q).add(P) }; };
+    if (p.link) LINK[p.link] = { anchor: P.clone(), q: Q.clone(), pn: V3(0, -1, 0).applyQuaternion(Q), palm: loc(palmO).sub(an).applyQuaternion(Q).add(P), thumb: th.sub(an).applyQuaternion(Q).add(P), index: loc(fingers[0].tip).sub(an).applyQuaternion(Q).add(P),
+      face: loc(faceO).sub(an).applyQuaternion(Q).add(P), grip: loc(gripO).sub(an).applyQuaternion(Q).add(P) }; };
   return shadowed(g); }
 Object.assign(ASSETS, { olive_tree: oliveTree, olive_cut: oliveCut, olive_pot: olivePot, potting_table: pottingTable, gard_hand: gardHand });
 Object.assign(RIG_POSES, { barkTouch: { fR: .42, eR: .75, adR: 1.3, fL: .1, eL: .25, sp: .1, hd: .05, tw: .05 } });
@@ -3790,3 +3818,212 @@ function callArcs(p = {}) { const g = new THREE.Group(), arcs = [0, 1, 2].map(()
     arcs.forEach(({ h, m }, i) => { const f = fr01(t * 1.2 + i / 3); h.position.copy(L.beak); h.quaternion.copy(camera.quaternion); m.rotation.z = Math.PI / 4 - side * .55; h.scale.setScalar(.035 + f * .1); m.material.opacity = on * .75 * Math.sin(Math.PI * f) ** .7; }); };
   return g; }
 Object.assign(ASSETS, { lay_egg: layEgg, egg_tray: eggTray, call_arcs: callArcs });
+
+// ================= Pigeon cage pack (2026-11-20, plans/pigeon_cage.mjs) =================
+// pigeon_cage: a home-built 1.2 x 0.6 x 0.9 m pigeon cage in fresh planed pine on red-brick piers (3 courses, 21 cm), built in stages that are
+//   all stateless functions of t: 6 cm posts rise from the piers, rails, a slatted floor, 45-degree corner braces cut from two points, wall
+//   boards with 1.2 cm gaps slide in one by one and settle, a plank roof sloping 8 cm front to back lowers onto the rails, galvanised welded
+//   mesh (1 cm squares, 0.8 mm wire) unrolls from its roll and is pulled taut, nails are driven one by one, a small mesh door swings on two
+//   hinges and locks with a barrel bolt, rain runs off the roof and drips from the low back edge, a down feather drifts in through a gap.
+//   Must stand at the scene origin (OC grips are in cage space). OC['<link>:roll' | ':door' | ':bolt'] give the hands their grips.
+const PGC = { L: 1.2, D: .6, H: .9, HB: .82, PH: .21, PW: .06 };
+PGC.FLOOR = PGC.PH + .06 + .018; PGC.ZF = PGC.D / 2 - PGC.PW / 2; PGC.XP = PGC.L / 2 - PGC.PW / 2;
+PGC.DOOR = { x0: .13, x1: .45, y0: PGC.FLOOR + .03, y1: PGC.FLOOR + .41 }; PGC.MZ = PGC.D / 2 + .002; // mesh plane on the front face of the posts
+PGC.roofUnder = z => PGC.PH + PGC.HB + (z + PGC.ZF) / (2 * PGC.ZF) * (PGC.H - PGC.HB);
+window.__pgc = () => PGC;
+function wireTex() { return SPR.wireT ||= (() => { const t = canvasT(128, 128, (c, w, h) => { c.clearRect(0, 0, w, h); const q = w / 4;
+  c.strokeStyle = 'rgba(214,218,222,1)'; c.lineWidth = 2.6; for (let i = 0; i < 4; i++) { const a = i * q + q / 2; c.beginPath(); c.moveTo(a, 0); c.lineTo(a, h); c.stroke(); c.beginPath(); c.moveTo(0, a); c.lineTo(w, a); c.stroke(); }
+  c.fillStyle = 'rgba(236,238,240,1)'; for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) c.fillRect(i * q + q / 2 - 2.4, j * q + q / 2 - 2.4, 4.8, 4.8); }); // weld spots
+  t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 8; return t; })(); }
+function brickBlockTex() { return SPR.brickB ||= (() => { const r = rng(611); return canvasT(128, 64, (c, w, h) => { c.fillStyle = '#a4553a'; c.fillRect(0, 0, w, h);
+  for (let i = 0; i < 1400; i++) { c.fillStyle = `rgba(${r() > .5 ? '196,112,78' : '110,48,30'},${r() * .3})`; c.fillRect(r() * w, r() * h, 1 + r() * 3, 1 + r() * 2); }
+  for (let i = 0; i < 30; i++) { c.fillStyle = `rgba(230,214,190,${r() * .35})`; c.fillRect(r() * w, r() * h, 1.5, 1.5); }                     // lime specks
+  c.strokeStyle = 'rgba(70,32,20,.35)'; c.lineWidth = 2; c.strokeRect(1, 1, w - 2, h - 2); }); })(); }
+function pgFeatherTex(base, o = {}) { const key = 'fth' + base + (o.bars || '') + (o.band || '') + (o.tip || ''); return SPR[key] ||= (() => { const r = rng(621 + base.length); return canvasT(128, 256, (c, w, h) => {
+  c.fillStyle = base; c.fillRect(0, 0, w, h); const sc = o.sc || 12;
+  for (let row = 0, y = -sc; y < h + sc; row++, y += sc * .62) for (let x = (row % 2) * sc / 2 - sc; x < w + sc; x += sc) {      // scalloped feather rows
+    c.strokeStyle = `rgba(30,32,36,${.1 + r() * .08})`; c.lineWidth = 1.2; c.beginPath(); c.arc(x, y, sc * .55, .15 * Math.PI, .85 * Math.PI); c.stroke();
+    c.strokeStyle = `rgba(255,255,255,${.06 + r() * .08})`; c.lineWidth = 1; c.beginPath(); c.arc(x, y - 1.2, sc * .5, .25 * Math.PI, .75 * Math.PI); c.stroke(); }
+  for (let i = 0; i < 1800; i++) { c.fillStyle = `rgba(${r() > .5 ? '255,255,255' : '20,22,26'},${r() * .07})`; c.fillRect(r() * w, r() * h, 1, 2 + r() * 3); }
+  if (o.bars) o.bars.forEach(([a, b]) => { c.fillStyle = '#25262a'; c.beginPath(); c.moveTo(0, a * h); for (let x = 0; x <= w; x += 8) c.lineTo(x, a * h + Math.sin(x * .2) * 2.5); c.lineTo(w, b * h); for (let x = w; x >= 0; x -= 8) c.lineTo(x, b * h + Math.sin(x * .25) * 2.5); c.fill(); });
+  if (o.tip) { const g2 = c.createLinearGradient(0, o.tip * h, 0, h); g2.addColorStop(0, 'rgba(60,64,70,0)'); g2.addColorStop(.25, 'rgba(60,64,70,.9)'); g2.addColorStop(1, 'rgba(48,50,56,1)'); c.fillStyle = g2; c.fillRect(0, o.tip * h, w, h); }
+  if (o.band) { c.fillStyle = 'rgba(30,31,35,.95)'; c.fillRect(0, o.band[0] * h, w, (o.band[1] - o.band[0]) * h); }
+}, [1, 1]); })(); }
+// one wooden member between two points (diagonal braces, sloped rails): section [w, t], grain along the member
+function member(a, b, sec, tint) { const A = V3(...a), B = V3(...b), d = B.clone().sub(A), L = d.length(), m = woodBox([sec[0], sec[1], L], 2, tint, null);
+  m.position.copy(A).add(B).multiplyScalar(.5); m.quaternion.setFromUnitVectors(V3(0, 0, 1), d.normalize()); return m; }
+function pigeonCage(p = {}) { const g = new THREE.Group(), { L, D, H, HB, PH, PW, FLOOR, ZF, XP, DOOR, MZ } = PGC, full = !!p.full, link = p.link || 'cage';
+  const TN = ['#d2ad7d', '#c9a274', '#d8b689', '#c39a6b'], tn = i => TN[i % TN.length], parts = [];
+  // a piece that drops (or slides) in from `off` over `dur` once its key passes `at` (eased, with a 6 mm settle bounce at the end)
+  const piece = (m, key, at, dur = .5, off = [0, .22, 0]) => { const base = m.position.clone(); g.add(m); parts.push({ m, base, key, at, dur, off: V3(...off) }); return m; };
+  const brickM = new THREE.MeshStandardMaterial({ map: brickBlockTex(), roughness: .9 }), mortM = std('#b9ae9c', { r: .95 });
+  // piers: 3 courses of 25 x 12 x 6.5 cm red brick, crossed, with mortar beds
+  [-1, 1].forEach(sx => [-1, 1].forEach(sz => { for (let k = 0; k < 3; k++) { const rot = k % 2 ? Math.PI / 2 : 0;
+    [-1, 1].forEach(s => { const b = box(.25, .065, .12, brickM); b.position.set(sx * XP + (rot ? s * .062 : 0), .0325 + k * .072, sz * ZF + (rot ? 0 : s * .062)); b.rotation.y = rot; b.castShadow = b.receiveShadow = true; g.add(b); });
+    if (k) { const mb = box(.24, .007, .24, mortM); mb.position.set(sx * XP, k * .072 - .0035, sz * ZF); g.add(mb); } } }));
+  const S = { frame: t => full ? 1 : kv(p.frameK, t, 0), brace: t => full ? 1 : kv(p.braceK, t, 0), roof: t => full ? 1 : kv(p.roofK, t, 0) };
+  // posts (front H, back HB so the roof slopes), bottom rails, floor slats, top rails (the side ones sloped)
+  [[-1, 1], [1, 1], [-1, -1], [1, -1]].forEach(([sx, sz], i) => { const h = sz > 0 ? H : HB; piece(woodBox([PW, h, PW], 1, tn(i), [sx * XP, PH + h / 2, sz * ZF]), S.frame, i * .1, .3, [0, .35, 0]); });
+  [-1, 1].forEach((sz, i) => piece(woodBox([L - 2 * PW, .06, .045], 0, tn(i + 1), [0, PH + .03, sz * ZF]), S.frame, .42, .25));
+  [-1, 1].forEach((sx, i) => piece(woodBox([.045, .06, D - 2 * PW], 2, tn(i + 2), [sx * XP, PH + .03, 0]), S.frame, .47, .25));
+  for (let k = 0; k < 11; k++) piece(woodBox([.092, .018, D - .01], 2, tn(k), [-.515 + k * .103, PH + .069, 0]), S.frame, .55 + k * .025, .2, [0, .12, 0]);
+  piece(woodBox([L - 2 * PW, .06, .045], 0, tn(3), [0, PH + H - .03, ZF]), S.frame, .82, .2);
+  piece(woodBox([L - 2 * PW, .06, .045], 0, tn(0), [0, PH + HB - .03, -ZF]), S.frame, .85, .2);
+  [-1, 1].forEach((sx, i) => piece(member([sx * XP, PH + H - .03, ZF - PW / 2], [sx * XP, PH + HB - .03, -ZF + PW / 2], [.045, .06], tn(i + 1)), S.frame, .88, .12));
+  // door jambs and head rail (front, right of centre)
+  piece(woodBox([.03, H - .12, .045], 1, tn(2), [DOOR.x0 - .016, PH + H / 2, ZF]), S.frame, .9, .1);
+  piece(woodBox([.03, H - .12, .045], 1, tn(1), [DOOR.x1 + .018, PH + H / 2, ZF]), S.frame, .92, .08);
+  piece(woodBox([DOOR.x1 - DOOR.x0 + .004, .03, .045], 0, tn(3), [(DOOR.x0 + DOOR.x1) / 2, DOOR.y1 + .016, ZF]), S.frame, .94, .06);
+  // corner braces: true diagonals from the post (22 cm down) to the rail (22 cm along), two in each upper corner of the back and the sides, front left
+  const br = .2, brT = (sx, sz) => (sz > 0 ? PH + H : PH + HB) - .06;
+  const braces = [];
+  [-1, 1].forEach(sx => braces.push([[sx * (XP - PW / 2), brT(sx, -1) - br, -ZF - .028], [sx * (XP - PW / 2 - br), brT(sx, -1), -ZF - .028]]));
+  [-1, 1].forEach(sx => [-1, 1].forEach(sz => { const y0 = brT(sx, sz), y1 = PH + HB + (sz > 0 ? (H - HB) * (1 - br / D) : (H - HB) * (br / D)) - .06;
+    braces.push([[sx * (XP + .028), y0 - br, sz * (ZF - PW / 2)], [sx * (XP + .028), y1, sz * (ZF - PW / 2 - br)]]); }));
+  braces.push([[-(XP - PW / 2), PH + H - .06 - br, ZF + .028], [-(XP - PW / 2 - br), PH + H - .06, ZF + .028]]);
+  braces.forEach(([a, b], i) => { const out = V3(...a).setY(0); out.normalize().multiplyScalar(.25); piece(member(a, b, [.04, .028], tn(i)), S.brace, i * .1, .35, [out.x, .05, out.z]); });
+  // wall boards: 8 on the back (13.8 cm, 1.25 cm gaps, centre gap at x 0), 4 on each side; each slides in from outside and settles
+  const BP = .1505, BW = .138, boards = [];
+  for (let i = 0; i < 8; i++) boards.push({ m: woodBox([BW, HB, .018], 1, tn(i + 1), [(i - 3.5) * BP, PH + HB / 2, -D / 2 - .009]), off: [0, .06, -.32] });
+  [-1, 1].forEach(sx => { for (let k = 0; k < 4; k++) { const z = (k - 1.5) * BP, h = PGC.roofUnder(Math.min(ZF, z)) - PH - .005;
+    boards.push({ m: woodBox([.018, h, BW], 1, tn(k + 2), [sx * (L / 2 + .009), PH + h / 2, z]), off: [sx * .32, .06, 0] }); } });
+  const B0 = p.boards || [0, .3, .5];
+  boards.forEach((b, i) => piece(b.m, t => full ? 1e3 : t, B0[0] + i * B0[1], B0[2], b.off));
+  // roof: 14 planks along the slope, 10 cm eaves front and back, 6 cm at the sides; lowers onto the rails and settles
+  const roof = new THREE.Group(), slope = Math.atan2(H - HB, 2 * ZF), yc = PGC.roofUnder(0) + .009; roof.position.set(0, yc, 0); roof.rotation.x = -slope; g.add(roof);
+  const roofMats = { side: new THREE.MeshStandardMaterial({ color: col('#c49c6c'), map: woodMats('#c49c6c').side.map, roughness: .62 }), end: woodMats('#c49c6c').end };
+  for (let k = 0; k < 14; k++) roof.add(woodBox([.092, .018, D + .2], 2, tn(k), [-.6125 + k * .0942, 0, 0], { mats: roofMats }));
+  // welded mesh: four panels round the door opening, unrolled left to right; slack bulge until pulled taut
+  const wm = new THREE.MeshStandardMaterial({ map: wireTex(), color: col('#ffffff'), metalness: .55, roughness: .38, transparent: true, side: THREE.DoubleSide, depthWrite: false });
+  const panels = [[-L / 2, DOOR.x0 - .03, PH + .005, PH + H], [DOOR.x0 - .03, L / 2, DOOR.y1 + .03, PH + H], [DOOR.x0 - .03, L / 2, PH + .005, DOOR.y0], [DOOR.x1 + .003, L / 2, DOOR.y0, DOOR.y1 + .03]].map(([x0, x1, y0, y1]) => {
+    const geo = new THREE.PlaneGeometry(1, y1 - y0, 16, 10); geo.translate(.5, 0, 0); const base = Float32Array.from(geo.attributes.position.array), mat = wm.clone(); mat.map = wireTex().clone(); mat.map.needsUpdate = true;
+    const m = new THREE.Mesh(geo, mat); m.position.set(x0, (y0 + y1) / 2, MZ); m.renderOrder = 2; g.add(m); return { m, geo, base, x0, x1, h: y1 - y0 }; });
+  const rollM = new THREE.MeshStandardMaterial({ color: col('#c3c8cc'), metalness: .7, roughness: .35, map: wireTex().clone() }); rollM.map.repeat.set(8, 60); rollM.map.needsUpdate = true;
+  const roll = cyl(1, 1, H, rollM, 20); roll.position.y = PH + H / 2; g.add(roll);
+  const rollX = t => full ? L / 2 : lerp(-L / 2, L / 2, kv(p.meshK, t, 0)), rollR = t => .016 * (1 - .55 * (rollX(t) + L / 2) / L);
+  OC[link + ':roll'] = { at: t => { g.updateMatrixWorld(true); return new THREE.Matrix4().makeTranslation(rollX(t), PH + H * .62, MZ + rollR(t) + .002).premultiply(g.matrixWorld); } };
+  // nails along the front posts and rails (heads 6 mm), driven one by one: each starts 12 mm proud and sinks in 3 taps' worth per key
+  const nailM = std('#4a4d50', { m: .8, r: .4 }), nails = [], NP = p.nailPts || [];
+  NP.forEach(([x, y]) => { const n = new THREE.Group(), hd = cyl(.0032, .0032, .0014, nailM, 10), sh = cyl(.0012, .0012, .03, nailM, 6); hd.rotation.x = sh.rotation.x = Math.PI / 2; sh.position.z = -.015; n.add(hd, sh); n.position.set(x, y, MZ + .0008); g.add(n); nails.push(n); });
+  // the door: stiles and rails 2.8 cm, mesh inside, hinged at x0, opens outward; barrel bolt on the latch stile, staple keeper on the jamb
+  const door = new THREE.Group(), dw = DOOR.x1 - DOOR.x0, dh = DOOR.y1 - DOOR.y0; door.position.set(DOOR.x0, DOOR.y0, MZ + .012); g.add(door);
+  door.add(woodBox([.028, dh, .02], 1, tn(2), [.014, dh / 2, 0]), woodBox([.028, dh, .02], 1, tn(0), [dw - .014, dh / 2, 0]), woodBox([dw - .056, .028, .02], 0, tn(1), [dw / 2, .014, 0]), woodBox([dw - .056, .028, .02], 0, tn(3), [dw / 2, dh - .014, 0]));
+  const dmesh = new THREE.Mesh(new THREE.PlaneGeometry(dw - .05, dh - .05), (() => { const m = wm.clone(); m.map = wireTex().clone(); m.map.repeat.set((dw - .05) / .04, (dh - .05) / .04); m.map.needsUpdate = true; return m; })());
+  dmesh.position.set(dw / 2, dh / 2, -.006); dmesh.renderOrder = 2; door.add(dmesh);
+  const steel = std('#55595d', { m: .8, r: .35 }), zinc = std('#9ea4a8', { m: .85, r: .28 });
+  [.07, dh - .07].forEach(y => { const hg = box(.05, .03, .003, steel); hg.position.set(.0, y, .0115); door.add(hg); const pin = cyl(.004, .004, .034, steel, 8); pin.position.set(-.003, y, .012); door.add(pin); });
+  const BY = dh * .5, plate = box(.06, .02, .003, zinc); plate.position.set(dw - .04, BY, .0115); door.add(plate);
+  const bolt = new THREE.Group(); door.add(bolt); const rod = cyl(.0045, .0045, .065, zinc, 10); rod.rotation.z = Math.PI / 2; bolt.add(rod);
+  const knob = cyl(.004, .004, .016, zinc, 8); knob.rotation.x = Math.PI / 2; knob.position.set(0, 0, .009); bolt.add(knob); bolt.position.set(dw - .045, BY, .0185);
+  const keeper = new THREE.Mesh(new THREE.TorusGeometry(.009, .0022, 6, 12, Math.PI), zinc); keeper.rotation.y = Math.PI / 2; keeper.position.set(DOOR.x1 + .03, DOOR.y0 + BY, MZ + .02); g.add(keeper);
+  const doorA = t => full ? 0 : -1.75 * kv(p.openK, t, 0), boltX = t => (full ? 1 : kv(p.latchK, t, 0)) * .032;
+  const doorM = t => { g.updateMatrixWorld(true); return new THREE.Matrix4().compose(V3(DOOR.x0, DOOR.y0, MZ + .012), new THREE.Quaternion().setFromAxisAngle(YUP, doorA(t)), V3(1, 1, 1)).premultiply(g.matrixWorld); };
+  OC[link + ':door'] = { at: doorM }; OC[link + ':bolt'] = { at: t => doorM(t).multiply(new THREE.Matrix4().makeTranslation(dw - .045 + boltX(t), BY, .0185 + .017)) };
+  // rain: falling streaks, beads that run down the roof planks and drip off the low back edge (nothing pools on top)
+  const NR = 150, rainIM = new THREE.InstancedMesh(new THREE.CylinderGeometry(.0011, .0011, .1, 4), new THREE.MeshBasicMaterial({ color: col('#dfe8ef'), transparent: true, opacity: .5, depthWrite: false }), NR);
+  const NB2 = 36, beadIM = new THREE.InstancedMesh(new THREE.SphereGeometry(.0042, 8, 6), new THREE.MeshPhysicalMaterial({ color: col('#cfe0ea'), roughness: .02, transmission: .3, transparent: true, opacity: .85, clearcoat: 1 }), NB2);
+  [rainIM, beadIM].forEach(m => { m.frustumCulled = false; g.add(m); }); const rr = rng(631), RD = Array.from({ length: NR }, () => [rr() * 2.4 - 1.2, rr() * 1.8 - .7, rr()]), BD = Array.from({ length: NB2 }, () => [rr() * 1.2 - .6, rr() * .5, rr()]);
+  // a down feather that drifts in through the centre gap of the back wall
+  const fth = new THREE.Mesh(new THREE.PlaneGeometry(.014, .03), new THREE.MeshStandardMaterial({ map: pgFeatherTex('#e9e6e1', { sc: 6 }), color: col('#f2efe9'), roughness: .9, side: THREE.DoubleSide, transparent: true, opacity: .95 })); g.add(fth);
+  const m4 = new THREE.Matrix4(), q0 = new THREE.Quaternion(), sc0 = V3(1, 1, 1), ZERO = V3(0, 0, 0);
+  g.userData.tick = t => {
+    for (const q of parts) { const u = q.key === S.frame || q.key === S.brace || q.key === S.roof ? clamp((q.key(t) - q.at) / q.dur) : clamp((q.key(t) - q.at) / q.dur);
+      q.m.visible = u > 0; if (!q.m.visible) continue; const e = sEase(u), bn = u > .7 ? Math.sin((u - .7) / .3 * Math.PI) * .006 : 0;
+      q.m.position.copy(q.base).addScaledVector(q.off, 1 - e).y += -bn; }
+    const shk = kv(p.shakeK, t, 0); g.rotation.z = shk * .0025 * Math.sin(t * 15) ; // the push test: the braced frame barely moves (2-3 mm)
+    const rk = S.roof(t), re = sEase(rk); roof.visible = rk > 0; roof.position.y = yc + (1 - re) * .45 - (rk > .75 && rk < 1 ? Math.sin((rk - .75) / .25 * Math.PI) * .005 : 0); roof.rotation.x = -slope - (1 - re) * .12;
+    const X = rollX(t), mk = full ? 1 : kv(p.meshK, t, 0), taut = full ? 1 : kv(p.tautK, t, 0);
+    for (const pn of panels) { const vis = clamp(X - pn.x0, 0, pn.x1 - pn.x0); pn.m.visible = vis > .002; if (!pn.m.visible) continue; pn.m.scale.x = vis; pn.m.material.map.repeat.set(vis / .04, pn.h / .04);
+      const P = pn.geo.attributes.position, sag = .028 * (1 - taut); for (let i = 0; i < P.count; i++) { const x = pn.base[i * 3], y = pn.base[i * 3 + 1] / pn.h + .5; P.setZ(i, sag * Math.sin(Math.PI * x) * Math.sin(Math.PI * y)); } P.needsUpdate = true; }
+    roll.visible = !full && mk < .995 && mk > 0; const R = rollR(t); roll.scale.set(R, 1, R); roll.position.set(X, PH + H / 2, MZ + R + .002); roll.rotation.y = -(X + L / 2) / R * .2;
+    nails.forEach((n, i) => { const tk = (p.nailT || [])[i]; if (full) { n.visible = true; n.position.z = MZ + .0008; return; } n.visible = tk != null && t >= tk - .9;
+      const d = tk == null ? 0 : t < tk ? 0 : t < tk + .1 ? (t - tk) / .1 : 1; n.position.z = MZ + .0008 + .012 * (1 - d); });
+    door.visible = full || t >= (p.doorAt ?? 1e9); door.rotation.y = doorA(t); bolt.position.x = dw - .045 + boltX(t);
+    const rain = kv(p.rainK, t, 0); roofMats.side.color.set('#c49c6c').multiplyScalar(1 - .32 * clamp(rain * 1.4)); roofMats.side.roughness = lerp(.62, .3, rain);
+    for (let i = 0; i < NR; i++) { const [x, z, ph] = RD[i], f = fr01(t * 2.4 + ph), y = 2.6 - f * 2.6, inR = Math.abs(x) < .66 && Math.abs(z) < .4, floorY = inR && roof.visible ? PGC.roofUnder(z) + .03 : 0;
+      const on = i < NR * rain && y > floorY; m4.compose(on ? V3(x, y, z) : ZERO, q0, on ? sc0 : ZERO); rainIM.setMatrixAt(i, m4); } rainIM.instanceMatrix.needsUpdate = true;
+    for (let i = 0; i < NB2; i++) { const [x, z0, ph] = BD[i], f = fr01(t / 1.3 + ph), zE = -ZF - .1, on = rain > .35 && roof.visible && rk >= 1; let P;
+      if (f < .62) { const s = (f / .62) ** 2, z = lerp(z0, zE, s); P = V3(x, PGC.roofUnder(z) + .02 + .0045, z); }
+      else { const tf = (f - .62) * 1.3, y = PGC.roofUnder(zE) + .02 - 4.9 * tf * tf; P = V3(x, y, zE - .004 - tf * .05); }
+      const vis = on && P.y > .01; m4.compose(vis ? P : ZERO, q0, vis ? V3(1, f < .62 ? .6 : 1.5, f < .62 ? 1.6 : 1) : ZERO); beadIM.setMatrixAt(i, m4); } beadIM.instanceMatrix.needsUpdate = true;
+    const fk = kv(p.featherK, t, 0); fth.visible = fk > 0 && fk < 1; if (fth.visible) { const z = lerp(-D / 2 - .35, .12, fk), y = PH + .45 + Math.sin(fk * 5) * .03 + fk * .08, x = Math.sin(fk * 7) * .015;
+      fth.position.set(x, y, z); fth.rotation.set(Math.sin(t * 3) * .6, Math.abs(z + D / 2) < .05 ? Math.PI / 2 : t * 1.5, Math.sin(t * 2.3) * .5); }
+    LINK[link] = { rollX: X, door: doorA(t), bolt: boltX(t) }; };
+  return shadowed(g); }
+
+// ---- a rainwater puddle under the cage that runs off along the yard's fall instead of standing (flowK 0..1)
+function waterPuddle(p = {}) { const g = new THREE.Group(), r = rng(p.seed || 641), R0 = p.r || .35, N = 72, blob = k => { const s = new THREE.Shape(); for (let i = 0; i <= N; i++) { const a = i / N * Math.PI * 2, rr = R0 * k * (1 + .14 * Math.sin(a * 3 + 1) + .08 * Math.sin(a * 5 + 2) + .05 * Math.sin(a * 9));
+    i ? s.lineTo(Math.cos(a) * rr * 1.25, Math.sin(a) * rr) : s.moveTo(Math.cos(a) * rr * 1.25, Math.sin(a) * rr); } const geo = new THREE.ShapeGeometry(s, 4); geo.rotateX(-Math.PI / 2); return geo; };
+  const wm = new THREE.MeshPhysicalMaterial({ color: col('#5a5546'), roughness: .05, clearcoat: 1, clearcoatRoughness: .03, transparent: true, opacity: .86, envMapIntensity: 1.4, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -6 });
+  const dm = new THREE.MeshStandardMaterial({ color: col('#3e3427'), roughness: .9, transparent: true, opacity: .5, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -5 });
+  const water = new THREE.Mesh(blob(1), wm), damp = new THREE.Mesh(blob(1.18), dm), trail = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), dm.clone()); trail.rotation.x = -Math.PI / 2;
+  water.position.y = .017; damp.position.y = .015; trail.position.y = .0155; g.add(damp, trail, water); water.receiveShadow = damp.receiveShadow = true;
+  const to = V3(...(p.to || [1.2, 0, .2]));
+  g.userData.tick = t => { const u = kv(p.flowK, t, 0), e = sEase(u), c = to.clone().multiplyScalar(e), s = lerp(1, .22, e) * (1 + .03 * Math.sin(t * 2.1)), fade = 1 - clamp((u - .8) / .2);
+    water.position.set(c.x, .017, c.z); water.scale.set(s * (1 + .5 * Math.sin(Math.PI * e)), 1, s); wm.opacity = .86 * fade; water.visible = fade > .01;
+    damp.position.set(0, .015, 0); damp.material.opacity = .5 * (1 - .55 * e);                                                    // the wet patch dries back
+    const len = c.length(); trail.visible = len > .02; trail.scale.set(len, R0 * .5 * (1 - .4 * e), 1); trail.position.set(c.x / 2, .0155, c.z / 2); trail.rotation.z = Math.atan2(c.z, c.x) * 1; trail.material.opacity = .4 * fade; };
+  return g; }
+
+// ---- pigeon (rock / domestic, blue-bar): 33 cm beak to tail, slate-grey head, green-purple iridescent neck, pale grey wings with two black
+//   bars, dark primaries, black tail band, orange eye, dark beak with a white cere, red legs. Track [t, x, z, act, yaw, y]; acts idle | peck |
+//   coo; a move between keys is a walk whose step cycle follows the ground distance (no sliding feet) with the pigeon's hold-then-thrust head bob.
+function iridMat() { const m = new THREE.MeshPhysicalMaterial({ color: col('#ffffff'), map: pgFeatherTex('#8a9590', { sc: 7 }), roughness: .42, iridescence: .8, iridescenceIOR: 1.7, iridescenceThicknessRange: [280, 620], sheen: .4, sheenColor: col('#9fd0b0') });
+  m.onBeforeCompile = sh => { sh.fragmentShader = sh.fragmentShader.replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
+    float irF = smoothstep(.15, .95, abs(normal.z)); diffuseColor.rgb *= mix(vec3(.62,.36,.70), vec3(.34,.66,.46), irF) * 1.15;`); };
+  m.customProgramCacheKey = () => 'pigeonIrid'; return m; }
+function pigeonModel(seed = 1) { const g = new THREE.Group(), U = {};
+  const fm = (base, o = {}) => new THREE.MeshStandardMaterial({ color: col('#ffffff'), map: pgFeatherTex(base, o), roughness: .78 });
+  const bodyM = fm('#8d97a2'), headM = fm('#717a87', { sc: 6 }), wingM = fm('#a9b1ba', { bars: [[.6, .655], [.72, .775]], tip: .86 }), tailM = fm('#77808c', { band: [.8, .93] }), legM = std('#b8434c', { r: .55 }), beakM = std('#2e2b2a', { r: .4 });
+  const ell = (r, m, pos, rot = [0, 0, 0], par = g) => { const e = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 16), m); e.scale.set(...r); e.position.set(...pos); e.rotation.set(...rot); par.add(e); return e; };
+  U.body = ell([.05, .052, .1], bodyM, [0, .118, -.005], [-.35, 0, 0]);
+  ell([.046, .05, .05], bodyM, [0, .13, .048]);                                                                                  // full breast
+  ell([.036, .03, .05], bodyM, [0, .09, -.07], [-.4, 0, 0]);                                                                       // vent / undertail
+  const irid = iridMat(); ell([.041, .038, .042], irid, [0, .148, .062]);                                                          // iridescent lower neck / crop
+  U.neck = new THREE.Mesh(new THREE.CylinderGeometry(.019, .03, 1, 18, 1, true), irid); g.add(U.neck);
+  U.head = new THREE.Group(); U.head.position.set(0, .205, .092); g.add(U.head);
+  ell([.021, .02, .025], headM, [0, 0, 0], [0, 0, 0], U.head);
+  const bk = new THREE.Mesh(new THREE.ConeGeometry(.0044, .018, 10), beakM); bk.rotation.x = Math.PI / 2; bk.position.set(0, -.004, .03); U.head.add(bk); U.beakTip = new THREE.Object3D(); U.beakTip.position.set(0, -.004, .039); U.head.add(U.beakTip);
+  ell([.005, .0032, .0058], std('#e7e3da', { r: .9 }), [0, .0005, .022], [0, 0, 0], U.head);                                        // white cere
+  [-1, 1].forEach(s => { ell([.0052, .0052, .0035], std('#e07a1f', { r: .25 }), [s * .0145, .005, .009], [0, s * .9, 0], U.head);    // orange iris
+    ell([.0024, .0024, .0016], std('#0b0a0a', { r: .1 }), [s * .0182, .0052, .0112], [0, s * .9, 0], U.head);
+    ell([.0012, .0012, .0008], new THREE.MeshBasicMaterial({ color: '#ffffff' }), [s * .0188, .0068, .0125], [0, 0, 0], U.head); });   // catchlight
+  U.wings = [-1, 1].map(s => { const w = new THREE.Group(); w.position.set(s * .036, .142, .035); g.add(w); const geo = new THREE.SphereGeometry(1, 22, 14); geo.rotateX(Math.PI / 2);
+    const m = new THREE.Mesh(geo, wingM); m.scale.set(.014, .042, .118); m.position.set(s * .008, -.02, -.1); m.rotation.set(.18, -s * .07, s * .16); w.add(m); return { m: w, s, z0: 0 }; });
+  U.tail = new THREE.Group(); U.tail.position.set(0, .1, -.085); g.add(U.tail);
+  { const geo = new THREE.SphereGeometry(1, 20, 12); geo.rotateX(Math.PI / 2); const tl = new THREE.Mesh(geo, tailM); tl.scale.set(.034, .0075, .08); tl.position.set(0, -.012, -.065); tl.rotation.x = .2; U.tail.add(tl); }
+  U.legs = [-1, 1].map(s => { const l = new THREE.Group(); l.position.set(s * .019, .062, .012); g.add(l); ell([.015, .017, .019], bodyM, [0, .006, 0], [0, 0, 0], l);  // feathered thigh
+    const ts = cyl(.0034, .0036, .05, legM, 8); ts.position.set(0, -.032, .004); l.add(ts);
+    [-.45, 0, .45].forEach(a => { const toe = new THREE.Mesh(new THREE.CapsuleGeometry(.0022, .022, 3, 6), legM); toe.rotation.set(Math.PI / 2, 0, 0); toe.position.set(Math.sin(a) * .012, -.059, .004 + Math.cos(a) * .012); toe.rotation.y = a; l.add(toe); });
+    const hb = new THREE.Mesh(new THREE.CapsuleGeometry(.002, .01, 3, 6), legM); hb.rotation.x = Math.PI / 2; hb.position.set(0, -.059, -.006); l.add(hb); return l; });
+  return shadowed(g), Object.assign(g.userData, U), g; }
+function pigeonWalker(p = {}) { const g = new THREE.Group(), mover = new THREE.Group(); g.add(mover); const S = (p.len || .33) / .336, c = pigeonModel(p.seed); c.scale.setScalar(S); mover.add(c);
+  const U = c.userData, head = U.head, neck = U.neck, h0 = head.position.clone(), nBase = V3(0, .138, .05), nOff = V3(0, -.006, -.012), b0 = U.body.scale.clone(), sd = p.seed || 1;
+  const sh = contactShadow(.07, .1, .4); g.add(sh);
+  const K = (p.track || [[0, 0, 0, 'idle']]).map(k => ({ t: k[0], x: k[1], z: k[2], act: k[3] || 'idle', yaw: k[4], y: k[5] || 0 })); let yaw = K[0].yaw ?? 0, cum = 0; const seg = [];
+  for (let i = 0; i < K.length - 1; i++) { const a = K[i], b = K[i + 1], len = Math.hypot(b.x - a.x, b.z - a.z), mv = len > .01;
+    const y1 = mv ? angTo(yaw, Math.atan2(b.x - a.x, b.z - a.z)) : (b.yaw != null ? angTo(yaw, b.yaw) : yaw); seg.push({ a, b, len, mv, cum, y0: yaw, y1 }); cum += len; yaw = y1; }
+  const STR = .045 * S, actOf = q => q.mv ? 'walk' : q.a.act;
+  const state = t => { if (!seg.length || t <= K[0].t) return { x: K[0].x, z: K[0].z, y: K[0].y, yaw: seg[0]?.y0 ?? yaw, act: K[0].act, prev: K[0].act, t0: -9, dist: 0, sp: 0 };
+    const i = seg.findIndex(q => t < q.b.t); if (i < 0) { const q = seg[seg.length - 1]; return { x: q.b.x, z: q.b.z, y: q.b.y, yaw: q.y1, act: q.b.act, prev: actOf(q), t0: q.b.t, dist: cum, sp: 0 }; }
+    const q = seg[i], D = Math.max(.01, q.b.t - q.a.t), u = (t - q.a.t) / D, e = q.mv ? trapE(u, .2) : 0;
+    return { x: lerp(q.a.x, q.b.x, e), z: lerp(q.a.z, q.b.z, e), y: lerp(q.a.y, q.b.y, e), yaw: lerp(q.y0, q.y1, easeIO(u * D / Math.min(D, .4))), act: actOf(q), prev: i ? actOf(seg[i - 1]) : actOf(q), t0: q.a.t, dist: q.cum + q.len * e, sp: q.mv ? q.len / D * trapV(u, .2) : 0 }; };
+  const pose = (act, t) => { const o = { pitch: 0, hy: 0, hz: 0, hrx: 0, hry: 0, puff: 0, tail: 0, bow: 0 };
+    if (act === 'idle' || act === 'walk') { const per = .9, k = Math.floor((t + sd) / per), f = fr01((t + sd) / per); o.hry = lerp((hr(k, sd) - .5) * 1.4, (hr(k + 1, sd) - .5) * 1.4, clamp((f - .85) / .08)) * (act === 'walk' ? .2 : 1); o.hrx = (hr(k, sd + 3) - .5) * .3; }
+    if (act === 'peck') { const per = 1.1, f = fr01((t + sd * .41) / per), sk = f < .14 ? sEase(f / .14) : f < .26 ? 1 : f < .5 ? 1 - sEase((f - .26) / .24) : 0; o.pitch = .5 * sk; o.hy = -.07 * sk; o.hz = .02 * sk; o.hrx = .8 * sk; }
+    if (act === 'coo') { const f = fr01((t + sd) / 1.6), b = Math.sin(f * Math.PI * 2); o.puff = .9 + .2 * b; o.bow = Math.max(0, b) * .35; o.hrx = .25 * Math.max(0, b); o.tail = .3 * Math.max(0, -b); o.hry = Math.sin(t * .8) * .5; }
+    return o; };
+  const vT = V3(0, 0, 0), vD = V3(0, 0, 0), Y1 = V3(0, 1, 0);
+  g.userData.tick = t => { const st = state(t), kb = easeIO((t - st.t0) / .3), A = pose(st.prev, t), B = pose(st.act, t), P = {}; for (const k in B) P[k] = lerp(A[k], B[k], kb);
+    const mvK = clamp(st.sp / .12), u = fr01(st.dist / STR), ph = st.dist / STR * Math.PI, stab = (u < .65 ? -u / .65 : -1 + (u - .65) / .35) + .5;   // head holds still, then thrusts
+    head.position.set(h0.x, h0.y + P.hy - P.bow * .03, h0.z + P.hz + stab * STR / S * mvK * .9); head.rotation.set(P.hrx, P.hry, 0, 'YXZ');
+    vT.copy(nOff).applyQuaternion(head.quaternion).add(head.position); vD.subVectors(vT, nBase); const Ln = clamp(vD.length(), .03, .16);
+    neck.position.addVectors(nBase, vT).multiplyScalar(.5); neck.quaternion.setFromUnitVectors(Y1, vD.normalize()); neck.scale.set(1 + .35 * P.puff, Ln, 1 + .35 * P.puff);
+    c.rotation.x = P.pitch + P.bow + .04 * mvK; U.body.scale.copy(b0).multiplyScalar(1 + .012 * Math.sin(t * 3.1 + sd));
+    U.tail.rotation.x = -P.tail + .06 * Math.sin(t * .7 + sd); U.legs[0].rotation.x = Math.sin(ph) * .5 * mvK; U.legs[1].rotation.x = -Math.sin(ph) * .5 * mvK;
+    const fl = fr01((t + sd * 1.7) / 4.1); U.wings.forEach(w => { w.m.rotation.z = w.s * (fl < .06 ? Math.sin(fl / .06 * Math.PI) * .25 : 0); });       // a wing shuffle now and then
+    mover.position.set(st.x, st.y + Math.abs(Math.sin(ph)) * .004 * mvK, st.z); mover.rotation.y = st.yaw; mover.rotation.z = Math.sin(ph) * .06 * mvK;  // waddle
+    sh.position.set(st.x, st.y + .014, st.z); sh.rotation.z = -st.yaw;
+    if (p.link) { c.updateMatrixWorld(true); LINK[p.link] = { pos: V3(st.x, st.y, st.z), head: head.getWorldPosition(V3(0, 0, 0)), beak: U.beakTip.getWorldPosition(V3(0, 0, 0)), yaw: st.yaw }; } };
+  return g; }
+Object.assign(ASSETS, { pigeon_cage: pigeonCage, water_puddle: waterPuddle, pigeon: pigeonWalker });
