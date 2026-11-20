@@ -3727,6 +3727,16 @@ function gardHand(p = {}) { const g = new THREE.Group(), inner = new THREE.Group
     [-1, 1].forEach(s => { const cl = box(.009, .02, .07, st); cl.position.set(-.245 * sx + s * .006, -.03, .03); cl.rotation.x = -.35; hammer.add(cl); }); }
   const faceO = new THREE.Object3D(); faceO.position.set(-.245 * sx, -.026, .146); hammer.add(faceO);
   const gripO = new THREE.Object3D(); gripO.position.set(.004 * sx, -.026, .074); inner.add(gripO);
+  // brick trowel in the fist (hen_coop): beech handle across the curled fingers, a cranked steel shank out of the thumb side and a flat
+  //   pointed blade 23 cm long under and parallel to the handle; anchor = the middle of the blade's underside (keyed onto the brick top)
+  const trowel = new THREE.Group(); inner.add(trowel); trowel.visible = false;
+  { const hw = std('#b8875a', { r: .5 }), st = new THREE.MeshStandardMaterial({ color: col('#9aa0a4'), metalness: .85, roughness: .3, side: THREE.DoubleSide }), hd = cyl(.0125, .011, .115, hw, 14); hd.rotation.z = Math.PI / 2; hd.position.set(.004 * sx, -.026, .074); trowel.add(hd);
+    const fe = cyl(.008, .008, .02, std('#c9a43c', { m: .8, r: .3 }), 10); fe.rotation.z = Math.PI / 2; fe.position.set(-.063 * sx, -.026, .074); trowel.add(fe);
+    const sh = cyl(.004, .004, .06, st, 8); sh.position.set(-.075 * sx, -.056, .074); trowel.add(sh);
+    const shp = new THREE.Shape(); shp.moveTo(0, -.055); shp.lineTo(.232, 0); shp.lineTo(0, .055); shp.quadraticCurveTo(-.012, 0, 0, -.055);
+    const bg = new THREE.ExtrudeGeometry(shp, { depth: .0022, bevelEnabled: false }); bg.rotateX(-Math.PI / 2); if (sx > 0) bg.scale(-1, 1, 1);
+    const bl = new THREE.Mesh(bg, st); bl.position.set(-.07 * sx, -.0882, .074); bl.castShadow = true; trowel.add(bl); }
+  const trowelO = new THREE.Object3D(); trowelO.position.set(-.186 * sx, -.0882, .074); trowel.add(trowelO);
   // grafting knife in the fist: handle across the curled fingers, blade out of the thumb side, edge forward
   const knife = new THREE.Group(); inner.add(knife); const hm = new THREE.MeshStandardMaterial({ color: col('#7a4e2c'), roughness: .55 }), hd = cyl(.0095, .0095, .105, hm, 14); hd.rotation.z = Math.PI / 2; hd.position.set(.004 * sx, -.026, .074); knife.add(hd);
   const blade = new THREE.Mesh(new THREE.BoxGeometry(.068, .0016, .017), new THREE.MeshStandardMaterial({ color: col('#d9dde0'), metalness: .9, roughness: .22 })); blade.position.set(-(.05 + .034) * sx, -.026, .0765); knife.add(blade);
@@ -3749,8 +3759,8 @@ function gardHand(p = {}) { const g = new THREE.Group(), inner = new THREE.Group
     for (const gr of p.grabs || []) { const w = kv(gr.k, t, 0); if (w <= 0 || !OC[gr.obj]) continue; const M = OC[gr.obj].at(t), cq = new THREE.Quaternion().setFromRotationMatrix(M), s = Array.isArray(gr.s) ? kv(gr.s, t, .1) : gr.s ?? .1;
       const hq = cq.clone().multiply(basisQ(V3(...gr.f), V3(...gr.u))), Ps = V3(...(gr.at || [0, 0, 0])).add(V3(0, s, 0)).applyMatrix4(M), off = V3(...(gr.off || [0, -.0058, 0])).applyQuaternion(hq), A = Ps.sub(off);
       P.lerp(A, w); Q.slerp(hq, w); if (gr.pose) { if (w > .5) { pa = gr.pose; pb = gr.pose; pu = 1; } } }
-    const kn = kv(p.knifeK, t, 0) > .5, hm = kv(p.hammerK, t, 0) > .5; knife.visible = kn; hammer.visible = hm; pose(pa, pb, pu);
-    const an = kn ? loc(edgeO) : hm ? loc(faceO) : p.anchor === 'palm' ? loc(palmO) : p.anchor === 'grip' ? loc(gripO) : loc(fingers[0].tip), th = loc(thumb.tip);
+    const kn = kv(p.knifeK, t, 0) > .5, hm = kv(p.hammerK, t, 0) > .5, tw = kv(p.trowelK, t, 0) > .5; knife.visible = kn; hammer.visible = hm; trowel.visible = tw; pose(pa, pb, pu);
+    const an = kn ? loc(edgeO) : hm ? loc(faceO) : tw ? loc(trowelO) : p.anchor === 'palm' ? loc(palmO) : p.anchor === 'grip' ? loc(gripO) : loc(fingers[0].tip), th = loc(thumb.tip);
     inner.position.copy(an).negate(); g.position.copy(P); g.quaternion.copy(Q);
     if (p.link) LINK[p.link] = { anchor: P.clone(), q: Q.clone(), pn: V3(0, -1, 0).applyQuaternion(Q), palm: loc(palmO).sub(an).applyQuaternion(Q).add(P), thumb: th.sub(an).applyQuaternion(Q).add(P), index: loc(fingers[0].tip).sub(an).applyQuaternion(Q).add(P),
       face: loc(faceO).sub(an).applyQuaternion(Q).add(P), grip: loc(gripO).sub(an).applyQuaternion(Q).add(P) }; };
@@ -4027,3 +4037,168 @@ function pigeonWalker(p = {}) { const g = new THREE.Group(), mover = new THREE.G
     if (p.link) { c.updateMatrixWorld(true); LINK[p.link] = { pos: V3(st.x, st.y, st.z), head: head.getWorldPosition(V3(0, 0, 0)), beak: U.beakTip.getWorldPosition(V3(0, 0, 0)), yaw: st.yaw }; } };
   return g; }
 Object.assign(ASSETS, { pigeon_cage: pigeonCage, water_puddle: waterPuddle, pigeon: pigeonWalker });
+
+// ---- brick_coop (hen_coop video 2026-11-20): a 3 x 2 m red-brick hen house built in stages, all stateless functions of t.
+//   Builder's string lines and pegs mark the footprint (stringK), a 3-course brick plinth with rubble fill rises (baseK, courses) and a
+//   cement screed is drawn across it (slabK); a dug trench round the plinth (digK) takes a galvanised wire apron (apronK, fox-proof);
+//   the walls go up course by course in running bond around the perimeter (courseK = course index + perimeter fraction; each brick drops
+//   4 cm into a wet mortar bed and settles, the bed dries from dark to light grey); the sun-side front wall is 23 courses (1.89 m), the
+//   back 19 (1.60 m), the side walls follow the roof slope with cut bricks; a door opening with a timber lintel, a low vent with a sliding
+//   shutter (lowK), high vents in the two side walls with fine mesh pressed in (meshK), breeze streaks through them (airK, lowAirK) and a
+//   stale humid haze inside that clears (hazeK); a perch on two trestles (perchK); floor litter spread from left to right (litterK), damp
+//   darkening (dirtK) and a fresh layer over it (freshK); a mono-pitch plank roof on rafters with overhangs (roofK) and rain that runs
+//   off the low back edge (rainK); a plank door hung on hinges (doorAt, openK) with a barrel bolt (latchK). OC['<link>:door' | ':bolt'].
+//   full:true shows the finished coop. Must stand at the scene origin.
+const BCP = { W: 3, D: 2, T: .12, CH: .072, F0: .236, NF: 23, NBk: 19 };
+BCP.yF = BCP.F0 + BCP.NF * BCP.CH; BCP.yB = BCP.F0 + BCP.NBk * BCP.CH;
+BCP.top = z => BCP.yB + (z + BCP.D / 2) / BCP.D * (BCP.yF - BCP.yB);
+BCP.DOOR = { x0: .55, x1: 1.15, y0: BCP.F0, y1: BCP.F0 + 15 * BCP.CH };
+BCP.LOW = { x0: -1.1, x1: -.8, y0: BCP.F0 + BCP.CH, y1: BCP.F0 + 3 * BCP.CH };
+BCP.VENT = { z0: -.45, z1: .45, y0: BCP.F0 + 16 * BCP.CH, y1: BCP.F0 + 19 * BCP.CH };
+BCP.PERCH = { z: .35, y: BCP.F0 + .6, x0: -1.2, x1: 1.2 };
+window.__bcp = () => BCP;
+function softPuffTex() { return SPR.softPuff ||= canvasT(64, 64, (c, w, h) => { const g2 = c.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2); g2.addColorStop(0, 'rgba(255,255,255,1)'); g2.addColorStop(.5, 'rgba(255,255,255,.45)'); g2.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = g2; c.fillRect(0, 0, w, h); }); }
+// brick pieces of one rectangular ring of walls: running bond, openings cut out, tops cut to a line; s = perimeter fraction (lay order)
+function brickRing(o) { const { x0, x1, z0, z1, T, y0, n } = o, CH = BCP.CH, W = x1 - x0, D = z1 - z0, out = [];
+  const walls = [{ id: 'F', len: W, P: a => [x0 + a, z1 - T / 2], ax: 'x' }, { id: 'R', len: D - 2 * T, P: a => [x1 - T / 2, z1 - T - a], ax: 'z' },
+    { id: 'B', len: W, P: a => [x1 - a, z0 + T / 2], ax: 'x' }, { id: 'L', len: D - 2 * T, P: a => [x0 + T / 2, z0 + T + a], ax: 'z' }], PT = 2 * W + 2 * (D - 2 * T);
+  for (let c = 0; c < n; c++) { const yb = y0 + c * CH; let s0 = 0;
+    for (const w of walls) { const off = (c + (w.ax === 'z' ? 1 : 0)) % 2 ? .13 : 0, holes = (o.holes || []).filter(h => h.wall === w.id && yb + .036 > h.y0 && yb + .036 < h.y1);
+      for (let a = -off; a < w.len - .02; a += .26) { let segs = [[Math.max(0, a), Math.min(w.len, a + .25)]];
+        for (const h of holes) segs = segs.flatMap(([p, q]) => q <= h.a0 || p >= h.a1 ? [[p, q]] : [[p, Math.min(q, h.a0)], [Math.max(p, h.a1), q]]);
+        for (const [p, q] of segs) { if (q - p < .035) continue; const am = (p + q) / 2, [cx, cz] = w.P(am), lim = o.top ? o.top(w.id, cx, cz) : 1e9;
+          if (yb + .007 + .02 > lim) continue; const hgt = Math.min(.065, lim - yb - .007);
+          out.push({ cx, cz, ax: w.ax, len: q - p, yb, h: hgt, T, kb: c + (s0 + am) / PT }); } }
+      s0 += w.len; } }
+  return out; }
+function brickCoop(p = {}) { const g = new THREE.Group(), { W, D, T, CH, F0, DOOR, LOW, VENT, PERCH } = BCP, full = !!p.full, link = p.link || 'coop';
+  const K = (key, d = 0) => t => full ? 1e3 : kv(p[key], t, d), courseK = K('courseK'), baseK = K('baseK');
+  const lid = (o, k) => o; // (readability)
+  const brickM = new THREE.MeshStandardMaterial({ map: brickBlockTex(), roughness: .88 }), mortM = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: .96 });
+  // the plinth (3 courses, 5 cm ledge) and the walls on it
+  const holes = [{ wall: 'F', a0: DOOR.x0 + W / 2, a1: DOOR.x1 + W / 2, y0: DOOR.y0, y1: DOOR.y1 }, { wall: 'F', a0: DOOR.x0 + W / 2 - .15, a1: DOOR.x1 + W / 2 + .15, y0: DOOR.y1, y1: DOOR.y1 + BCP.CH }, { wall: 'F', a0: LOW.x0 + W / 2, a1: LOW.x1 + W / 2, y0: LOW.y0, y1: LOW.y1 },
+    { wall: 'L', a0: VENT.z0 + D / 2 - T, a1: VENT.z1 + D / 2 - T, y0: VENT.y0, y1: VENT.y1 }, { wall: 'R', a0: D / 2 - T - VENT.z1, a1: D / 2 - T - VENT.z0, y0: VENT.y0, y1: VENT.y1 }];
+  const plinth = brickRing({ x0: -W / 2 - .05, x1: W / 2 + .05, z0: -D / 2 - .05, z1: D / 2 + .05, T: .12, y0: 0, n: 3 }).map(b => ({ ...b, base: 1 }));
+  const walls = brickRing({ x0: -W / 2, x1: W / 2, z0: -D / 2, z1: D / 2, T, y0: F0, n: BCP.NF, holes, top: (id, x, z) => id === 'F' ? BCP.yF : id === 'B' ? BCP.yB : BCP.top(z) });
+  const BR = [...plinth, ...walls], NBR = BR.length, unit = new THREE.BoxGeometry(1, 1, 1);
+  const bIM = new THREE.InstancedMesh(unit, brickM, NBR), mIM = new THREE.InstancedMesh(unit, mortM, NBR); bIM.castShadow = bIM.receiveShadow = mIM.receiveShadow = true; mIM.castShadow = true;
+  [bIM, mIM].forEach(m => { m.frustumCulled = false; g.add(m); });
+  const bcol = BR.map((b, i) => col(['#a4553a', '#9b4d33', '#ad5f40', '#93472f', '#b0623f'][Math.floor(hr(i, 11) * 5)]).multiplyScalar(.9 + hr(i, 12) * .2));
+  BR.forEach((b, i) => bIM.setColorAt(i, bcol[i]));
+  const fill = box(W + .02, 1, D + .02, std('#8d8070', { r: .97 })); fill.receiveShadow = true; g.add(fill);                 // rubble fill inside the plinth
+  const scr = new THREE.MeshStandardMaterial({ map: canvasT(256, 256, (c, w, h) => { const r = rng(711); c.fillStyle = '#8f887d'; c.fillRect(0, 0, w, h);
+    for (let i = 0; i < 4000; i++) { c.fillStyle = `rgba(${r() > .5 ? '220,214,204' : '90,84,76'},${r() * .14})`; c.fillRect(r() * w, r() * h, 1 + r() * 2, 1 + r() * 2); }
+    for (let i = 0; i < 40; i++) { c.strokeStyle = `rgba(150,142,130,${.2 + r() * .2})`; c.lineWidth = 1; c.beginPath(); const x = r() * w, y = r() * h; c.arc(x, y, 20 + r() * 40, r() * 6, r() * 6 + 1.2); c.stroke(); } // float swirls
+  }, [3, 2]), roughness: .9 });
+  const screed = box(1, .02, D + .08, scr); screed.receiveShadow = true; g.add(screed);
+  // builder's line: 4 pegs and a taut string round the footprint
+  const pegM = std('#9a7a52', { r: .8 }), strM = std('#e8e2d4', { r: .7 }), CR = [[-W / 2 - .05, D / 2 + .05], [W / 2 + .05, D / 2 + .05], [W / 2 + .05, -D / 2 - .05], [-W / 2 - .05, -D / 2 - .05]].map(([x, z]) => [x + Math.sign(x) * .25, z + Math.sign(z) * .25]);
+  const pegs = CR.map(([x, z]) => { const m = box(.035, .3, .035, pegM); m.position.set(x, .15, z); m.castShadow = true; g.add(m); return m; });
+  const strs = CR.map((a, i) => { const b = CR[(i + 1) % 4], m = cyl(.0012, .0012, 1, strM, 4); m.rotation.z = Math.PI / 2; const gg = new THREE.Group(); gg.add(m); gg.position.set(a[0], .2, a[1]); gg.rotation.y = -Math.atan2(b[1] - a[1], b[0] - a[0]); g.add(gg); return { gg, m, L: Math.hypot(b[0] - a[0], b[1] - a[1]) }; });
+  // trench and wire apron round the plinth (four strips, dug then laid in turn)
+  const trM = new THREE.MeshStandardMaterial({ color: col('#4a3a2b'), roughness: 1 }), apM = new THREE.MeshStandardMaterial({ map: wireTex().clone(), color: col('#ffffff'), metalness: .55, roughness: .4, transparent: true, depthWrite: false, side: THREE.DoubleSide });
+  apM.map.needsUpdate = true; apM.map.repeat.set(.4 / .025, 3 / .025);
+  const strips = [[0, D / 2 + .25, W + .6, 'x'], [W / 2 + .25, 0, D + .1, 'z'], [0, -D / 2 - .25, W + .6, 'x'], [-W / 2 - .25, 0, D + .1, 'z']].map(([x, z, L, ax]) => {
+    const tr = new THREE.Mesh(new THREE.PlaneGeometry(1, .34), trM), ap = new THREE.Mesh(new THREE.PlaneGeometry(1, .4), apM); [tr, ap].forEach(m => { m.rotation.x = -Math.PI / 2; m.receiveShadow = true; });
+    const gt = new THREE.Group(), ga = new THREE.Group(); gt.add(tr); ga.add(ap); [gt, ga].forEach(q => { q.position.set(x, 0, z); q.rotation.y = ax === 'z' ? Math.PI / 2 : 0; g.add(q); }); gt.position.y = .004; ga.position.y = .009; ap.renderOrder = 2;
+    return { gt, ga, tr, ap, L }; });
+  // timber: lintel over the door, frames round the vents, wall plates under the roof
+  const TW = '#8a6a48', lintel = woodBox([DOOR.x1 - DOOR.x0 + .3, .07, T + .01], 0, TW, [(DOOR.x0 + DOOR.x1) / 2, DOOR.y1 + .036, D / 2 - T / 2]); g.add(lintel);
+  const vfr = [-1, 1].map(sx => { const q = new THREE.Group(), x = sx * (W / 2 + .012); g.add(q);
+    q.add(woodBox([.025, .04, VENT.z1 - VENT.z0 + .08], 2, TW, [x, VENT.y0 - .02, 0]), woodBox([.025, .04, VENT.z1 - VENT.z0 + .08], 2, TW, [x, VENT.y1 + .02, 0]),
+      woodBox([.025, VENT.y1 - VENT.y0, .04], 1, TW, [x, (VENT.y0 + VENT.y1) / 2, VENT.z0 - .02]), woodBox([.025, VENT.y1 - VENT.y0, .04], 1, TW, [x, (VENT.y0 + VENT.y1) / 2, VENT.z1 + .02])); return q; });
+  const fineW = () => { const m = new THREE.MeshStandardMaterial({ map: wireTex().clone(), color: col('#ffffff'), metalness: .6, roughness: .35, transparent: true, depthWrite: false, side: THREE.DoubleSide }); m.map.needsUpdate = true; return m; };
+  const vmesh = [-1, 1].map(sx => { const m = fineW(); m.map.repeat.set((VENT.z1 - VENT.z0) / .016, (VENT.y1 - VENT.y0) / .016); const pl = new THREE.Mesh(new THREE.PlaneGeometry(VENT.z1 - VENT.z0 + .03, VENT.y1 - VENT.y0 + .03, 12, 6), m);
+    pl.rotation.y = Math.PI / 2; pl.renderOrder = 2; const base = Float32Array.from(pl.geometry.attributes.position.array); g.add(pl); return { pl, sx, base }; });
+  const lowM = fineW(); lowM.map.repeat.set((LOW.x1 - LOW.x0) / .016, (LOW.y1 - LOW.y0) / .016); const lowMesh = new THREE.Mesh(new THREE.PlaneGeometry(LOW.x1 - LOW.x0 + .02, LOW.y1 - LOW.y0 + .02), lowM);
+  lowMesh.position.set((LOW.x0 + LOW.x1) / 2, (LOW.y0 + LOW.y1) / 2, D / 2 - T + .004); lowMesh.renderOrder = 2; g.add(lowMesh);
+  const shutter = woodBox([LOW.x1 - LOW.x0 + .06, LOW.y1 - LOW.y0 + .05, .02], 0, '#7d5f40', [0, 0, 0]); g.add(shutter);
+  const rails = [LOW.y0 - .035, LOW.y1 + .035].map(y => { const m = woodBox([.72, .018, .022], 0, TW, [(LOW.x0 + LOW.x1) / 2 - .17, y, D / 2 + .011]); g.add(m); return m; });
+  const plates = [woodBox([W, .05, T], 0, TW, [0, BCP.yF + .025, D / 2 - T / 2]), woodBox([W, .05, T], 0, TW, [0, BCP.yB + .025, -D / 2 + T / 2]),
+    member([-W / 2 + T / 2, BCP.yB + .025, -D / 2], [-W / 2 + T / 2, BCP.yF + .025, D / 2], [T, .05], TW), member([W / 2 - T / 2, BCP.yB + .025, -D / 2], [W / 2 - T / 2, BCP.yF + .025, D / 2], [T, .05], TW)];
+  plates.forEach(m => g.add(m));
+  // perch: a 5 cm pole on two trestles, 60 cm above the floor, in the front half (away from the nests at the back)
+  const perch = new THREE.Group(); g.add(perch); perch.add(woodBox([PERCH.x1 - PERCH.x0, .045, .05], 0, '#9b7b55', [0, PERCH.y, PERCH.z]));
+  [PERCH.x0 + .06, PERCH.x1 - .06].forEach(x => { perch.add(member([x, F0, PERCH.z - .22], [x, PERCH.y - .02, PERCH.z], [.04, .04], '#8a6a48'), member([x, F0, PERCH.z + .22], [x, PERCH.y - .02, PERCH.z], [.04, .04], '#86664a'),
+    woodBox([.04, .03, .5], 2, '#7f6146', [x, F0 + .015, PERCH.z])); });
+  // floor litter (straw / shavings, 7 cm): spread left to right; damp darkening; a fresh layer drawn over it
+  const LX = W - 2 * T - .02, LZ = D - 2 * T - .02, mkL = () => { const m = new THREE.MeshStandardMaterial({ map: strawTex(false).clone(), roughness: .95 }); m.map.needsUpdate = true; m.map.repeat.set(1.6, 1.1); return m; };
+  const litM = mkL(), freshM = mkL(), litter = box(1, .07, LZ, litM), fresh = box(1, .012, LZ, freshM); [litter, fresh].forEach(m => { m.receiveShadow = true; g.add(m); });
+  // roof: 5 rafters and 19 planks, overhang 35 cm front, 40 cm back, 15 cm sides; lowers onto the wall plates
+  const slope = Math.atan2(BCP.yF - BCP.yB, D), yc = (BCP.yF + BCP.yB) / 2 + .05, roof = new THREE.Group(); roof.position.set(0, yc, 0); roof.rotation.x = -slope; g.add(roof);
+  const RZ0 = -D / 2 - .4, RZ1 = D / 2 + .35, roofMat = woodMats('#a7845e'), roofSide = new THREE.MeshStandardMaterial({ color: col('#a7845e'), map: roofMat.side.map, roughness: .7 }), rparts = [];
+  [-1.45, -.72, 0, .72, 1.45].forEach((x, i) => { const m = woodBox([.06, .09, RZ1 - RZ0], 2, '#8f6d4a', [x, .045, (RZ0 + RZ1) / 2]); roof.add(m); rparts.push({ m, at: i * .06, base: m.position.clone() }); });
+  const NPk = 19, pw = (RZ1 - RZ0) / NPk; for (let k = 0; k < NPk; k++) { const m = woodBox([W + .3, .022, pw - .006], 0, '#a7845e', [0, .101, RZ0 + pw * (k + .5)], { mats: { side: roofSide, end: roofMat.end } }); roof.add(m); rparts.push({ m, at: .35 + k * .033, base: m.position.clone() }); }
+  const roofTop = z => yc + Math.tan(slope) * z + .112 / Math.cos(slope);
+  // the door: four vertical planks, two ledges and a brace; hinged on the left jamb, opens out; barrel bolt on the free edge, keeper on the wall
+  const dw = DOOR.x1 - DOOR.x0 - .01, dh = DOOR.y1 - DOOR.y0 - .01, door = new THREE.Group(); door.position.set(DOOR.x0 + .005, DOOR.y0 + .005, D / 2 + .012); g.add(door);
+  for (let i = 0; i < 4; i++) door.add(woodBox([dw / 4 - .004, dh, .022], 1, ['#8f6f4d', '#86674a', '#957552', '#7f6247'][i], [dw / 8 + i * dw / 4, dh / 2, 0]));
+  [.18, dh - .18].forEach(y => door.add(woodBox([dw - .04, .09, .022], 0, '#7a5c40', [dw / 2, y, .022]))); door.add(member([.06, .25, .022], [dw - .06, dh - .25, .022], [.07, .02], '#7a5c40'));
+  const steel = std('#55595d', { m: .8, r: .35 }), zinc = std('#9ea4a8', { m: .85, r: .28 });
+  [.18, dh - .18].forEach(y => { const hg = box(.16, .03, .004, steel); hg.position.set(.08, y, .035); door.add(hg); const pin = cyl(.006, .006, .05, steel, 8); pin.position.set(-.004, y, .02); door.add(pin); });
+  const BY = dh * .5, plate = box(.09, .03, .004, zinc); plate.position.set(dw - .06, BY, .0135); door.add(plate);
+  const bolt = new THREE.Group(); door.add(bolt); const rod = cyl(.007, .007, .1, zinc, 10); rod.rotation.z = Math.PI / 2; bolt.add(rod);
+  const knob = cyl(.006, .006, .022, zinc, 8); knob.rotation.x = Math.PI / 2; knob.position.set(0, 0, .013); bolt.add(knob); bolt.position.set(dw - .07, BY, .022);
+  const keeper = new THREE.Mesh(new THREE.TorusGeometry(.012, .003, 6, 12, Math.PI), zinc); keeper.rotation.y = Math.PI / 2; keeper.position.set(DOOR.x1 + .035, DOOR.y0 + .005 + BY, D / 2 + .034); g.add(keeper);
+  const doorA = t => full ? 0 : -1.6 * kv(p.openK, t, 0), boltX = t => (full ? 1 : kv(p.latchK, t, 0)) * .05;
+  const doorM = t => { g.updateMatrixWorld(true); return new THREE.Matrix4().compose(V3(DOOR.x0 + .005, DOOR.y0 + .005, D / 2 + .012), new THREE.Quaternion().setFromAxisAngle(YUP, doorA(t)), V3(1, 1, 1)).premultiply(g.matrixWorld); };
+  OC[link + ':door'] = { at: doorM }; OC[link + ':bolt'] = { at: t => doorM(t).multiply(new THREE.Matrix4().makeTranslation(dw - .07 + boltX(t), BY, .022 + .024)) };
+  // breeze streaks (vent to vent and in at the low gap), stale haze puffs, rain streaks and beads off the low roof edge
+  const streakM = new THREE.MeshBasicMaterial({ color: col('#ffffff'), transparent: true, opacity: .28, depthWrite: false }), NA = 46, airIM = new THREE.InstancedMesh(new THREE.BoxGeometry(1, .004, .004), streakM, NA);
+  const NH = 26, hazeM = new THREE.MeshBasicMaterial({ map: softPuffTex(), color: col('#eef0ec'), transparent: true, opacity: .2, depthWrite: false }), hazes = [];
+  for (let i = 0; i < NH; i++) { const s = new THREE.Sprite(hazeM.clone()); s.userData.d = [hr(i, 21) * 2.4 - 1.2, F0 + .25 + hr(i, 22) * 1.1, hr(i, 23) * 1.5 - .75, hr(i, 24)]; s.scale.setScalar(.55 + hr(i, 25) * .4); g.add(s); hazes.push(s); }
+  const NR = 220, rainIM = new THREE.InstancedMesh(new THREE.CylinderGeometry(.0011, .0011, .12, 4), new THREE.MeshBasicMaterial({ color: col('#dfe8ef'), transparent: true, opacity: .5, depthWrite: false }), NR);
+  const NB2 = 60, beadIM = new THREE.InstancedMesh(new THREE.SphereGeometry(.0055, 8, 6), new THREE.MeshPhysicalMaterial({ color: col('#cfe0ea'), roughness: .02, transmission: .3, transparent: true, opacity: .85, clearcoat: 1 }), NB2);
+  [airIM, rainIM, beadIM].forEach(m => { m.frustumCulled = false; g.add(m); });
+  const rr = rng(741), RD = Array.from({ length: NR }, () => [rr() * 5 - 2.5, rr() * 4.4 - 2.2, rr()]), BD = Array.from({ length: NB2 }, () => [rr() * (W + .2) - W / 2 - .1, rr() * 1.6 - .6, rr()]), AD = Array.from({ length: NA }, () => [rr(), rr(), rr(), rr()]);
+  const m4 = new THREE.Matrix4(), q0 = new THREE.Quaternion(), qz = new THREE.Quaternion().setFromAxisAngle(YUP, Math.PI / 2), ZERO = V3(0, 0, 0), S1 = V3(1, 1, 1), wet = col('#5e5850'), dry = col('#8c8377'), tc = new THREE.Color();
+  g.userData.tick = t => {
+    const k = courseK(t), bk = baseK(t);
+    for (let i = 0; i < NBR; i++) { const b = BR[i], kk = b.base ? bk : k, u = clamp((kk - b.kb) * (b.base ? 6 : 25)); if (u <= 0) { m4.compose(ZERO, q0, ZERO); bIM.setMatrixAt(i, m4); mIM.setMatrixAt(i, m4); continue; }
+      const e = sEase(u), dy = (1 - e) * .04 - (u > .7 && u < 1 ? Math.sin((u - .7) / .3 * Math.PI) * .004 : 0), Q = b.ax === 'z' ? qz : q0;
+      m4.compose(V3(b.cx, b.yb + .007 + b.h / 2 + dy, b.cz), Q, V3(b.len - .004, b.h, .118)); bIM.setMatrixAt(i, m4);
+      const mb = clamp((kk - b.kb) * (b.base ? 6 : 25) * 2); m4.compose(V3(b.cx, b.yb + (b.h + .007) / 2, b.cz), Q, V3(b.len + .008, (b.h + .007) * mb, b.T - .026)); mIM.setMatrixAt(i, m4);
+      mIM.setColorAt(i, tc.copy(wet).lerp(dry, clamp(full ? 1 : (kk - b.kb - .15) / (b.base ? 2 : 1.5)))); }
+    bIM.instanceMatrix.needsUpdate = mIM.instanceMatrix.needsUpdate = true; if (mIM.instanceColor) mIM.instanceColor.needsUpdate = true;
+    const fh = clamp(bk / 3) * .216; fill.visible = fh > .01; fill.scale.y = Math.max(.001, fh - .005); fill.position.y = fh / 2;
+    const sk = full ? 1 : kv(p.slabK, t, 0); screed.visible = sk > 0; screed.scale.x = Math.max(.001, (W + .08) * sk); screed.position.set(-(W + .08) / 2 + (W + .08) * sk / 2, .226, 0);
+    const st = full ? 0 : kv(p.stringK, t, 0), son = st > 0 && k < 1.5; pegs.forEach(m => m.visible = son); strs.forEach((s, i) => { const u = clamp(st * 4 - i); s.gg.visible = son && u > 0; s.m.scale.y = Math.max(.001, s.L * u); s.m.position.x = s.L * u / 2; });
+    const dg = full ? 4 : kv(p.digK, t, 0) * 4, apk = full ? 4 : kv(p.apronK, t, 0) * 4;
+    strips.forEach((s, i) => { const u = clamp(dg - i), v = clamp(apk - i); s.gt.visible = u > 0; s.tr.scale.x = Math.max(.001, s.L * u); s.tr.position.x = -s.L / 2 + s.L * u / 2;
+      s.ga.visible = v > 0; s.ap.scale.x = Math.max(.001, s.L * v); s.ap.position.x = -s.L / 2 + s.L * v / 2; });
+    lintel.visible = k > 15.3; vfr.forEach(q => q.visible = k > 19.2); plates.forEach(m => m.visible = k > BCP.NF + .4);
+    const mk = full ? 1 : kv(p.meshK, t, 0); vmesh.forEach(v => { v.pl.visible = mk > 0; const P = v.pl.geometry.attributes.position, sag = .02 * (1 - clamp(mk * 1.25 - .25));
+      for (let i = 0; i < P.count; i++) { const bx = v.base[i * 3], by = v.base[i * 3 + 1]; P.setZ(i, sag * Math.cos(bx / (VENT.z1 - VENT.z0 + .03) * Math.PI) * Math.cos(by / (VENT.y1 - VENT.y0 + .03) * Math.PI)); } P.needsUpdate = true;
+      v.pl.position.set(v.sx * (W / 2 + .003 + (1 - sEase(clamp(mk * 1.25))) * .3), (VENT.y0 + VENT.y1) / 2, 0); });
+    const lk = full ? 1 : kv(p.lowK, t, 0); lowMesh.visible = k > 3.2; shutter.visible = rails[0].visible = rails[1].visible = full || (p.lowK && k > 3.2);
+    shutter.position.set((LOW.x0 + LOW.x1) / 2 - lk * .34, (LOW.y0 + LOW.y1) / 2, D / 2 + .012);
+    const pk = full ? 1 : kv(p.perchK, t, 0); perch.visible = pk > 0; perch.position.y = (1 - sEase(pk)) * .35 - (pk > .75 && pk < 1 ? Math.sin((pk - .75) / .25 * Math.PI) * .006 : 0);
+    const lt = full ? 1 : kv(p.litterK, t, 0), dk = full ? 0 : kv(p.dirtK, t, 0), fk = full ? 0 : kv(p.freshK, t, 0);
+    litter.visible = lt > 0; litter.scale.x = Math.max(.001, LX * lt); litter.position.set(-LX / 2 + LX * lt / 2, F0 + .035, 0); litM.color.setRGB(1 - .45 * dk, 1 - .5 * dk, 1 - .55 * dk); litM.roughness = .95 - .35 * dk;
+    fresh.visible = fk > 0; fresh.scale.x = Math.max(.001, LX * fk); fresh.position.set(LX / 2 - LX * fk / 2, F0 + .076, 0);
+    const rk = full ? 1 : kv(p.roofK, t, 0); roof.visible = rk > 0; for (const q of rparts) { const u = clamp((rk - q.at) / .3); q.m.visible = u > 0; q.m.position.copy(q.base); q.m.position.y += (1 - sEase(u)) * .4 - (u > .7 && u < 1 ? Math.sin((u - .7) / .3 * Math.PI) * .005 : 0); }
+    door.visible = full || t >= (p.doorAt ?? 1e9); door.rotation.y = doorA(t); bolt.position.x = dw - .07 + boltX(t);
+    const ak = kv(p.airK, t, 0), lak = kv(p.lowAirK, t, 0);
+    for (let i = 0; i < NA; i++) { const [a, b, c2, ph] = AD[i], lowS = i >= NA * .7; let on, P;
+      if (!lowS) { const f = fr01(t * .55 + ph), x = W / 2 + .6 - f * (W + 1.2); on = i < NA * .7 * ak; P = V3(x, lerp(VENT.y0 + .03, VENT.y1 - .03, a) + Math.sin(f * 9 + ph * 6) * .02, lerp(VENT.z0 + .05, VENT.z1 - .05, b)); }
+      else { const f = fr01(t * .5 + ph); on = lak > (i - NA * .7) / (NA * .3); P = V3(lerp(LOW.x0 + .03, LOW.x1 - .03, a) + Math.sin(f * 7) * .03, lerp(LOW.y0 + .02, LOW.y1 - .02, b) + f * .25, D / 2 + .5 - f * 1.3); }
+      const fade = on ? 1 : 0; m4.compose(fade ? P : ZERO, lowS ? qz : q0, fade ? V3(.16 + c2 * .14, 1, 1) : ZERO); airIM.setMatrixAt(i, m4); } airIM.instanceMatrix.needsUpdate = true;
+    const hz = kv(p.hazeK, t, 0); hazes.forEach((s, i) => { const [x, y, z, ph] = s.userData.d; s.visible = hz > .02; if (!s.visible) return; const blow = (1 - hz) * 1.6;
+      s.position.set(x + Math.sin(t * .25 + ph * 6) * .08 - blow, y + Math.sin(t * .3 + ph * 4) * .05, z + Math.cos(t * .2 + ph * 5) * .08); s.material.opacity = .2 * hz * clamp(1 - (blow - x - W / 2 + 1.5) * 0); });
+    const rain = kv(p.rainK, t, 0); roofSide.color.set('#a7845e').multiplyScalar(1 - .3 * clamp(rain * 1.4)); roofSide.roughness = lerp(.7, .32, rain);
+    for (let i = 0; i < NR; i++) { const [x, z, ph] = RD[i], f = fr01(t * 2.3 + ph), y = 3.4 - f * 3.4, inR = Math.abs(x) < W / 2 + .15 && z > RZ0 && z < RZ1, fl = inR && roof.visible && rk >= 1 ? roofTop(z) : Math.abs(x) < W / 2 + .05 && Math.abs(z) < D / 2 + .05 ? .24 : 0;
+      const on = i < NR * rain && y > fl; m4.compose(on ? V3(x, y, z) : ZERO, q0, on ? S1 : ZERO); rainIM.setMatrixAt(i, m4); } rainIM.instanceMatrix.needsUpdate = true;
+    for (let i = 0; i < NB2; i++) { const [x, z0, ph] = BD[i], f = fr01(t / 1.2 + ph), zE = RZ0 + .01, on = rain > .35 && roof.visible && rk >= 1; let P;
+      if (f < .6) { const s = (f / .6) ** 2, z = lerp(z0, zE, s); P = V3(x, roofTop(z) + .005, z); } else { const tf = (f - .6) * 1.3, y = roofTop(zE) - 4.9 * tf * tf; P = V3(x, y, zE - .006 - tf * .08); }
+      const vis = on && P.y > .01; m4.compose(vis ? P : ZERO, q0, vis ? V3(1, f < .6 ? .6 : 1.6, f < .6 ? 1.6 : 1) : ZERO); beadIM.setMatrixAt(i, m4); } beadIM.instanceMatrix.needsUpdate = true;
+    LINK[link] = { k, door: doorA(t), bolt: boltX(t), mesh: mk }; };
+  return g; }
+// a steel tape measure: the case rides a rig_person palm (LINK[link][side]), the yellow blade runs straight to a fixed hook point
+function tapeLine(p = {}) { const g = new THREE.Group(), bl = new THREE.MeshStandardMaterial({ color: col('#e8c21a'), roughness: .45, metalness: .2 }), blade = box(1, .0012, .019, bl); g.add(blade);
+  const cs = new THREE.Group(); g.add(cs); const c1 = cyl(.034, .034, .03, std('#d9b01a', { r: .5 }), 20); c1.rotation.x = Math.PI / 2; cs.add(c1); const c2 = cyl(.024, .024, .032, std('#2b2b2b', { r: .6 }), 16); c2.rotation.x = Math.PI / 2; cs.add(c2);
+  const hook = box(.004, .015, .02, std('#9ea4a8', { m: .8, r: .3 })); g.add(hook); const A = V3(...(p.from || [0, 0, 0]));
+  g.userData.tick = t => { const on = kv(p.onK, t, 1) > .5, L = LINK[p.link], h = L && L[p.side || 'R']; g.visible = on && !!h; if (!g.visible) return;
+    const P = h.clone().add(V3(...(p.off || [0, -.03, 0]))), d = P.clone().sub(A), len = d.length(); cs.position.copy(P); cs.rotation.y = Math.atan2(-d.z, d.x);
+    blade.scale.x = Math.max(.001, len - .03); blade.position.copy(A).lerp(P, .5); blade.quaternion.setFromUnitVectors(V3(1, 0, 0), d.clone().normalize()); hook.position.copy(A).add(V3(0, .007, 0)); };
+  return g; }
+Object.assign(ASSETS, { brick_coop: brickCoop, tape_line: tapeLine });
