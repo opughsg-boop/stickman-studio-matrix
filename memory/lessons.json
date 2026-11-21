@@ -16,9 +16,9 @@
  {
   "code": "beat_too_long",
   "rule": "Split long sentences into two beats with a camera change.",
-  "count": 8,
-  "last_seen": "2026-11-19",
-  "example": "beat 7 lasts 10.4s without a new idea"
+  "count": 9,
+  "last_seen": "2026-11-21",
+  "example": "beat 2 lasts 8.2s without a new idea"
  },
  {
   "code": "caption_flash",
@@ -100,9 +100,9 @@
  {
   "code": "dead_beat",
   "rule": "Each beat must add an object, change a character mode, add an effect or change the camera.",
-  "count": 58,
-  "last_seen": "2026-11-20",
-  "example": "beat 6 adds nothing new visually"
+  "count": 78,
+  "last_seen": "2026-11-21",
+  "example": "beat 32 adds nothing new visually"
  },
  {
   "code": "flat_primitive_water",

@@ -73,3 +73,4 @@
 {"run": "olive_cutting", "time": "2026-11-19 18:48", "score": 51, "issues": 11, "codes": ["beat_too_short", "dead_beat", "loudness"]}
 {"run": "hen_laying", "time": "2026-11-19 20:36", "score": 58, "issues": 9, "codes": ["dead_beat", "loudness"]}
 {"run": "pigeon_cage", "time": "2026-11-20 20:44", "score": 85, "issues": 3, "codes": ["dead_beat"]}
+{"run": "hen_coop", "time": "2026-11-21 02:07", "score": 0, "issues": 21, "codes": ["beat_too_long", "dead_beat"]}
