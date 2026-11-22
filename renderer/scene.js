@@ -4216,6 +4216,7 @@ Object.assign(ASSETS, { brick_coop: brickCoop, tape_line: tapeLine });
 //   OC ':hose') and a bucket poured over the rim (bucketK pose keys [t, lipX, lipY, lipZ, tilt], OC ':bucketH' | ':bucketB'). Algae band
 //   and rim scrub (algaeK, cleanK, scrubVis, OC ':scrub'). Bird net cover (netK, netFold). Scoop net (scoopK [t,x,y,z,yaw,pitch], catchAt,
 //   OC ':scoop') and a rinse nozzle (rinseK, rinseAt, OC ':rinse'). splashes [[t, x, z, r]] add expanding rings.
+const TT_DRY = new THREE.Color('#aaa59b'), TT_WET = new THREE.Color('#77736c');
 const TTK = { X: .75, Z: .5, T: .1, F: .1, TOP: 1.1, LV: .95 };
 TTK.lvl = w => TTK.F + (TTK.LV - TTK.F) * w;
 window.__ttk = () => TTK;
@@ -4482,7 +4483,7 @@ function tilapiaTank(p = {}) { const g = new THREE.Group(), link = p.link || 'ta
   g.userData.tick = t => {
     const wk = wallK(t), lv = level(t), wf = waterK(t), tb = turbK(t), on = onK(t) > .5, ai = airK(t) > .5;
     clipTop.constant = wk >= .999 ? TOP + .01 : F + WH * wk; caps.forEach(c => { c.visible = wk > .01 && wk < .999; c.position.y = F + WH * wk + .003; });
-    conc.color.copy(white).lerp(col('#8d8a84'), wetK(t)); slab.visible = true;
+    conc.color.copy(TT_DRY).lerp(TT_WET, wetK(t)); slabM.color.copy(TT_DRY);
     const rk = rebarK(t); rebar.visible = rk > .01 && wk < .999; rebar.scale.y = Math.max(.01, rk); rebar.position.y = F * (1 - rebar.scale.y);
     const pk = paintK(t); coats.forEach(({ m, c, d, L, ph }) => { const k = clamp((pk - ph[0]) / (ph[1] - ph[0])); m.visible = k > .002 && wk > .99; m.scale.x = Math.max(.001, k); m.position.copy(c).addScaledVector(d, -(1 - k) * L / 2); });
     brush.visible = brushK(t) > .5; if (brush.visible) brushPose(t).decompose(brush.position, brush.quaternion, brush.scale);
