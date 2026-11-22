@@ -60,7 +60,7 @@ export async function render(planFile, audio, outDir, o = {}) {
   fs.mkdirSync(path.join(outDir, 'chunks'), { recursive: true });
   const { server, url } = await startStatic();
   // GPU mode (a machine with a graphics card): real WebGL hardware + full 1080x1920 resolution.
-  const browser = await chromium.launch(gpu ? { headless: true, args: ['--ignore-gpu-blocklist', '--enable-gpu', '--use-angle=default'] } : { args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
+  let browser = await chromium.launch(gpu ? { headless: true, args: ['--ignore-gpu-blocklist', '--enable-gpu', '--use-angle=default'] } : { args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
   const log = o.onProgress || (() => {});
   try {
     if (opt.preview) { // stills from the middle of every beat
@@ -82,7 +82,10 @@ export async function render(planFile, audio, outDir, o = {}) {
       while (queue.length) { const c = queue.shift();
         for (let attempt = 1; ; attempt++) {
           try { await renderChunk(browser, url, plan, opt, c.i, c.f0, c.f1, c.file); break; }
-          catch (e) { console.error(`[render] chunk ${c.i} attempt ${attempt} failed: ${e.message}`); if (attempt >= 3) throw e; }
+          catch (e) { console.error(`[render] chunk ${c.i} attempt ${attempt} failed: ${e.message}`); if (attempt >= 3) throw e;
+            // a crashed browser stays dead: relaunch it before the retry
+            try { await browser.close(); } catch {}
+            browser = await chromium.launch(gpu ? { headless: true, args: ["--ignore-gpu-blocklist", "--enable-gpu", "--use-angle=default"] } : { args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"] }); }
         }
         done++; log(done / chunks.length); console.log(`[render] chunk ${c.i + 1}/${chunks.length} ok (${((Date.now() - t0) / 1000).toFixed(0)}s)`);
       }
