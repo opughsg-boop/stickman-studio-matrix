@@ -230,7 +230,7 @@ b.push({ t: T(23), kind: 'problem', remove: ['handD'], camera: { target: [0, .35
 // 17 water change: siphon out a quarter, then a bucket of matched water poured slowly over the rim
 b.push({ t: T(24), kind: 'solution', add: [handS], camera: { target: [-.2, 1.0, .6], dist: 2.2, elev: .32, az: -.12 } });
 // 18 a cat hops onto the rim to fish; the bird net comes down over the tank
-b.push({ t: T(26), kind: 'solution', remove: ['handS', 'handBH', 'handBB'], add: [cat], camera: { target: [.45, .65, .6], dist: 2.9, elev: .25, az: .6, spin: .15 } });
+b.push({ t: T(26), kind: 'solution', remove: ['handS', 'handBH', 'handBB'], add: [], camera: { target: [.45, .65, .6], dist: 2.9, elev: .25, az: .6, spin: .15 } });
 // 19 the net folded back, the rim scrubbed of algae
 b.push({ t: T(28), kind: 'info', remove: ['cat'], add: [handC], camera: { fly: { target: [[-.35, 1.1, .55], [.35, 1.1, .55]], dist: [1.25, 1.25], elev: [.42, .42], az: [.32, .25], blend: true } } });
 // 20 months pass: the fish grow; a soft scoop net lifts one and it is rinsed
