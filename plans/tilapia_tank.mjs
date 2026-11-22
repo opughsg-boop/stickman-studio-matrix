@@ -109,7 +109,7 @@ const rotX = (v, a) => [v[0], v[1] * Math.cos(a) - v[2] * Math.sin(a), v[1] * Ma
 // line 5: the brush (already in the hand at the cut); after the last stroke the hand lifts it out
 const brushAt = t => { const k = Math.min(1, Math.max(0, (t - (T(5) + .3)) / 4.4)), x = Math.max(-X + .06, Math.min(X - .06, -X + 2 * X * k - .035)), y = (F + TOP) / 2 + .3 * Math.sin(2 * PI * 1.05 * t);
   return add([x, y, -Z + .004], rotX([0, 0, .2], -.65)); };
-const fP = [1, 0, 0], uP = [0, 1, 0], HP = [], Tbr = T(5) + 4.75;
+const fP = [0, -1, 0], uP = [1, 0, 0], HP = [], Tbr = T(5) + 4.75;
 hk(HP, 0, brushAt(T(5)), rotX(fP, -.65), rotX(uP, -.65), 'grip'); hk(HP, Tbr, brushAt(Tbr), rotX(fP, -.65), rotX(uP, -.65), 'grip'); hk(HP, Tbr + .8, add(brushAt(Tbr), [.3, .55, .55]), rotX(fP, -.65), rotX(uP, -.65), 'open');
 const handP = hand('handP', 'R', HP, { anchor: 'grip', grabs: [grab('tank:brush', T(5), Tbr, fP, uP)] });
 // line 6: the left hand brings the hose nozzle over the rim and holds it while the tank fills
@@ -197,7 +197,7 @@ const b = [];
 // 1 hook: the finished tank under the half shade cloth, a few tilapia under the surface; 4.3 m slow push-in toward the water
 b.push({ t: 0, kind: 'intro', add: [...world, tank], camera: { target: [0, .85, 0], dist: 5.4, elev: .3, az: .25, push: .42 } });
 // 2 from above: the whole house for the fish, bubbles from the air stone
-b.push({ t: Tb2, kind: 'info', camera: { target: [0, .95, 0], dist: 3.7, elev: 1.3, az: 1.52, spin: .1 } });
+b.push({ t: Tb2, kind: 'info', camera: { target: [0, .8, .15], dist: 3.9, elev: 1.0, az: .25, spin: .08 } });
 // 3 the rebar cage and the walls cast up to the rim; the shade cloth rises (line 4)
 b.push({ t: T(3), kind: 'info', remove: ['shade'], add: [{ id: 'shade2', type: 'shade_net', pos: [0, 0, -.45], anim: 'rise', delay: r3(T(4) + .3 - T(3)), params: { w: 2.8, d: 1.3, h: 2.25 } }],
   camera: { target: [0, .75, -.1], dist: 5.9, elev: .36, az: .5, spin: .15 } });
@@ -216,7 +216,7 @@ b.push({ t: T(13), kind: 'info', remove: ['handBg', 'handR'], add: [handF], came
 // 10 macro through the plastic: lively fry, clear eyes, the same size
 b.push({ t: T(14), kind: 'info', add: [stk('mag', 'magnifier', [BAGH[0] - .07, BAGH[1] + .14, BAGH[2] + .08], .06, { delay: 1.2 })], camera: { target: [BAGH[0], BAGH[1] - .01, BAGH[2]], dist: .62, elev: .08, az: .35, spin: .3 } });
 // 11 from above: the whole stock in one bag, set down on the water
-b.push({ t: T(16), kind: 'info', remove: ['mag'], camera: { target: [0, 1.0, .05], dist: 1.9, elev: 1.3, az: 1.5, spin: .08 } });
+b.push({ t: T(16), kind: 'info', remove: ['mag'], camera: { target: [0, 1.0, .15], dist: 1.9, elev: .95, az: .3, spin: .08 } });
 // 12 the bag floats to even out the temperature, then a hand opens it and the fry swim out
 b.push({ t: Tb12, kind: 'info', remove: ['handF'], camera: { target: [-.12, .98, .08], dist: 1.15, elev: .3, az: .55 } });
 // 13 the first week: a palm on the rim, watching the fry
@@ -234,7 +234,7 @@ b.push({ t: T(26), kind: 'solution', remove: ['handS', 'handBH', 'handBB'], add:
 // 19 the net folded back, the rim scrubbed of algae
 b.push({ t: T(28), kind: 'info', remove: ['cat'], add: [handC], camera: { fly: { target: [[-.35, 1.1, .55], [.35, 1.1, .55]], dist: [1.25, 1.25], elev: [.42, .42], az: [.32, .25], blend: true } } });
 // 20 months pass: the fish grow; a soft scoop net lifts one and it is rinsed
-b.push({ t: T(29), kind: 'info', remove: ['handC'], camera: { fly: { target: [[0, .9, 0], [.1, 1.32, .3]], dist: [2.9, 1.6], elev: [1.25, .36], az: [1.5, .45], ease: true, blend: true } } });
+b.push({ t: T(29), kind: 'info', remove: ['handC'], camera: { fly: { target: [[0, .85, .1], [.1, 1.32, .3]], dist: [3.0, 1.6], elev: [.95, .36], az: [.9, .45], ease: true, blend: true } } });
 // 21 a new cycle: a new bag of fry released into the tank
 b.push({ t: T(31), kind: 'info', remove: ['handSp', 'handRn'], camera: { target: [-.08, .95, -.02], dist: 1.5, elev: .95, az: -.95 } });
 // 22 the fried tilapia on its platter, then the camera pulls back round the tank (CTA)
