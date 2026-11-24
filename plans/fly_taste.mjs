@@ -13,29 +13,37 @@ const T = [...Array(13).keys()].map(at);
 const [T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12] = T;
 
 const TOP = .75;                    // table top height (metres)
-const CUBE = .014, CUBE_X = 0;      // sugar cube side and centre x
-const FACE = CUBE_X - CUBE / 2;     // the cube's front face (the fly comes from -x)
-const EDGE_X = FACE - .009;         // fly body centre: its front leg reaches the cube face
+// sugar sachet: a plain cream pouch (built from primitives, no printed words), standing on the table
+const SACK_X = 0, SACK_W = .062, SACK_H = .068, SACK_T = .022;
+const FACE = SACK_X - SACK_W / 2 + .004;   // the pouch’s front face, where the leg touches (the fly comes from -x)
+const EDGE_X = FACE - .009;               // fly body centre: its front leg reaches the pouch
 const LEG = [FACE + .0003, TOP + .0045, 0], HEAD = [EDGE_X + .005, TOP + .011, 0];
 
 // crumbs scattered on the table around the cube (not a heap); none inside the cube or under the fly
 let sd = 7; const rr = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
 const crumbs = [];
-for (let i = 0; i < 380; i++) {
+const sackParts = [
+  { shape: 'box', size: [SACK_W, SACK_H, SACK_T], pos: [SACK_X, TOP + SACK_H / 2, 0], color: '#f3ead2', rough: .32 },
+  { shape: 'box', size: [SACK_W * .92, SACK_H * .10, SACK_T * 1.2], pos: [SACK_X, TOP + SACK_H * .95, 0], color: '#e2d4b0', rough: .4 },
+  { shape: 'box', size: [SACK_W * .8, SACK_H * .06, SACK_T * 1.4], pos: [SACK_X, TOP + SACK_H * .99, 0], color: '#d9c9a2', rough: .45 },
+];
+// sugar spilling out of the open top and a few grains on the table next to the pouch
+for (let i = 0; i < 90; i++) { const x = SACK_X + (rr() - .5) * SACK_W * .9, z = (rr() - .5) * SACK_T * 1.2, y = TOP + SACK_H + rr() * .012; const d = .0012 + rr() * .0012; sackParts.push({ shape: 'box', size: [d, d * .8, d], pos: [x, y, z], color: '#fbfbf7', rough: .4 }); }
+for (let i = 0; i < 360; i++) {
   const a = rr() * Math.PI * 2, r = .014 + Math.sqrt(rr()) * .10;
-  const x = CUBE_X + Math.cos(a) * r, z = Math.sin(a) * r;
-  if (Math.hypot(x - EDGE_X, z) < .012 || Math.hypot(x - LEG[0], z - LEG[2]) < .025) continue;
+  const x = SACK_X + Math.cos(a) * r, z = Math.sin(a) * r;
+  if (Math.hypot(x - SACK_X, z) < .035 || Math.hypot(x - LEG[0], z - LEG[2]) < .025) continue;
   const d = .0009 + rr() * .0009;
   crumbs.push({ shape: 'box', size: [d, d * (.6 + rr() * .5), d * (.7 + rr() * .6)], pos: [x, TOP + d / 2, z], color: ['#fbfbf7', '#f1efe6', '#e6e1d2'][Math.floor(rr() * 3)], rough: .4 });
 }
 const crumbsObj = { id: 'crumbs', type: 'custom', pos: [0, 0, 0], anim: 'none', params: { parts: crumbs } };
-const cube = { id: 'cube', type: 'custom', pos: [0, 0, 0], anim: 'none', params: { parts: [{ shape: 'box', size: [CUBE, CUBE, CUBE], pos: [CUBE_X, TOP + CUBE / 2, 0], color: '#fbfbf8', rough: .7 }] } };
+const sack = { id: 'sack', type: 'custom', pos: [0, 0, 0], anim: 'none', params: { parts: sackParts } };
 const table = { id: 'table', type: 'glb', pos: [0, 0, 0], anim: 'none', params: { model: 'ph/small_wooden_table_01', height: TOP } };
 
 const fly = { id: 'fly', type: 'glb', pos: [-.22, TOP, 0], anim: 'none', params: { model: 'insects/house_fly', height: .014, clip: 'Walk', path: [[-.22, 0], [EDGE_X, 0]], pathSpeed: .25 }, modes: {} };
 const pulse = { id: 'pulse', type: 'pulse', pos: [0, 0, 0], anim: 'none', params: { a: LEG, b: HEAD, t0: T3, dur: T4 - T3 - .3, color: '#34e8ff' } };
 
-const world = [table, cube, crumbsObj, fly];
+const world = [table, sack, crumbsObj, fly];
 const b = [];
 b.push({ t: T0, kind: 'intro', add: world, camera: { target: [0, TOP + .02, 0], dist: .6, elev: .2, az: .3 } });
 b.push({ t: T1, kind: 'info', camera: { target: [0, TOP + .01, 0], dist: .35, elev: .2, az: -.35 } });
