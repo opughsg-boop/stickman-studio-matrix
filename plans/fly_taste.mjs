@@ -24,9 +24,9 @@ const crumbs = [];
 for (let i = 0; i < 380; i++) {
   const a = rr() * Math.PI * 2, r = .014 + Math.sqrt(rr()) * .10;
   const x = CUBE_X + Math.cos(a) * r, z = Math.sin(a) * r;
-  if (Math.hypot(x - EDGE_X, z) < .012) continue;
+  if (Math.hypot(x - EDGE_X, z) < .012 || Math.hypot(x - LEG[0], z - LEG[2]) < .025) continue;
   const d = .0009 + rr() * .0009;
-  crumbs.push({ shape: 'sphere', size: [d, d, d], pos: [x, TOP + d / 2, z], color: rr() > .5 ? '#fbfbf7' : '#f1efe6' });
+  crumbs.push({ shape: 'box', size: [d, d * (.6 + rr() * .5), d * (.7 + rr() * .6)], pos: [x, TOP + d / 2, z], color: ['#fbfbf7', '#f1efe6', '#e6e1d2'][Math.floor(rr() * 3)], rough: .4 });
 }
 const crumbsObj = { id: 'crumbs', type: 'custom', pos: [0, 0, 0], anim: 'none', params: { parts: crumbs } };
 const cube = { id: 'cube', type: 'custom', pos: [0, 0, 0], anim: 'none', params: { parts: [{ shape: 'box', size: [CUBE, CUBE, CUBE], pos: [CUBE_X, TOP + CUBE / 2, 0], color: '#fbfbf8', rough: .7 }] } };
@@ -37,19 +37,19 @@ const pulse = { id: 'pulse', type: 'pulse', pos: [0, 0, 0], anim: 'none', params
 
 const world = [table, cube, crumbsObj, fly];
 const b = [];
-b.push({ t: T0, kind: 'intro', add: world, camera: { target: [0, TOP + .02, 0], dist: .9, elev: .2, az: .3 } });
+b.push({ t: T0, kind: 'intro', add: world, camera: { target: [0, TOP + .02, 0], dist: .6, elev: .2, az: .3 } });
 b.push({ t: T1, kind: 'info', camera: { target: [0, TOP + .01, 0], dist: .35, elev: .2, az: -.35 } });
 b.push({ t: T2, kind: 'info', modes: { fly: { clip: 'Idle' } }, camera: { target: [(EDGE_X + FACE) / 2, TOP + .006, 0], dist: .08, elev: .3, az: 1.2 } });
-b.push({ t: T3, kind: 'info', add: [pulse], camera: { target: [(LEG[0] + HEAD[0]) / 2, TOP + .006, 0], dist: .06, elev: .3, az: 1.2 } });
-b.push({ t: T4, kind: 'info', camera: { target: [0, TOP + .01, 0], dist: .25, elev: .35, az: .6 } });
+b.push({ t: T3, kind: 'info', add: [pulse], camera: { target: [LEG[0] - .002, TOP + .004, 0], dist: .05, elev: .45, az: 1.35 } });
+b.push({ t: T4, kind: 'info', camera: { target: [(LEG[0] + HEAD[0]) / 2, TOP + .006, 0], dist: .06, elev: .5, az: 1.35 } });
 b.push({ t: T5, kind: 'info', camera: { target: [0, TOP + .01, 0], dist: .18, elev: .15, az: -.9 } });
 b.push({ t: T6, kind: 'info', camera: { target: [0, TOP + .01, 0], dist: .5, elev: .25, az: -.2 } });
-b.push({ t: T7, kind: 'info', camera: { target: [0, TOP + .01, 0], dist: .3, elev: .1, az: .5 } });
-b.push({ t: T8, kind: 'info', camera: { target: [0, TOP + .01, 0], dist: .8, elev: .35, az: .25 } });
+b.push({ t: T7, kind: 'info', modes: { fly: { clip: 'Fly', path: [[EDGE_X, 0], [-.09, .07]], pathSpeed: .18 } }, camera: { target: [-.03, TOP + .01, .02], dist: .3, elev: .2, az: .5 } });
+b.push({ t: T8, kind: 'info', camera: { target: [-.04, TOP + .01, .03], dist: .45, elev: .3, az: .25 } });
 b.push({ t: T9, kind: 'info', camera: { target: [0, TOP + .01, 0], dist: .4, elev: .15, az: -.6 } });
-b.push({ t: T10, kind: 'info', camera: { target: [0, TOP + .02, 0], dist: .9, elev: .3, az: .4 } });
+b.push({ t: T10, kind: 'info', camera: { target: [0, TOP + .02, 0], dist: .6, elev: .3, az: .4 } });
 b.push({ t: T11, kind: 'info', camera: { target: [0, TOP + .01, 0], dist: .3, elev: .2, az: -.2 } });
-b.push({ t: T12, kind: 'info', camera: { preset: 'orbit', target: [0, TOP + .01, 0], dist: 1.0, elev: .3, az: .4 } });
+b.push({ t: T12, kind: 'info', camera: { preset: 'orbit', target: [0, TOP + .01, 0], dist: .7, elev: .3, az: .4 } });
 
 const plan = {
   version: 2, planner: 'directed', duration: D, language: 'ar', prompt: 'الذبابة بتتذوق الأكل بالرجلين',
