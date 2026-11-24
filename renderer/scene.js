@@ -132,7 +132,7 @@ function buildEnvironment(env = {}) {
   scene.background = col(env.bg || '#3d7fd0');
   scene.fog = new THREE.Fog(col(env.bg || '#3d7fd0'), 40, 110);
   // env.space (glass_rain video): no blueprint floor or walls; a deep-space dome with stars instead
-  if (env.space) { const N = 1400, pos = new Float32Array(N * 3); let sd = 5; const r = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+  if (env.space && !env.noStars) { const N = 1400, pos = new Float32Array(N * 3); let sd = 5; const r = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
     for (let i = 0; i < N; i++) { const u = r() * 2 - 1, a = r() * Math.PI * 2, q = Math.sqrt(1 - u * u); pos.set([150 * q * Math.cos(a), 150 * u, 150 * q * Math.sin(a)], i * 3); }
     const sg = new THREE.BufferGeometry(); sg.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     scene.add(new THREE.Points(sg, new THREE.PointsMaterial({ color: '#ffffff', size: .9, sizeAttenuation: true, fog: false }))); }
