@@ -15,19 +15,21 @@ const [T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12] = T;
 // table top height and a sugar heap (small white grains, real size about 0.6 mm to 1 mm)
 const TOP = .36;
 let sd = 7; const rr = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
-// a real heap: grains pile up toward the middle (height falls off with radius), so it reads as a mound, not a ring
-const grains = []; for (let i = 0; i < 1400; i++) { const a = rr() * Math.PI * 2, r = Math.sqrt(rr()) * .06, hMax = .028 * (1 - (r / .06) ** 2), h = rr() * Math.max(.0012, hMax);
-  grains.push({ shape: 'box', size: [.0012, .0012, .0012], pos: [Math.cos(a) * r, TOP + h, Math.sin(a) * r], color: ['#efe6cf', '#e2d6bb', '#f4eee0', '#d9ccb0'][Math.floor(rr() * 4)] }); }
+const EDGE_X = -.052, CRYSTAL_X = EDGE_X + .0115;   // the crystal sits in front of the fly leg, never inside the body
+// a loose scatter of sugar (not a mountain): low, wide, and clear of the fly and the crystal
+// grains pile up toward the middle (height falls off with radius), so it reads as a mound, not a ring
+const grains = []; for (let i = 0; i < 1100; i++) { const a = rr() * Math.PI * 2, r = Math.sqrt(rr()) * .11, hMax = .010 * (1 - (r / .11) ** 2), h = rr() * Math.max(.0012, hMax);
+  const gx = Math.cos(a) * r, gz = Math.sin(a) * r; if (Math.hypot(gx - EDGE_X, gz) < .016) continue;
+  grains.push({ shape: 'box', size: [.0012, .0012, .0012], pos: [gx, TOP + h, gz], color: ['#efe6cf', '#e2d6bb', '#f4eee0', '#d9ccb0'][Math.floor(rr() * 4)] }); }
 const sugar = { id: 'sugar', type: 'custom', pos: [0, 0, 0], anim: 'none', params: { parts: grains } };
 const table = { id: 'table', type: 'glb', pos: [0, 0, 0], anim: 'none', params: { model: 'ph/wooden_crate_01', height: TOP } };
 
 // the fly: lands from the front-left, walks onto the sugar, feeds, leaves
 // the fly walks in from the left and stops on the heap edge at EDGE_X; its contact leg tip and head define the nerve pulse
-const EDGE_X = -.052;
 const fly = { id: 'fly', type: 'glb', pos: [-.25, TOP, 0], anim: 'none', params: { model: 'insects/house_fly', height: .014, clip: 'Walk', path: [[-.25, 0], [EDGE_X, 0]], pathSpeed: .25 }, modes: {} };
 // one clear crystal grain on the heap edge: the leg tip touches it
-const crystal = { id: 'crystal', type: 'custom', pos: [0, 0, 0], anim: 'none', params: { parts: [{ shape: 'crystal', size: [.009, .011, .009], pos: [EDGE_X - .004, TOP + .001, 0], color: '#bfefff' }] } };
-const LEG = [EDGE_X - .0005, TOP + .0015, 0], HEAD = [EDGE_X + .006, TOP + .011, 0];
+const crystal = { id: 'crystal', type: 'custom', pos: [0, 0, 0], anim: 'none', params: { parts: [{ shape: 'crystal', size: [.009, .011, .009], pos: [CRYSTAL_X, TOP, 0], color: '#bfefff' }] } };
+const LEG = [CRYSTAL_X - .0045 - .0006, TOP + .0045, 0], HEAD = [EDGE_X + .002, TOP + .011, 0];
 const pulse = { id: 'pulse', type: 'pulse', pos: [0, 0, 0], anim: 'none', params: { a: LEG, b: HEAD, t0: T3, dur: T4 - T3 - .3, color: '#34e8ff' } };
 
 const world = [table, sugar, fly, crystal];
@@ -35,7 +37,7 @@ const b = [];
 b.push({ t: T0, kind: 'intro', add: world, camera: { target: [0, .38, 0], dist: 1.1, elev: .18, az: .3 } });
 b.push({ t: T1, kind: 'info', camera: { target: [0, .38, 0], dist: .42, elev: .2, az: -.35 } });
 b.push({ t: T2, kind: 'info', modes: { fly: { clip: 'Idle' } }, camera: { target: [EDGE_X, TOP + .004, 0], dist: .09, elev: .32, az: 1.2 } });
-b.push({ t: T3, kind: 'info', add: [pulse], camera: { target: [EDGE_X, TOP + .008, 0], dist: .12, elev: .5, az: 1.2 } });
+b.push({ t: T3, kind: 'info', add: [pulse], camera: { target: [(EDGE_X + CRYSTAL_X) / 2, TOP + .006, 0], dist: .12, elev: .5, az: 1.2 } });
 b.push({ t: T4, kind: 'info', camera: { target: [0, .37, 0], dist: .06, elev: .08, az: -.5 } });
 b.push({ t: T5, kind: 'info', camera: { target: [0, .37, 0], dist: .2, elev: .3, az: .9 } });
 b.push({ t: T6, kind: 'info', camera: { target: [0, .38, 0], dist: .9, elev: .25, az: -.2 } });
