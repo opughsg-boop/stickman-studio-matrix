@@ -40,7 +40,7 @@ const crumbsObj = { id: 'crumbs', type: 'custom', pos: [0, 0, 0], anim: 'none', 
 const sack = { id: 'sack', type: 'custom', pos: [0, 0, 0], anim: 'none', params: { parts: sackParts } };
 const table = { id: 'table', type: 'glb', pos: [0, 0, 0], anim: 'none', params: { model: 'ph/small_wooden_table_01', height: TOP } };
 
-const fly = { id: 'fly', type: 'glb', pos: [-.22, TOP, 0], anim: 'none', params: { model: 'insects/house_fly', height: .014, clip: 'Walk', path: [[-.22, 0], [EDGE_X, 0]], pathSpeed: .25 }, modes: {} };
+const fly = { id: 'fly', type: 'glb', pos: [-.22, TOP, 0], anim: 'none', params: { model: 'insects/house_fly', height: .014, clip: 'Walk', path: [[-.22, 0], [EDGE_X, 0]], pathSpeed: .25, scaleXYZ: [.8, .8, 1], mats: { Hair: { visible: false } } }, modes: {} };
 const pulse = { id: 'pulse', type: 'pulse', pos: [0, 0, 0], anim: 'none', params: { a: LEG, b: HEAD, t0: T3, dur: T4 - T3 - .3, color: '#34e8ff' } };
 
 const world = [table, sack, crumbsObj, fly];

@@ -1349,7 +1349,7 @@ ASSETS.glb = (p = {}) => {
   const g = GLB[p.model]; if (!g) return box(.5, .5, .5, std('#f0f'));
   const o = skClone(g.scene); o.updateMatrixWorld(true);
   const bb = new THREE.Box3().setFromObject(o, true), s = (p.height || 1) / Math.max(.001, bb.max.y - bb.min.y);
-  o.scale.setScalar(s); o.position.y = -bb.min.y * s; o.position.x = -(bb.min.x + bb.max.x) / 2 * s; o.position.z = -(bb.min.z + bb.max.z) / 2 * s;
+  o.scale.setScalar(s); if (p.scaleXYZ) o.scale.set(s * p.scaleXYZ[0], s * p.scaleXYZ[1], s * p.scaleXYZ[2]); o.position.y = -bb.min.y * s; o.position.x = -(bb.min.x + bb.max.x) / 2 * s; o.position.z = -(bb.min.z + bb.max.z) / 2 * s;
   const w = new THREE.Group(); w.add(o); shadowed(o); o.traverse(m => { if (m.isMesh) m.frustumCulled = false; });
   // per-model material fixes (params.mats = { MaterialName: { color, rough, visible, opacity } }); clones first so other copies stay as they were
   if (p.mats) o.traverse(m => { if (!m.isMesh) return; const arr = [].concat(m.material).map(mt => { const c = mt.clone(), f = p.mats[mt.name]; if (f) { if (f.color) c.color.set(f.color); if (f.rough != null) c.roughness = f.rough; if (f.visible === false) c.visible = false; if (f.opacity != null) { c.transparent = true; c.opacity = f.opacity; c.depthWrite = false; } } return c; }); m.material = Array.isArray(m.material) ? arr : arr[0]; });
