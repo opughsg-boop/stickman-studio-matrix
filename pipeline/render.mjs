@@ -51,6 +51,30 @@ async function renderChunk(browser, url, plan, opt, ci, f0, f1, file) {
   } finally { await page.close().catch(() => {}); try { ff.stdin.end(); } catch {} }
 }
 
+// A chunk whose browser keeps crashing is rendered in 3 smaller pieces (same frames, same encoder), then joined.
+async function renderChunkSplit(browser, url, plan, opt, c) {
+  const piece = Math.ceil((c.f1 - c.f0) / 3), parts = [];
+  for (let f = c.f0, k = 0; f < c.f1; f += piece, k++) {
+    const pf = c.file.replace(/\.mkv$/, '_p' + k + '.mkv'), f1 = Math.min(c.f1, f + piece);
+    for (let attempt = 1; ; attempt++) {
+      try { await renderChunk(browser, url, plan, opt, c.i, f, f1, pf); break; }
+      catch (e) { console.error('[render] piece ' + c.i + '.' + k + ' attempt ' + attempt + ' failed: ' + e.message); if (attempt >= 3) throw e;
+        try { await browser.close(); } catch {} browser = await launchBrowser(opt); }
+    }
+    parts.push(pf);
+  }
+  const lst = c.file + '.parts.txt';
+  fs.writeFileSync(lst, parts.map(p => "file '" + path.basename(p) + "'").join('\n'));
+  execFileSync('ffmpeg', ['-v', 'error', '-y', '-f', 'concat', '-safe', '0', '-i', lst, '-c', 'copy', c.file + '.part.mkv']);
+  fs.renameSync(c.file + '.part.mkv', c.file);
+  for (const p of parts) fs.rmSync(p, { force: true }); fs.rmSync(lst, { force: true });
+  return browser;
+}
+
+async function launchBrowser(opt, gpu = opt.gpu) {
+  return chromium.launch(gpu ? { headless: true, args: ['--ignore-gpu-blocklist', '--enable-gpu', '--use-angle=default'] } : { args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
+}
+
 export async function render(planFile, audio, outDir, o = {}) {
   const gpu = !!(o.gpu || process.env.RENDER_GPU);
   // v2 (2026-11-15): CPU renders at 630x1120 (was 540x960): measured 1.46x the old time with the whole realism layer on; 720x1280 = 1.69x (pass --w 720 --h 1280)
@@ -60,7 +84,7 @@ export async function render(planFile, audio, outDir, o = {}) {
   fs.mkdirSync(path.join(outDir, 'chunks'), { recursive: true });
   const { server, url } = await startStatic();
   // GPU mode (a machine with a graphics card): real WebGL hardware + full 1080x1920 resolution.
-  let browser = await chromium.launch(gpu ? { headless: true, args: ['--ignore-gpu-blocklist', '--enable-gpu', '--use-angle=default'] } : { args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
+  let browser = await launchBrowser(opt, gpu);
   const log = o.onProgress || (() => {});
   try {
     if (opt.preview) { // stills from the middle of every beat
@@ -81,7 +105,7 @@ export async function render(planFile, audio, outDir, o = {}) {
     await Promise.all(Array.from({ length: opt.workers }, async () => {
       while (queue.length) { const c = queue.shift();
         for (let attempt = 1; ; attempt++) {
-          try { await renderChunk(browser, url, plan, opt, c.i, c.f0, c.f1, c.file); break; }
+          try { if (attempt >= 2) { browser = await renderChunkSplit(browser, url, plan, opt, c); } else await renderChunk(browser, url, plan, opt, c.i, c.f0, c.f1, c.file); break; }
           catch (e) { console.error(`[render] chunk ${c.i} attempt ${attempt} failed: ${e.message}`); if (attempt >= 3) throw e;
             // a crashed browser stays dead: relaunch it before the retry
             try { await browser.close(); } catch {}
