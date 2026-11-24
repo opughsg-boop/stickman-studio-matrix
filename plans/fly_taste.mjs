@@ -35,7 +35,7 @@ const b = [];
 b.push({ t: T0, kind: 'intro', add: world, camera: { target: [0, .38, 0], dist: 1.1, elev: .18, az: .3 } });
 b.push({ t: T1, kind: 'info', camera: { target: [0, .38, 0], dist: .42, elev: .2, az: -.35 } });
 b.push({ t: T2, kind: 'info', modes: { fly: { clip: 'Idle' } }, camera: { target: [EDGE_X, TOP + .004, 0], dist: .09, elev: .32, az: 1.2 } });
-b.push({ t: T3, kind: 'info', add: [pulse], camera: { target: [(LEG[0] + HEAD[0]) / 2, TOP + .004, 0], dist: .07, elev: .32, az: 1.2 } });
+b.push({ t: T3, kind: 'info', add: [pulse], camera: { target: [EDGE_X, TOP + .008, 0], dist: .12, elev: .5, az: 1.2 } });
 b.push({ t: T4, kind: 'info', camera: { target: [0, .37, 0], dist: .06, elev: .08, az: -.5 } });
 b.push({ t: T5, kind: 'info', camera: { target: [0, .37, 0], dist: .2, elev: .3, az: .9 } });
 b.push({ t: T6, kind: 'info', camera: { target: [0, .38, 0], dist: .9, elev: .25, az: -.2 } });
