@@ -44,8 +44,8 @@
  {
   "code": "caption_too_long",
   "rule": "Captions: 1 to 3 words only.",
-  "count": 2,
-  "last_seen": "2026-11-11",
+  "count": 3,
+  "last_seen": "2026-11-24",
   "example": "some captions exceed 3 words"
  },
  {
@@ -100,9 +100,9 @@
  {
   "code": "dead_beat",
   "rule": "Each beat must add an object, change a character mode, add an effect or change the camera.",
-  "count": 85,
+  "count": 94,
   "last_seen": "2026-11-24",
-  "example": "beat 17 adds nothing new visually"
+  "example": "beat 12 adds nothing new visually"
  },
  {
   "code": "flat_primitive_water",

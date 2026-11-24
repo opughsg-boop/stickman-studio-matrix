@@ -75,3 +75,4 @@
 {"run": "pigeon_cage", "time": "2026-11-20 20:44", "score": 85, "issues": 3, "codes": ["dead_beat"]}
 {"run": "hen_coop", "time": "2026-11-21 02:07", "score": 0, "issues": 21, "codes": ["beat_too_long", "dead_beat"]}
 {"run": "tilapia_tank", "time": "2026-11-24 15:18", "score": 0, "issues": 26, "codes": ["beat_too_long", "dead_beat", "loudness"]}
+{"run": "hen_twenty", "time": "2026-11-24 19:35", "score": 53, "issues": 10, "codes": ["caption_too_long", "dead_beat"]}
