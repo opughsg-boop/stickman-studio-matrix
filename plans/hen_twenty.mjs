@@ -37,6 +37,11 @@ const hen = { id: 'hen', type: 'hen', pos: [0, 0, 0], anim: 'none', params: { he
 const hen2 = { id: 'hen2', type: 'hen', pos: [0, 0, 0], anim: 'none', params: { height: .42, seed: 7, track: [[0, 1.3, 1.6, 'peck', -2], [6, 1.3, 1.6, 'peck'], [8, 1.0, 1.75, 'peck'], [D, 1.0, 1.75, 'peck']] } };
 const hen3 = { id: 'hen3', type: 'hen', pos: [0, 0, 0], anim: 'none', params: { height: .44, seed: 9, look: { ...FAY, pal: ['#aaa397', '#e9e4da', '#33302c'] },
   track: [[0, -1.2, 1.3, 'idle', 1.2], [3, -1.2, 1.3, 'peck'], [6, -1.0, 1.75, 'peck'], [D, -1.0, 1.75, 'peck']] } };
+// chicks: four yellow chicks hatch at T3 and follow the hen round the yard (each key = hen spot + the chick's own offset)
+const CHK = [[-.12, .05], [.1, -.04], [-.02, .12], [.14, .1]];
+const chickTrack = i => { const [ox, oz] = CHK[i], K = [[T3 - .01, -.2, .55], [T4 + .6, -.2, .6], [T7 + .7, -.25, .6], [T8, .25, 1.1], [T9 + .5, .2, 1.25], [T10, .1, 1.0], [D, .1, 1.0]];
+  return K.map(([t, x, z], k) => [r3(t), r3(x + ox * (k % 2 ? 1 : .6)), r3(z + oz * (k % 2 ? 1 : .6)), k === 3 || k === 4 ? 'peck' : 'idle']); };
+const chicks = [0, 1, 2, 3].map(i => ({ id: 'chick' + i, type: 'chick', pos: [0, 0, 0], anim: 'none', params: { height: .12, track: chickTrack(i) } }));
 const arcs = { id: 'arcs', type: 'call_arcs', pos: [0, 0, 0], anim: 'none', params: { link: 'hen', onK: [[T4 - .2, 0], [T4 - .05, 1], [T5 - .3, 1], [T5, 0]] } };
 
 // ---- scenery
@@ -50,7 +55,7 @@ const world = [
 ];
 [[-4.6, -3.6, 9], [-5.8, -.6, 10.5], [-4.9, 2.6, 8], [7.6, -6.5, 9.5], [-3.2, -5.5, 8.5]].forEach(([x, z, h], i) =>
   world.push(glb('palm' + i, `nature_pack/PalmTree_${1 + i % 3}`, [x, 0, z], h, { sway: .01, ph: i }, { rotY: i * 1.9 })));
-[[-2.4, -.1, .9, 'nature_pack/Bush_1'], [2.4, -.2, .8, 'ph/shrub_02'], [-2.7, 1.9, .7, 'ph/shrub_01'], [4.2, 1.6, .6, 'ph/shrub_01'], [-2.2, 3.1, .35, 'ph/rock_07']]
+[[2.4, -.2, .8, 'ph/shrub_02'], [-2.7, 1.9, .7, 'ph/shrub_01'], [4.2, 1.6, .6, 'ph/shrub_01'], [-2.2, 3.1, .35, 'ph/rock_07']]
   .forEach(([x, z, h, m], i) => world.push(glb('bush' + i, m, [x, 0, z], h, { sway: .015, ph: i * 2 }, { rotY: i * 1.3 })));
 
 // ---- beats (one new angle or state each)
@@ -58,7 +63,7 @@ const b = [];
 b.push({ t: T0, kind: 'intro', add: [...world, hen, hen2, hen3], camera: { target: [.15, .24, 1.1], dist: 2.0, elev: .2, az: .2, push: .12 } });   // hook: the hen in the yard
 b.push({ t: T1, kind: 'info', camera: { target: [.22, .15, 1.3], dist: 4.2, elev: .42, az: -.12 } });                                              // she walks the yard
 b.push({ t: T2, kind: 'info', camera: { target: [BOX0, .4, .02], dist: 1.1, elev: .16, az: -.4 } });                                              // the nest opening
-b.push({ t: T3, kind: 'info', add: [arcs], camera: { target: [BOX0, .5, -.02], dist: .95, elev: .1, az: .28, push: .08 } });                   // brooding, fluffed over the eggs
+b.push({ t: T3, kind: 'info', add: [arcs, ...chicks], camera: { target: [BOX0, .5, -.02], dist: .95, elev: .1, az: .28, push: .08 } });                   // brooding, fluffed over the eggs
 b.push({ t: T4, kind: 'info', camera: { target: [BOX0, .6, .06], dist: .62, elev: .06, az: .35 } });                                            // calls
 b.push({ t: T5, kind: 'info', camera: { target: [BOX0, .55, -.05], dist: 1.6, elev: .5, az: .1 } });                                           // nest from above
 b.push({ t: T6, kind: 'info', camera: { target: [-.2, .6, .45], dist: 3.4, elev: .18, az: .32 } });                                             // wide on the coop

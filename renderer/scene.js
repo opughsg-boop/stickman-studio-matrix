@@ -3267,7 +3267,32 @@ function henWalker(p = {}) { const g = new THREE.Group(), mover = new THREE.Grou
     if (p.inside) { const [x0, x1, z0, z1] = p.inside, e = .35, ins = clamp(Math.min(st.x - x0, x1 - st.x, st.z - z0, z1 - st.z) / e + .5), k = lerp(1, kv(p.shadeK, t, 1), ins); mats.forEach((m, i) => m.color.copy(c0[i]).multiplyScalar(k)); }
     if (p.link) { const bw = body.getWorldPosition(new THREE.Vector3()); LINK[p.link] = { pos: new THREE.Vector3(st.x, st.y, st.z), head: head.getWorldPosition(new THREE.Vector3()), body: bw, belly: bw.clone().setY(bw.y - .35 * S * b0.y / .7), beak: beakL.getWorldPosition(new THREE.Vector3()), yaw: st.yaw }; } };
   return g; }
-Object.assign(ASSETS, { hen_coop: henCoop, coop_floor: coopFloor, nest_row: nestRow, coop_lamp: coopLamp, coop_timer: coopTimer, sky_sun: skySun, hen: henWalker });
+// Chick (hen_twenty 2026-11-22): a yellow down ball with a short orange beak, black eyes and thin legs, scaled to the real height (p.height m).
+// Walks a track like henWalker ([t, x, z, act]); a quick step bob while moving, head down when pecking.
+function chickWalker(p = {}) {
+  const g = new THREE.Group(), body = new THREE.Group(), s = (p.height || .12) / 1.3; g.add(body); g.scale.setScalar(s);
+  const down = new THREE.MeshStandardMaterial({ color: '#f5d848', roughness: .92 }), beakM = new THREE.MeshStandardMaterial({ color: '#e08a1e', roughness: .5 });
+  const eyeM = new THREE.MeshStandardMaterial({ color: '#111', roughness: .4 }), legM = new THREE.MeshStandardMaterial({ color: '#c98f3a', roughness: .7 });
+  const bd = new THREE.Mesh(new THREE.SphereGeometry(.5, 18, 14), down); bd.scale.set(.85, .8, 1.05); bd.position.y = .6; body.add(bd);
+  const hd = new THREE.Mesh(new THREE.SphereGeometry(.34, 16, 12), down); hd.position.set(0, 1.05, .2); body.add(hd);
+  const bk = new THREE.Mesh(new THREE.ConeGeometry(.07, .16, 8), beakM); bk.rotation.x = Math.PI / 2; bk.position.set(0, 1.02, .52); body.add(bk);
+  for (const x of [-.13, .13]) { const e = new THREE.Mesh(new THREE.SphereGeometry(.035, 8, 6), eyeM); e.position.set(x, 1.1, .42); body.add(e);
+    const l = new THREE.Mesh(new THREE.CylinderGeometry(.018, .018, .22, 6), legM); l.position.set(x * .6, .11, 0); body.add(l); }
+  const K = (p.track || [[0, 0, 0, 'idle']]).map(k => ({ t: k[0], x: k[1], z: k[2], act: k[3] || 'idle' }));
+  g.position.set(K[0].x, 0, K[0].z);
+  g.userData.tick = t => {
+    let i = 0; while (i < K.length - 2 && t >= K[i + 1].t) i++;
+    const a = K[i], b = K[Math.min(i + 1, K.length - 1)], u = b.t > a.t ? Math.min(1, Math.max(0, (t - a.t) / (b.t - a.t))) : 1, e = u * u * (3 - 2 * u);
+    const x = a.x + (b.x - a.x) * e, z = a.z + (b.z - a.z) * e, mv = Math.hypot(b.x - a.x, b.z - a.z) > .01 && u > 0 && u < 1;
+    g.position.set(x, 0, z); if (mv) g.rotation.y = Math.atan2(b.x - a.x, b.z - a.z);
+    const bob = mv ? Math.abs(Math.sin(t * 13)) * .03 : 0; body.position.y = bob;
+    hd.position.y = 1.05 - (a.act === 'peck' ? .18 : 0); bk.position.y = 1.02 - (a.act === 'peck' ? .18 : 0);
+    g.visible = t >= K[0].t;
+  };
+  return g;
+}
+
+Object.assign(ASSETS, { chick: chickWalker, hen_coop: henCoop, coop_floor: coopFloor, nest_row: nestRow, coop_lamp: coopLamp, coop_timer: coopTimer, sky_sun: skySun, hen: henWalker });
 // reaching up to a wall (lamp at ~1.85 m) and turning a dial at ~1.25 m (Farmer; tuned with a palm probe, see plans/hens_winter.mjs)
 Object.assign(RIG_POSES, { mountUp: { adL: 1.3, adR: 1.3, fL: 2.15, fR: 2.1, eL: .15, eR: .2, sp: 0, hd: -.45 },     // facing the wall from .37 m: palms ~1.67 m high, .27 m forward
   dialSet: { fR: 1.2, eR: .85, adR: 1.25, fL: .1, eL: .2, sp: .08, hd: .15, tw: .1 }, dialTurn: { fR: 1.2, eR: .85, adR: 1.25, fL: .1, eL: .2, sp: .08, hd: .15, tw: .1, shake: .35 }, // right palm ~1.5 m, .3 m right
