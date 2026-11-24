@@ -2,9 +2,9 @@
  {
   "code": "loudness",
   "rule": "Normalize audio to -14 LUFS.",
-  "count": 5,
-  "last_seen": "2026-11-19",
-  "example": "integrated loudness -16.1 LUFS (target -14)"
+  "count": 6,
+  "last_seen": "2026-11-24",
+  "example": "integrated loudness -15.8 LUFS (target -14)"
  },
  {
   "code": "too_dark",
@@ -16,9 +16,9 @@
  {
   "code": "beat_too_long",
   "rule": "Split long sentences into two beats with a camera change.",
-  "count": 9,
-  "last_seen": "2026-11-21",
-  "example": "beat 2 lasts 8.2s without a new idea"
+  "count": 27,
+  "last_seen": "2026-11-24",
+  "example": "beat 21 lasts 9.4s without a new idea"
  },
  {
   "code": "caption_flash",
@@ -100,9 +100,9 @@
  {
   "code": "dead_beat",
   "rule": "Each beat must add an object, change a character mode, add an effect or change the camera.",
-  "count": 78,
-  "last_seen": "2026-11-21",
-  "example": "beat 32 adds nothing new visually"
+  "count": 85,
+  "last_seen": "2026-11-24",
+  "example": "beat 17 adds nothing new visually"
  },
  {
   "code": "flat_primitive_water",
