@@ -26,7 +26,7 @@ const table = { id: 'table', type: 'glb', pos: [0, 0, 0], anim: 'none', params: 
 const EDGE_X = -.052;
 const fly = { id: 'fly', type: 'glb', pos: [-.25, TOP, 0], anim: 'none', params: { model: 'insects/house_fly', height: .014, clip: 'Walk', path: [[-.25, 0], [EDGE_X, 0]], pathSpeed: .25 }, modes: {} };
 // one clear crystal grain on the heap edge: the leg tip touches it
-const crystal = { id: 'crystal', type: 'custom', pos: [0, 0, 0], anim: 'none', params: { parts: [{ shape: 'box', size: [.0105, .0105, .0105], pos: [EDGE_X - .004, TOP + .004, 0], color: '#9fe6ff' }] } };
+const crystal = { id: 'crystal', type: 'custom', pos: [0, 0, 0], anim: 'none', params: { parts: [{ shape: 'crystal', size: [.009, .011, .009], pos: [EDGE_X - .004, TOP + .001, 0], color: '#bfefff' }] } };
 const LEG = [EDGE_X - .0005, TOP + .0015, 0], HEAD = [EDGE_X + .006, TOP + .011, 0];
 const pulse = { id: 'pulse', type: 'pulse', pos: [0, 0, 0], anim: 'none', params: { a: LEG, b: HEAD, t0: T3, dur: T4 - T3 - .3, color: '#34e8ff' } };
 
