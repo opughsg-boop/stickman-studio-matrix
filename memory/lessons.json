@@ -16,9 +16,9 @@
  {
   "code": "beat_too_long",
   "rule": "Split long sentences into two beats with a camera change.",
-  "count": 29,
+  "count": 30,
   "last_seen": "2026-11-24",
-  "example": "beat 5 lasts 8.0s without a new idea"
+  "example": "beat 4 lasts 7.5s without a new idea"
  },
  {
   "code": "caption_flash",
@@ -93,16 +93,16 @@
  {
   "code": "no_context",
   "rule": "Show some of the blueprint room in most shots so the diorama look is preserved.",
-  "count": 14,
+  "count": 27,
   "last_seen": "2026-11-24",
-  "example": "beat 11: blueprint room not visible, framing too tight"
+  "example": "beat 12: blueprint room not visible, framing too tight"
  },
  {
   "code": "dead_beat",
   "rule": "Each beat must add an object, change a character mode, add an effect or change the camera.",
-  "count": 104,
+  "count": 112,
   "last_seen": "2026-11-24",
-  "example": "beat 10 adds nothing new visually"
+  "example": "beat 11 adds nothing new visually"
  },
  {
   "code": "flat_primitive_water",

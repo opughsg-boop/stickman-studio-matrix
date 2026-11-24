@@ -77,3 +77,4 @@
 {"run": "tilapia_tank", "time": "2026-11-24 15:18", "score": 0, "issues": 26, "codes": ["beat_too_long", "dead_beat", "loudness"]}
 {"run": "hen_twenty", "time": "2026-11-24 19:35", "score": 53, "issues": 10, "codes": ["caption_too_long", "dead_beat"]}
 {"run": "glass_rain", "time": "2026-11-24 20:29", "score": 6, "issues": 26, "codes": ["beat_too_long", "dead_beat", "no_context", "too_dark"]}
+{"run": "fly_taste", "time": "2026-11-24 23:25", "score": 29, "issues": 22, "codes": ["beat_too_long", "dead_beat", "no_context"]}
