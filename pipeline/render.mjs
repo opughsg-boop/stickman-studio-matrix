@@ -1,3 +1,4 @@
+import { createHash } from 'crypto';
 // plan.json + audio -> final mp4. Chunked (resumable) rendering with retries and parallel workers.
 // node pipeline/render.mjs PLAN.json AUDIO OUT_DIR [--fps 15] [--w 540] [--workers 2] [--preview]
 import fs from 'fs';
@@ -39,8 +40,20 @@ function encodeChunk(file, fps) {
   return { ff, done };
 }
 
-async function renderChunk(browser, url, plan, opt, ci, f0, f1, file) {
-  const page = await openPage(browser, url, plan, opt.w, opt.h);
+// Shared cache of finished chunks (cache/chunks). The key covers only what the frames depend on:
+// the global plan settings, the beats that overlap this time range, the size and the fps.
+const CACHE_DIR = path.join(ROOT, 'cache', 'chunks');
+function chunkKey(plan, opt, f0, f1) {
+  const { beats, shots, ...rest } = plan; const list = beats || shots || [];
+  const t0 = f0 / opt.fps - 1, t1 = f1 / opt.fps + 1;
+  const near = list.filter(b => b.end >= t0 && b.start <= t1);
+  return createHash('sha1').update(JSON.stringify([rest, near, opt.w, opt.h, opt.fps, f1 - f0])).digest('hex');
+}
+
+async function renderChunk(browser, url, plan, opt, ci, f0, f1, file, reuse = null) {
+  // reuse.page keeps one loaded page (and its models) per worker instead of reloading everything per chunk
+  const page = reuse && reuse.page ? reuse.page : await openPage(browser, url, plan, opt.w, opt.h);
+  if (reuse) reuse.page = page;
   const tmp = file + '.part.mkv'; const { ff, done } = encodeChunk(tmp, opt.fps);
   try {
     for (let f = f0; f < f1; f++) {
@@ -48,7 +61,8 @@ async function renderChunk(browser, url, plan, opt, ci, f0, f1, file) {
       if (!ff.stdin.write(Buffer.from(b64, 'base64'))) await new Promise(r => ff.stdin.once('drain', r));
     }
     ff.stdin.end(); await done; fs.renameSync(tmp, file);
-  } finally { await page.close().catch(() => {}); try { ff.stdin.end(); } catch {} }
+  } catch (e) { if (reuse) reuse.page = null; await page.close().catch(() => {}); try { ff.stdin.end(); } catch {} throw e; }
+  finally { if (!reuse) await page.close().catch(() => {}); try { ff.stdin.end(); } catch {} }
 }
 
 // A chunk whose browser keeps crashing is rendered in 3 smaller pieces (same frames, same encoder), then joined.
@@ -103,10 +117,14 @@ export async function render(planFile, audio, outDir, o = {}) {
     const queue = chunks.filter(c => !fs.existsSync(c.file));
     const t0 = Date.now();
     await Promise.all(Array.from({ length: opt.workers }, async () => {
+      const reuse = { page: null };
       while (queue.length) { const c = queue.shift();
         for (let attempt = 1; ; attempt++) {
-          try { if (attempt >= 2) { browser = await renderChunkSplit(browser, url, plan, opt, c); } else await renderChunk(browser, url, plan, opt, c.i, c.f0, c.f1, c.file); break; }
+          const key = chunkKey(plan, opt, c.f0, c.f1), cached = path.join(CACHE_DIR, key + '.mkv');
+          if (fs.existsSync(cached)) { fs.mkdirSync(path.dirname(c.file), { recursive: true }); fs.copyFileSync(cached, c.file); console.log(`[render] chunk ${c.i + 1}/${chunks.length} from cache`); break; }
+          try { if (attempt >= 2) { browser = await renderChunkSplit(browser, url, plan, opt, c); } else await renderChunk(browser, url, plan, opt, c.i, c.f0, c.f1, c.file, reuse); fs.mkdirSync(CACHE_DIR, { recursive: true }); fs.copyFileSync(c.file, cached + '.tmp'); fs.renameSync(cached + '.tmp', cached); break; }
           catch (e) { console.error(`[render] chunk ${c.i} attempt ${attempt} failed: ${e.message}`); if (attempt >= 3) throw e;
+            reuse.page = null;
             // a crashed browser stays dead: relaunch it before the retry
             try { await browser.close(); } catch {}
             browser = await chromium.launch(gpu ? { headless: true, args: ["--ignore-gpu-blocklist", "--enable-gpu", "--use-angle=default"] } : { args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"] }); }
