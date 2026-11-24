@@ -1,7 +1,7 @@
 {
  "render": {
-  "exposure": 1.38,
-  "camScale": 0.817,
+  "exposure": 1.46,
+  "camScale": 0.858,
   "drift": 0.11
  },
  "maxBeat": 3.5,

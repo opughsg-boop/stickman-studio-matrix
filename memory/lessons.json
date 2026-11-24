@@ -9,16 +9,16 @@
  {
   "code": "too_dark",
   "rule": "Keep night scenes readable: dim the light but keep the subject clearly visible.",
-  "count": 17,
-  "last_seen": "2026-11-13",
-  "example": "beat 4 too dark (luma 48)"
+  "count": 19,
+  "last_seen": "2026-11-24",
+  "example": "beat 4 too dark (luma 29)"
  },
  {
   "code": "beat_too_long",
   "rule": "Split long sentences into two beats with a camera change.",
-  "count": 27,
+  "count": 29,
   "last_seen": "2026-11-24",
-  "example": "beat 21 lasts 9.4s without a new idea"
+  "example": "beat 5 lasts 8.0s without a new idea"
  },
  {
   "code": "caption_flash",
@@ -93,16 +93,16 @@
  {
   "code": "no_context",
   "rule": "Show some of the blueprint room in most shots so the diorama look is preserved.",
-  "count": 2,
-  "last_seen": "2026-11-12",
-  "example": "beat 3: blueprint room not visible, framing too tight"
+  "count": 14,
+  "last_seen": "2026-11-24",
+  "example": "beat 11: blueprint room not visible, framing too tight"
  },
  {
   "code": "dead_beat",
   "rule": "Each beat must add an object, change a character mode, add an effect or change the camera.",
-  "count": 94,
+  "count": 104,
   "last_seen": "2026-11-24",
-  "example": "beat 12 adds nothing new visually"
+  "example": "beat 10 adds nothing new visually"
  },
  {
   "code": "flat_primitive_water",
