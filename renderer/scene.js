@@ -3338,9 +3338,9 @@ function glassRain(p = {}) {
 function pulseAsset(p = {}) {
   const g = new THREE.Group(), a = new THREE.Vector3(...(p.a || [0, 0, 0])), b = new THREE.Vector3(...(p.b || [0, .01, 0]));
   const len = a.distanceTo(b), mid = a.clone().add(b).multiplyScalar(.5);
-  const line = new THREE.Mesh(new THREE.CylinderGeometry(.00045, .00045, len, 8), new THREE.MeshBasicMaterial({ color: p.color || '#34e8ff', transparent: true, opacity: .55, toneMapped: false }));
+  const line = new THREE.Mesh(new THREE.CylinderGeometry(.0011, .0011, len, 10), new THREE.MeshBasicMaterial({ color: p.color || '#34e8ff', transparent: true, opacity: .85, toneMapped: false }));
   line.position.copy(mid); line.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.clone().sub(a).normalize()); g.add(line);
-  const dot = new THREE.Mesh(new THREE.SphereGeometry(.0018, 10, 8), new THREE.MeshBasicMaterial({ color: '#d8fbff', toneMapped: false, fog: false })); g.add(dot);
+  const dot = new THREE.Mesh(new THREE.SphereGeometry(.0036, 12, 10), new THREE.MeshBasicMaterial({ color: '#e8fdff', toneMapped: false, fog: false })); g.add(dot);
   const t0 = p.t0 ?? 0, dur = p.dur ?? 1.2;
   g.userData.tick = t => { const u = Math.min(1, Math.max(0, (t - t0) / dur)), e = u * u * (3 - 2 * u); dot.position.copy(a).lerp(b, e); dot.visible = t >= t0 && u < 1 || t >= t0 + dur && false; line.material.opacity = .25 + .5 * Math.sin(Math.min(1, u) * Math.PI); };
   return g;
