@@ -3274,9 +3274,19 @@ function chickWalker(p = {}) {
   const down = new THREE.MeshStandardMaterial({ color: '#f5d848', roughness: .92 }), beakM = new THREE.MeshStandardMaterial({ color: '#e08a1e', roughness: .5 });
   const eyeM = new THREE.MeshStandardMaterial({ color: '#111', roughness: .4 }), legM = new THREE.MeshStandardMaterial({ color: '#c98f3a', roughness: .7 });
   const bd = new THREE.Mesh(new THREE.SphereGeometry(.5, 18, 14), down); bd.scale.set(.85, .8, 1.05); bd.position.y = .6; body.add(bd);
+  // barred down: three dark rings across the back and sides (chick stripes)
+  const stripeM = new THREE.MeshStandardMaterial({ color: '#4a3b22', roughness: .9 });
+  for (const y of [.46, .6, .74]) { const r = Math.sqrt(Math.max(0, 1 - ((y - .6) / .42) ** 2)) * .42 * .85; const ring = new THREE.Mesh(new THREE.TorusGeometry(r, .022, 6, 22), stripeM);
+    ring.rotation.x = Math.PI / 2; ring.scale.set(1, 1, 1.05); ring.position.set(0, y, -.02); body.add(ring); }
+  // small wings folded on the sides
+  for (const x of [-.4, .4]) { const w = new THREE.Mesh(new THREE.SphereGeometry(1, 12, 8), new THREE.MeshStandardMaterial({ color: '#e6bf35', roughness: .9 }));
+    w.scale.set(.1, .2, .3); w.position.set(x, .6, -.02); w.rotation.z = x > 0 ? -.25 : .25; body.add(w); }
   const hd = new THREE.Mesh(new THREE.SphereGeometry(.34, 16, 12), down); hd.position.set(0, 1.05, .2); body.add(hd);
-  const bk = new THREE.Mesh(new THREE.ConeGeometry(.07, .16, 8), beakM); bk.rotation.x = Math.PI / 2; bk.position.set(0, 1.02, .52); body.add(bk);
-  for (const x of [-.13, .13]) { const e = new THREE.Mesh(new THREE.SphereGeometry(.035, 8, 6), eyeM); e.position.set(x, 1.1, .42); body.add(e);
+  // beak: a clearly visible orange cone pointing forward from the front of the head
+  const bk = new THREE.Mesh(new THREE.ConeGeometry(.055, .15, 10), beakM); bk.rotation.x = Math.PI / 2; bk.position.set(0, 1.02, .55); body.add(bk);
+  // big black eyes with a white glint, on the front of the head
+  for (const x of [-.13, .13]) { const e = new THREE.Mesh(new THREE.SphereGeometry(.05, 10, 8), eyeM); e.position.set(x, 1.1, .47); body.add(e);
+    const gl = new THREE.Mesh(new THREE.SphereGeometry(.015, 6, 6), new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: .2 })); gl.position.set(x + .02, 1.12, .5); body.add(gl);
     const l = new THREE.Mesh(new THREE.CylinderGeometry(.018, .018, .22, 6), legM); l.position.set(x * .6, .11, 0); body.add(l); }
   const K = (p.track || [[0, 0, 0, 'idle']]).map(k => ({ t: k[0], x: k[1], z: k[2], act: k[3] || 'idle' }));
   g.position.set(K[0].x, 0, K[0].z);
