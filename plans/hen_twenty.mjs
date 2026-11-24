@@ -81,7 +81,7 @@ const plan = {
   version: 2, planner: 'directed', duration: D, language: 'ar', prompt: 'إزاي فرخة واحدة تبقى عشرين فرخة في سنة',
   captions: S.flatMap((seg, si) => buildCaptions({ segments: [seg] }, 2).map(c => ({ ...c, end: Math.min(c.end + .25, si + 1 < S.length ? S[si + 1].start : D) }))),
   fades: [], fov: 40,
-  env: { island: { w: 14, d: 13, depth: 3.2 }, flatTop: true, soil: 'brown_mud_leaves_01', soilRepeat: 6, soilTint: [1.0, .94, .86], horizon: 'nile', cover: 'high',
+  env: { sfxBed: 'ambience', sfxCalls: [{ cat: 'chicken', times: [T4 - .2, T7 + .6, T10 + .4], gain: .05 }, { cat: 'bird', times: [T0 + 1, T8 + .5], gain: .04 }], island: { w: 14, d: 13, depth: 3.2 }, flatTop: true, soil: 'brown_mud_leaves_01', soilRepeat: 6, soilTint: [1.0, .94, .86], horizon: 'nile', cover: 'high',
     haze: .5, sunElev: 38, sunAz: 35, turbidity: 2.6, water: '#7f9a8f', waves: 0, foam: false, birds: 3, birdModel: 'Stork', motes: .5, clouds: 12 },
   style: { camEase: .6, captionY: .78, exposure: 1.05, foreground: false, handheld: .6 },
   beats: b.map((x, i, a) => ({ start: x.t, end: i + 1 < a.length ? a[i + 1].t : D, text: '', remove: [], modes: {}, effects: [], add: [], ...x, t: undefined })),

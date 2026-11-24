@@ -84,6 +84,29 @@ if bees_from is not None:
         lvl = .07 if (mode or {}).get('mode') == 'messy' else .035
         seg = bee_bed(b['end'] - b['start'] + .05, lvl); put(seg, b['start'], 1)
 
+# ---- sound library (assets/fetch_sfx.sh -> assets/sfx/<category>/*.mp3, Mixkit License). Kept very quiet under the voice.
+# plan.env.sfxBed = category for a looping environment bed (gain BED_G); plan.env.sfxCalls = [{cat, times:[s..], gain}] for animal calls.
+import glob
+BED_G, CALL_G = .03, .05
+def lib_clip(cat, idx=0):
+    files = sorted(glob.glob(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'assets', 'sfx', cat, '*.mp3')))
+    if not files: print('sfx library: no files for', cat); return None
+    raw = subprocess.run(['ffmpeg', '-v', 'error', '-i', files[idx % len(files)], '-f', 'f32le', '-ac', '1', '-ar', str(SR), '-'], capture_output=True).stdout
+    x = np.frombuffer(raw, dtype='<f4').astype(np.float64)
+    return x / (np.max(np.abs(x)) + 1e-9) if x.size else None
+env_cfg = plan.get('env') or {}
+if env_cfg.get('sfxBed'):
+    bed = lib_clip(env_cfg['sfxBed'], 0)
+    if bed is not None:
+        reps = int(np.ceil((D + 1) * SR / len(bed))) + 1
+        loop = np.tile(bed, reps)[:int((D + 1) * SR)]
+        fade = int(SR * .6); loop[:fade] *= np.linspace(0, 1, fade); loop[-fade:] *= np.linspace(1, 0, fade)
+        put(loop, 0, BED_G)
+for c in env_cfg.get('sfxCalls') or []:
+    clip = lib_clip(c['cat'], c.get('idx', 0))
+    if clip is None: continue
+    for t in c.get('times', []): put(clip, t, c.get('gain', CALL_G))
+
 track = np.tanh(track * 1.2) / 1.2
 tmp = out + '.sfx.wav'
 pcm = (np.clip(track, -1, 1) * 32767).astype('<i2')
