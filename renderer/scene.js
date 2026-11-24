@@ -131,9 +131,14 @@ function buildEnvironment(env = {}) {
     fx.water = water; fx.rays = new THREE.Group(); buildIsland(env, true); return; }
   scene.background = col(env.bg || '#3d7fd0');
   scene.fog = new THREE.Fog(col(env.bg || '#3d7fd0'), 40, 110);
+  // env.space (glass_rain video): no blueprint floor or walls; a deep-space dome with stars instead
+  if (env.space) { const N = 1400, pos = new Float32Array(N * 3); let sd = 5; const r = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+    for (let i = 0; i < N; i++) { const u = r() * 2 - 1, a = r() * Math.PI * 2, q = Math.sqrt(1 - u * u); pos.set([150 * q * Math.cos(a), 150 * u, 150 * q * Math.sin(a)], i * 3); }
+    const sg = new THREE.BufferGeometry(); sg.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    scene.add(new THREE.Points(sg, new THREE.PointsMaterial({ color: '#ffffff', size: .9, sizeAttenuation: true, fog: false }))); }
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(240, 240), new THREE.MeshStandardMaterial({ map: TEX.grid, roughness: .6 }));
-  floor.rotation.x = -Math.PI / 2; floor.position.y = -6; floor.receiveShadow = true; scene.add(floor);
-  for (const [x, z, ry] of [[0, -45, 0], [-45, 0, Math.PI / 2]]) {
+  floor.rotation.x = -Math.PI / 2; floor.position.y = -6; floor.receiveShadow = true; if (!env.space) scene.add(floor);
+  for (const [x, z, ry] of (env.space ? [] : [[0, -45, 0], [-45, 0, Math.PI / 2]])) {
     const wt = TEX.grid.clone(); wt.needsUpdate = true; wt.repeat.set(30, 20);
     const wall = new THREE.Mesh(new THREE.PlaneGeometry(240, 160), new THREE.MeshStandardMaterial({ map: wt, roughness: .7, color: col('#a8c8ff') }));
     wall.position.set(x, 74, z); wall.rotation.y = ry; scene.add(wall);
@@ -3302,7 +3307,33 @@ function chickWalker(p = {}) {
   return g;
 }
 
-Object.assign(ASSETS, { chick: chickWalker, hen_coop: henCoop, coop_floor: coopFloor, nest_row: nestRow, coop_lamp: coopLamp, coop_timer: coopTimer, sky_sun: skySun, hen: henWalker });
+// Space assets (glass_rain video 2026-11-25). planet: a textured sphere from assets/space (Solar System Scope, CC BY 4.0) with a faint
+// atmosphere shell and a slow spin. glass_rain: thin cyan streaks that fall slanted and fly sideways (wrapping inside a box), one InstancedMesh.
+function planetAsset(p = {}) {
+  const g = new THREE.Group(), R = p.radius || 1;
+  const tex = new THREE.TextureLoader().load('/assets/space/' + (p.tex || '2k_neptune') + '.jpg');
+  const m = new THREE.Mesh(new THREE.SphereGeometry(R, 64, 48), new THREE.MeshStandardMaterial({ map: tex, roughness: .85, metalness: 0 })); g.add(m);
+  const atm = new THREE.Mesh(new THREE.SphereGeometry(R * 1.035, 48, 32), new THREE.MeshBasicMaterial({ color: p.glow || '#6fb6ff', transparent: true, opacity: .14, side: THREE.BackSide, depthWrite: false }));
+  g.add(atm);
+  g.userData.tick = t => { m.rotation.y = t * (p.spin ?? .04); };
+  return g;
+}
+function glassRain(p = {}) {
+  const g = new THREE.Group(), N = p.count || 500, S = p.span || [6, 3, 6], v = p.speed || 9;
+  const im = new THREE.InstancedMesh(new THREE.BoxGeometry(.004, .24, .004), new THREE.MeshStandardMaterial({ color: '#bfeeff', roughness: .05, metalness: .1, transparent: true, opacity: .6, emissive: '#7fd7ff', emissiveIntensity: .7 }), N);
+  let sd = p.seed || 11; const rnd = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+  const P = []; for (let i = 0; i < N; i++) P.push([(rnd() - .5) * S[0], rnd() * S[1], (rnd() - .5) * S[2], .8 + rnd() * .4]);
+  const dm = new THREE.Object3D(); dm.rotation.set(0, 0, Math.PI / 2 - .12); g.add(im);
+  const wrap = (a, b) => ((a % b) + b) % b;
+  g.userData.tick = t => {
+    for (let i = 0; i < N; i++) { const q = P[i];
+      dm.position.set(wrap(q[0] + S[0] / 2 - v * q[3] * t, S[0]) - S[0] / 2, q[1], q[2]); dm.updateMatrix(); im.setMatrixAt(i, dm.matrix); }
+    im.instanceMatrix.needsUpdate = true;
+  };
+  return g;
+}
+
+Object.assign(ASSETS, { planet: planetAsset, glass_rain: glassRain, chick: chickWalker, hen_coop: henCoop, coop_floor: coopFloor, nest_row: nestRow, coop_lamp: coopLamp, coop_timer: coopTimer, sky_sun: skySun, hen: henWalker });
 // reaching up to a wall (lamp at ~1.85 m) and turning a dial at ~1.25 m (Farmer; tuned with a palm probe, see plans/hens_winter.mjs)
 Object.assign(RIG_POSES, { mountUp: { adL: 1.3, adR: 1.3, fL: 2.15, fR: 2.1, eL: .15, eR: .2, sp: 0, hd: -.45 },     // facing the wall from .37 m: palms ~1.67 m high, .27 m forward
   dialSet: { fR: 1.2, eR: .85, adR: 1.25, fL: .1, eL: .2, sp: .08, hd: .15, tw: .1 }, dialTurn: { fR: 1.2, eR: .85, adR: 1.25, fL: .1, eL: .2, sp: .08, hd: .15, tw: .1, shake: .35 }, // right palm ~1.5 m, .3 m right
