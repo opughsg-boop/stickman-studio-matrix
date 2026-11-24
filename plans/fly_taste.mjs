@@ -1,9 +1,9 @@
 // "الذبابة بتتذوق الأكل بالرجلين" (voice-over 2026-11-25, 13 lines, 65.4 s).
-// A wooden table with a heap of sugar; a House Fly (vinish.dev, CC BY 4.0, rigged: Idle, Walk, Fly) lands, walks on the sugar,
-// its feet taste it (macro on the legs), its proboscis unfolds for sweet, then it flies off on a bitter/bad signal.
-// Realism: real fly size (about 7 mm), real legs on the sugar surface, no overlap between the fly and the sugar grains.
-// 1x improvement over the last video (glass_rain): Motion (walk and lift-off clips with a real fly path), Graphics (macro camera on legs),
-// Realism (real fly scale, real sugar grains).
+// A small wooden table (Poly Haven, CC0) with a sugar cube in the middle, sugar crumbs scattered around it.
+// A House Fly (vinish.dev, CC BY 4.0, rigged: Idle, Walk, Fly) walks in and stops at the cube's side; its front leg tip touches the cube
+// (the taste contact), a bright nerve pulse runs from the leg to the head, then the fly feeds or leaves.
+// Realism: real fly size (about 7 mm; drawn at 14 mm for readability), a sugar cube about 1.4 cm, a table at real height (0.75 m).
+// Nothing overlaps: the fly stands beside the cube, the crumbs keep clear of the cube and the fly body.
 import fs from 'fs';
 import { buildCaptions } from '../pipeline/plan.mjs';
 const [trf, out] = process.argv.slice(2);
@@ -12,41 +12,44 @@ const at = i => S[Math.min(i, S.length - 1)].start;
 const T = [...Array(13).keys()].map(at);
 const [T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12] = T;
 
-// table top height and a sugar heap (small white grains, real size about 0.6 mm to 1 mm)
-const TOP = .36;
-let sd = 7; const rr = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
-const EDGE_X = -.052, CRYSTAL_X = EDGE_X + .0115;   // the crystal sits in front of the fly leg, never inside the body
-// a loose scatter of sugar (not a mountain): low, wide, and clear of the fly and the crystal
-// grains pile up toward the middle (height falls off with radius), so it reads as a mound, not a ring
-const grains = []; for (let i = 0; i < 1100; i++) { const a = rr() * Math.PI * 2, r = Math.sqrt(rr()) * .11, hMax = .010 * (1 - (r / .11) ** 2), h = rr() * Math.max(.0012, hMax);
-  const gx = Math.cos(a) * r, gz = Math.sin(a) * r; if (Math.hypot(gx - EDGE_X, gz) < .016) continue;
-  grains.push({ shape: 'box', size: [.0012, .0012, .0012], pos: [gx, TOP + h, gz], color: ['#efe6cf', '#e2d6bb', '#f4eee0', '#d9ccb0'][Math.floor(rr() * 4)] }); }
-const sugar = { id: 'sugar', type: 'custom', pos: [0, 0, 0], anim: 'none', params: { parts: grains } };
-const table = { id: 'table', type: 'glb', pos: [0, 0, 0], anim: 'none', params: { model: 'ph/wooden_crate_01', height: TOP } };
+const TOP = .75;                    // table top height (metres)
+const CUBE = .014, CUBE_X = 0;      // sugar cube side and centre x
+const FACE = CUBE_X - CUBE / 2;     // the cube's front face (the fly comes from -x)
+const EDGE_X = FACE - .009;         // fly body centre: its front leg reaches the cube face
+const LEG = [FACE + .0003, TOP + .0045, 0], HEAD = [EDGE_X + .005, TOP + .011, 0];
 
-// the fly: lands from the front-left, walks onto the sugar, feeds, leaves
-// the fly walks in from the left and stops on the heap edge at EDGE_X; its contact leg tip and head define the nerve pulse
-const fly = { id: 'fly', type: 'glb', pos: [-.25, TOP, 0], anim: 'none', params: { model: 'insects/house_fly', height: .014, clip: 'Walk', path: [[-.25, 0], [EDGE_X, 0]], pathSpeed: .25 }, modes: {} };
-// one clear crystal grain on the heap edge: the leg tip touches it
-const crystal = { id: 'crystal', type: 'custom', pos: [0, 0, 0], anim: 'none', params: { parts: [{ shape: 'crystal', size: [.009, .011, .009], pos: [CRYSTAL_X, TOP, 0], color: '#bfefff' }] } };
-const LEG = [CRYSTAL_X - .0045 - .0006, TOP + .0045, 0], HEAD = [EDGE_X + .002, TOP + .011, 0];
+// crumbs scattered on the table around the cube (not a heap); none inside the cube or under the fly
+let sd = 7; const rr = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+const crumbs = [];
+for (let i = 0; i < 380; i++) {
+  const a = rr() * Math.PI * 2, r = .014 + Math.sqrt(rr()) * .10;
+  const x = CUBE_X + Math.cos(a) * r, z = Math.sin(a) * r;
+  if (Math.hypot(x - EDGE_X, z) < .012) continue;
+  const d = .0009 + rr() * .0009;
+  crumbs.push({ shape: 'sphere', size: [d, d, d], pos: [x, TOP + d / 2, z], color: rr() > .5 ? '#fbfbf7' : '#f1efe6' });
+}
+const crumbsObj = { id: 'crumbs', type: 'custom', pos: [0, 0, 0], anim: 'none', params: { parts: crumbs } };
+const cube = { id: 'cube', type: 'custom', pos: [0, 0, 0], anim: 'none', params: { parts: [{ shape: 'box', size: [CUBE, CUBE, CUBE], pos: [CUBE_X, TOP + CUBE / 2, 0], color: '#fbfbf8', rough: .7 }] } };
+const table = { id: 'table', type: 'glb', pos: [0, 0, 0], anim: 'none', params: { model: 'ph/small_wooden_table_01', height: TOP } };
+
+const fly = { id: 'fly', type: 'glb', pos: [-.22, TOP, 0], anim: 'none', params: { model: 'insects/house_fly', height: .014, clip: 'Walk', path: [[-.22, 0], [EDGE_X, 0]], pathSpeed: .25 }, modes: {} };
 const pulse = { id: 'pulse', type: 'pulse', pos: [0, 0, 0], anim: 'none', params: { a: LEG, b: HEAD, t0: T3, dur: T4 - T3 - .3, color: '#34e8ff' } };
 
-const world = [table, sugar, fly, crystal];
+const world = [table, cube, crumbsObj, fly];
 const b = [];
-b.push({ t: T0, kind: 'intro', add: world, camera: { target: [0, .38, 0], dist: 1.1, elev: .18, az: .3 } });
-b.push({ t: T1, kind: 'info', camera: { target: [0, .38, 0], dist: .42, elev: .2, az: -.35 } });
-b.push({ t: T2, kind: 'info', modes: { fly: { clip: 'Idle' } }, camera: { target: [EDGE_X, TOP + .004, 0], dist: .09, elev: .32, az: 1.2 } });
-b.push({ t: T3, kind: 'info', add: [pulse], camera: { target: [(EDGE_X + CRYSTAL_X) / 2, TOP + .006, 0], dist: .12, elev: .5, az: 1.2 } });
-b.push({ t: T4, kind: 'info', camera: { target: [0, .37, 0], dist: .06, elev: .08, az: -.5 } });
-b.push({ t: T5, kind: 'info', camera: { target: [0, .37, 0], dist: .2, elev: .3, az: .9 } });
-b.push({ t: T6, kind: 'info', camera: { target: [0, .38, 0], dist: .9, elev: .25, az: -.2 } });
-b.push({ t: T7, kind: 'info', camera: { target: [0, .38, 0], dist: .4, elev: .1, az: .5 } });
-b.push({ t: T8, kind: 'info', camera: { target: [0, .38, 0], dist: 1.2, elev: .35, az: .25 } });
-b.push({ t: T9, kind: 'info', camera: { target: [0, .38, 0], dist: .5, elev: .15, az: -.6 } });
-b.push({ t: T10, kind: 'info', camera: { target: [0, .4, 0], dist: 1.4, elev: .3, az: .4 } });
-b.push({ t: T11, kind: 'info', camera: { target: [0, .38, 0], dist: .3, elev: .2, az: -.2 } });
-b.push({ t: T12, kind: 'info', camera: { preset: 'orbit', target: [0, .38, 0], dist: 1.6, elev: .3, az: .4 } });
+b.push({ t: T0, kind: 'intro', add: world, camera: { target: [0, TOP + .02, 0], dist: .9, elev: .2, az: .3 } });
+b.push({ t: T1, kind: 'info', camera: { target: [0, TOP + .01, 0], dist: .35, elev: .2, az: -.35 } });
+b.push({ t: T2, kind: 'info', modes: { fly: { clip: 'Idle' } }, camera: { target: [(EDGE_X + FACE) / 2, TOP + .006, 0], dist: .08, elev: .3, az: 1.2 } });
+b.push({ t: T3, kind: 'info', add: [pulse], camera: { target: [(LEG[0] + HEAD[0]) / 2, TOP + .006, 0], dist: .06, elev: .3, az: 1.2 } });
+b.push({ t: T4, kind: 'info', camera: { target: [0, TOP + .01, 0], dist: .25, elev: .35, az: .6 } });
+b.push({ t: T5, kind: 'info', camera: { target: [0, TOP + .01, 0], dist: .18, elev: .15, az: -.9 } });
+b.push({ t: T6, kind: 'info', camera: { target: [0, TOP + .01, 0], dist: .5, elev: .25, az: -.2 } });
+b.push({ t: T7, kind: 'info', camera: { target: [0, TOP + .01, 0], dist: .3, elev: .1, az: .5 } });
+b.push({ t: T8, kind: 'info', camera: { target: [0, TOP + .01, 0], dist: .8, elev: .35, az: .25 } });
+b.push({ t: T9, kind: 'info', camera: { target: [0, TOP + .01, 0], dist: .4, elev: .15, az: -.6 } });
+b.push({ t: T10, kind: 'info', camera: { target: [0, TOP + .02, 0], dist: .9, elev: .3, az: .4 } });
+b.push({ t: T11, kind: 'info', camera: { target: [0, TOP + .01, 0], dist: .3, elev: .2, az: -.2 } });
+b.push({ t: T12, kind: 'info', camera: { preset: 'orbit', target: [0, TOP + .01, 0], dist: 1.0, elev: .3, az: .4 } });
 
 const plan = {
   version: 2, planner: 'directed', duration: D, language: 'ar', prompt: 'الذبابة بتتذوق الأكل بالرجلين',
