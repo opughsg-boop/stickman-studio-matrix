@@ -62,7 +62,7 @@ b.push({ t: T12, kind: 'info', camera: { preset: 'orbit', target: [0, TOP + .01,
 const plan = {
   version: 2, planner: 'directed', duration: D, language: 'ar', prompt: 'الذبابة بتتذوق الأكل بالرجلين',
   captions: S.flatMap((seg, si) => buildCaptions({ segments: [seg] }, 2).map(c => ({ ...c, end: Math.min(c.end + .25, si + 1 < S.length ? S[si + 1].start : D) }))),
-  fades: [], fov: 40,
+  fades: [], fov: 40, near: .002,
   env: { sky: false, space: true, noStars: true, bg: '#d9d2c4', flatTop: true, soil: 'coast_sand_rocks_02', soilRepeat: 2, soilTint: [.9, .85, .78] },
   style: { camEase: .6, captionY: .78, exposure: 1.05 },
   beats: b.map((x, i, a) => ({ start: x.t, end: i + 1 < a.length ? a[i + 1].t : D, text: '', remove: [], modes: {}, effects: [], add: [], ...x, t: undefined })),
