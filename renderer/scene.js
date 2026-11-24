@@ -3333,7 +3333,20 @@ function glassRain(p = {}) {
   return g;
 }
 
-Object.assign(ASSETS, { planet: planetAsset, glass_rain: glassRain, chick: chickWalker, hen_coop: henCoop, coop_floor: coopFloor, nest_row: nestRow, coop_lamp: coopLamp, coop_timer: coopTimer, sky_sun: skySun, hen: henWalker });
+// nerve pulse (fly_taste 2026-11-25): a thin glowing line from a leg tip to the head with a bright dot running along it.
+// params: a [x,y,z] (leg tip), b [x,y,z] (head), t0 (start), dur (travel time, s), color.
+function pulseAsset(p = {}) {
+  const g = new THREE.Group(), a = new THREE.Vector3(...(p.a || [0, 0, 0])), b = new THREE.Vector3(...(p.b || [0, .01, 0]));
+  const len = a.distanceTo(b), mid = a.clone().add(b).multiplyScalar(.5);
+  const line = new THREE.Mesh(new THREE.CylinderGeometry(.00045, .00045, len, 8), new THREE.MeshBasicMaterial({ color: p.color || '#34e8ff', transparent: true, opacity: .55, toneMapped: false }));
+  line.position.copy(mid); line.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.clone().sub(a).normalize()); g.add(line);
+  const dot = new THREE.Mesh(new THREE.SphereGeometry(.0018, 10, 8), new THREE.MeshBasicMaterial({ color: '#d8fbff', toneMapped: false, fog: false })); g.add(dot);
+  const t0 = p.t0 ?? 0, dur = p.dur ?? 1.2;
+  g.userData.tick = t => { const u = Math.min(1, Math.max(0, (t - t0) / dur)), e = u * u * (3 - 2 * u); dot.position.copy(a).lerp(b, e); dot.visible = t >= t0 && u < 1 || t >= t0 + dur && false; line.material.opacity = .25 + .5 * Math.sin(Math.min(1, u) * Math.PI); };
+  return g;
+}
+
+Object.assign(ASSETS, { pulse: pulseAsset, planet: planetAsset, glass_rain: glassRain, chick: chickWalker, hen_coop: henCoop, coop_floor: coopFloor, nest_row: nestRow, coop_lamp: coopLamp, coop_timer: coopTimer, sky_sun: skySun, hen: henWalker });
 // reaching up to a wall (lamp at ~1.85 m) and turning a dial at ~1.25 m (Farmer; tuned with a palm probe, see plans/hens_winter.mjs)
 Object.assign(RIG_POSES, { mountUp: { adL: 1.3, adR: 1.3, fL: 2.15, fR: 2.1, eL: .15, eR: .2, sp: 0, hd: -.45 },     // facing the wall from .37 m: palms ~1.67 m high, .27 m forward
   dialSet: { fR: 1.2, eR: .85, adR: 1.25, fL: .1, eL: .2, sp: .08, hd: .15, tw: .1 }, dialTurn: { fR: 1.2, eR: .85, adR: 1.25, fL: .1, eL: .2, sp: .08, hd: .15, tw: .1, shake: .35 }, // right palm ~1.5 m, .3 m right

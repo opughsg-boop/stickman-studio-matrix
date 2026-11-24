@@ -22,15 +22,20 @@ const sugar = { id: 'sugar', type: 'custom', pos: [0, 0, 0], anim: 'none', param
 const table = { id: 'table', type: 'glb', pos: [0, 0, 0], anim: 'none', params: { model: 'ph/wooden_crate_01', height: TOP } };
 
 // the fly: lands from the front-left, walks onto the sugar, feeds, leaves
-const fly = { id: 'fly', type: 'glb', pos: [0, TOP, 0], anim: 'none', params: { model: 'insects/house_fly', height: .014, clip: 'Fly', path: [[-.25, .0], [0, .0]], pathSpeed: .8 },
-  modes: {} };
+// the fly walks in from the left and stops on the heap edge at EDGE_X; its contact leg tip and head define the nerve pulse
+const EDGE_X = -.052;
+const fly = { id: 'fly', type: 'glb', pos: [-.25, TOP, 0], anim: 'none', params: { model: 'insects/house_fly', height: .014, clip: 'Walk', path: [[-.25, 0], [EDGE_X, 0]], pathSpeed: .25 }, modes: {} };
+// one clear crystal grain on the heap edge: the leg tip touches it
+const crystal = { id: 'crystal', type: 'custom', pos: [0, 0, 0], anim: 'none', params: { parts: [{ shape: 'box', size: [.0045, .0045, .0045], pos: [EDGE_X - .003, TOP + .002, 0], color: '#e6f8ff' }] } };
+const LEG = [EDGE_X - .0005, TOP + .0015, 0], HEAD = [EDGE_X + .006, TOP + .011, 0];
+const pulse = { id: 'pulse', type: 'pulse', pos: [0, 0, 0], anim: 'none', params: { a: LEG, b: HEAD, t0: T3, dur: T4 - T3 - .3, color: '#34e8ff' } };
 
-const world = [table, sugar, fly];
+const world = [table, sugar, fly, crystal];
 const b = [];
 b.push({ t: T0, kind: 'intro', add: world, camera: { target: [0, .38, 0], dist: 1.1, elev: .18, az: .3 } });
 b.push({ t: T1, kind: 'info', camera: { target: [0, .38, 0], dist: .42, elev: .2, az: -.35 } });
-b.push({ t: T2, kind: 'info', camera: { target: [0, .37, 0], dist: .12, elev: .12, az: .7 } });
-b.push({ t: T3, kind: 'info', camera: { target: [0, .37, 0], dist: .28, elev: .45, az: .1 } });
+b.push({ t: T2, kind: 'info', modes: { fly: { clip: 'Idle' } }, camera: { target: [EDGE_X, TOP + .004, 0], dist: .09, elev: .32, az: 1.2 } });
+b.push({ t: T3, kind: 'info', add: [pulse], camera: { target: [(LEG[0] + HEAD[0]) / 2, TOP + .004, 0], dist: .07, elev: .32, az: 1.2 } });
 b.push({ t: T4, kind: 'info', camera: { target: [0, .37, 0], dist: .06, elev: .08, az: -.5 } });
 b.push({ t: T5, kind: 'info', camera: { target: [0, .37, 0], dist: .2, elev: .3, az: .9 } });
 b.push({ t: T6, kind: 'info', camera: { target: [0, .38, 0], dist: .9, elev: .25, az: -.2 } });
