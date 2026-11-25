@@ -24,11 +24,13 @@ const danceB = [[T8 - .01, .0, .0, 'walk'], ...fig8(T8, 3.2, .018, .02)];       
 const dancer = { id: 'dancer', type: 'waggle_bee', pos: [0, 0, 0], anim: 'none', params: { height: .015, y: BEE_Y, track: danceA } };
 const dancerB = { id: 'dancerB', type: 'waggle_bee', pos: [0, 0, 0], anim: 'none', params: { height: .015, y: BEE_Y, track: danceB } };
 const comb = { id: 'comb', type: 'flat_comb', pos: [0, COMB_Y, 0], anim: 'none', params: { w: .22, h: .14, flat: true } };
-const table = { id: 'table', type: 'glb', pos: [0, 0, 0], anim: 'none', params: { model: 'ph/small_wooden_table_01', height: TOP } };
+// the comb sits on a wooden crate (the hive stand) in a flower field
+const table = { id: 'table', type: 'glb', pos: [0, 0, 0], anim: 'none', params: { model: 'ph/wooden_crate_01', height: TOP } };
+const flowers = [[1.1, .3, 'ph/flower_ursinia', .28], [1.4, -.4, 'ph/flower_gazania', .22], [-1.2, .5, 'ph/periwinkle_plant', .24], [-1.5, -.6, 'ph/flower_empodium', .3], [1.9, -.9, 'nature_pack/Flowers', .35], [-2.2, .1, 'ph/flower_ursinia', .26], [.9, 1.3, 'ph/flower_gazania', .2], [-.9, -1.4, 'nature_pack/Flowers', .33], [2.4, .6, 'ph/periwinkle_plant', .25]].map(([x, z, m, h], i) => ({ id: 'fl' + i, type: 'glb', pos: [x, 0, z], anim: 'none', params: { model: m, height: h } }));
 const swarm = { id: 'swarm', type: 'glb', pos: [.25, .75, -.15], anim: 'none', params: { model: 'insects/bee_group', height: .3, path: [[.25, -.15], [.45, .15], [.1, .25], [.25, -.15]], pathSpeed: .05 } };
 const flower = { id: 'flower', type: 'glb', pos: [1.6, 0, -1.0], anim: 'none', params: { model: 'ph/flower_gazania', height: .22 } };
 
-const world = [table, comb, swarm];
+const world = [table, comb, swarm, ...flowers];
 const b = [];
 b.push({ t: T0, kind: 'intro', add: [...world, dancer], camera: { target: [0, TOP + .03, 0], dist: .6, elev: .35, az: .3 } });
 b.push({ t: T1, kind: 'info', camera: { target: [0, TOP + .03, 0], dist: .45, elev: .25, az: -.3 } });

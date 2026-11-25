@@ -3358,6 +3358,9 @@ function pulseAsset(p = {}) {
 // Heading follows the track direction; the bee hovers at p.y. No overlap with the comb: the caller keeps tracks inside the comb frame.
 function waggleBee(p = {}) {
   const g = new THREE.Group(), inner = ASSETS.glb({ model: 'insects/bee_single', height: p.height || .014 }); g.add(inner);
+  inner.scale.set(.92, .92, 1.18); // a little longer and slimmer than the source model
+  // the bee's proboscis (tongue tube) folded under the head, pointing forward
+  const pb = new THREE.Mesh(new THREE.CylinderGeometry(.00025, .0004, .0042, 6), new THREE.MeshStandardMaterial({ color: '#3a2414', roughness: .5 })); pb.rotation.x = Math.PI / 2; pb.position.set(0, -.0008, (p.height || .014) * .66); g.add(pb);
   const K = (p.track || [[0, 0, 0, 'walk']]).map(k => ({ t: k[0], x: k[1], z: k[2], mode: k[3] || 'walk' }));
   const y = p.y ?? 0;
   g.userData.tick = t => {
