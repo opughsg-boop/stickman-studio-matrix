@@ -8,3 +8,6 @@ assets/ph_tex/
 cache/
 assets/sfx/
 __pycache__/
+hf/bee_dance/.hyperframes/
+hf/bee_dance/assets/voice.wav
+hf/bee_dance/node_modules/

@@ -1,0 +1,27 @@
+<template>
+  <style>
+    @font-face { font-family: 'CairoAr'; src: url('assets/fonts/cairo-arabic-900-normal.woff2') format('woff2'); font-weight: 900; }
+    #root { position: absolute; inset: 0; background: linear-gradient(#bfe6ff, #eef8e8 60%, #9ccf7a); overflow: hidden; }
+    .cap { position: absolute; left: 0; right: 0; top: 1480px; text-align: center; font: 900 84px 'CairoAr', sans-serif; color: #1f2a1a; }
+  </style>
+  <div id="root" data-composition-id="s2" data-width="1080" data-height="1920">
+    <svg id="scene2-art" class="clip" data-start="0" data-duration="7" width="1080" height="1920" viewBox="0 0 1080 1920" style="position:absolute;inset:0">
+      <g id="flowers">
+        <circle cx="300" cy="700" r="60" fill="#ff9ec7"/><circle cx="300" cy="700" r="18" fill="#ffd54a"/>
+        <circle cx="760" cy="560" r="54" fill="#ffd54a"/><circle cx="760" cy="560" r="16" fill="#8a5a2b"/>
+      </g>
+      <g id="bee2" transform="translate(200 1100)">
+        <ellipse cx="0" cy="0" rx="46" ry="30" fill="#f5c400" stroke="#1b1200" stroke-width="6"/>
+        <rect x="-30" y="-20" width="16" height="40" fill="#1b1200"/>
+        <rect x="6" y="-20" width="16" height="40" fill="#1b1200"/>
+      </g>
+    </svg>
+    <div id="cap2" class="cap clip" data-start="0.2" data-duration="6.6">أزهار جميلة</div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    tl.fromTo("#bee2", { x: 0, y: 0 }, { x: 560, y: -260, duration: 3.2, ease: "power1.inOut" }, 0.4);
+    tl.fromTo("#cap2", { opacity: 0 }, { opacity: 1, duration: 0.3 }, 0.2);
+    window.__timelines["s2"] = tl;
+  </script>
+</template>
