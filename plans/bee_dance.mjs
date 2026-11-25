@@ -13,7 +13,8 @@ const at = i => S[Math.min(i, S.length - 1)].start;
 const T = [...Array(14).keys()].map(at);
 const [T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13] = T;
 
-const TOP = .45, COMB_Y = TOP + .004, BEE_Y = COMB_Y + .016;   // comb on the table; the bee hovers just over the cells
+const HIVE_TOP = .535;                                              // top of the roof (a real Langstroth-style hive stands about 0.5 m high)
+const TOP = HIVE_TOP, COMB_Y = TOP + .004, BEE_Y = COMB_Y + .016;   // comb lies on the roof; the bee hovers just over the cells
 // figure-eight waggle track: a loop of keys from t0 for dur seconds (run mode while the body crosses the middle)
 const fig8 = (t0, dur, A, B) => { const K = []; const n = Math.round(dur / .15);
   for (let i = 0; i <= n; i++) { const ph = i / n * Math.PI * 2, t = t0 + i * .15, x = A * Math.sin(ph), z = B * Math.sin(2 * ph) / 2;
@@ -25,12 +26,21 @@ const dancer = { id: 'dancer', type: 'waggle_bee', pos: [0, 0, 0], anim: 'none',
 const dancerB = { id: 'dancerB', type: 'waggle_bee', pos: [0, 0, 0], anim: 'none', params: { height: .015, y: BEE_Y, track: danceB } };
 const comb = { id: 'comb', type: 'flat_comb', pos: [0, COMB_Y, 0], anim: 'none', params: { w: .22, h: .14, flat: true } };
 // the comb sits on a wooden crate (the hive stand) in a flower field
-const table = { id: 'table', type: 'glb', pos: [0, 0, 0], anim: 'none', params: { model: 'ph/wooden_crate_01', height: TOP } };
+// a wooden beehive built from boxes: stand, floor, four walls with a front entrance, and a roof (real size, metres)
+const wood = '#b58655', woodD = '#8a5f38';
+const hivePart = (size, pos, color = wood) => ({ shape: 'box', size, pos, color, rough: .8 });
+const hive = { id: 'hive', type: 'custom', pos: [0, 0, 0], anim: 'none', params: { parts: [
+  ...[[-.19, -.13], [.19, -.13], [-.19, .13], [.19, .13]].map(([x, z]) => hivePart([.03, .27, .03], [x, .135, z], woodD)),
+  hivePart([.46, .025, .36], [0, .2825, 0], woodD),
+  hivePart([.42, .22, .02], [0, .4, .16]), hivePart([.42, .22, .02], [0, .4, -.16]),
+  hivePart([.02, .22, .32], [-.2, .4, 0]), hivePart([.02, .22, .32], [.2, .4, 0]),
+  hivePart([.09, .03, .02], [0, .3, .17], '#2a1d12'),
+  hivePart([.48, .03, .38], [0, .5275, 0], woodD), hivePart([.46, .012, .36], [0, .5425, 0], '#c9a26a')] } };
 const flowers = [[1.1, .3, 'ph/flower_ursinia', .28], [1.4, -.4, 'ph/flower_gazania', .22], [-1.2, .5, 'ph/periwinkle_plant', .24], [-1.5, -.6, 'ph/flower_empodium', .3], [1.9, -.9, 'nature_pack/Flowers', .35], [-2.2, .1, 'ph/flower_ursinia', .26], [.9, 1.3, 'ph/flower_gazania', .2], [-.9, -1.4, 'nature_pack/Flowers', .33], [2.4, .6, 'ph/periwinkle_plant', .25]].map(([x, z, m, h], i) => ({ id: 'fl' + i, type: 'glb', pos: [x, 0, z], anim: 'none', params: { model: m, height: h } }));
 const swarm = { id: 'swarm', type: 'glb', pos: [.25, .75, -.15], anim: 'none', params: { model: 'insects/bee_group', height: .3, path: [[.25, -.15], [.45, .15], [.1, .25], [.25, -.15]], pathSpeed: .05 } };
 const flower = { id: 'flower', type: 'glb', pos: [1.6, 0, -1.0], anim: 'none', params: { model: 'ph/flower_gazania', height: .22 } };
 
-const world = [table, comb, swarm, ...flowers];
+const world = [hive, comb, swarm, ...flowers];
 const b = [];
 b.push({ t: T0, kind: 'intro', add: [...world, dancer], camera: { target: [0, TOP + .03, 0], dist: .6, elev: .35, az: .3 } });
 b.push({ t: T1, kind: 'info', camera: { target: [0, TOP + .03, 0], dist: .45, elev: .25, az: -.3 } });
