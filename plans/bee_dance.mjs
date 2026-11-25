@@ -60,8 +60,8 @@ const plan = {
   version: 2, planner: 'directed', duration: D, language: 'ar', prompt: 'النحلة بترقص عشان تقول فين الأكل',
   captions: S.flatMap((seg, si) => buildCaptions({ segments: [seg] }, 2).map(c => ({ ...c, end: Math.min(c.end + .25, si + 1 < S.length ? S[si + 1].start : D) }))),
   fades: [], fov: 40, near: .002,
-  env: { flatTop: true, soil: 'brown_mud_leaves_01', soilRepeat: 4 },
-  style: { camEase: .6, captionY: .78, exposure: 1.05 },
+  env: { flatTop: true, soil: 'brown_mud_leaves_01', soilRepeat: 4, motes: 1.6 },
+  style: { camEase: .6, captionY: .78, exposure: 1.05, handheld: 1.4 },
   beats: b.map((x, i, a) => ({ start: x.t, end: i + 1 < a.length ? a[i + 1].t : D, text: '', remove: [], modes: {}, effects: [], add: [], ...x, t: undefined })),
 };
 plan.beats.forEach(x => { delete x.t; x.text = S.flatMap(s => s.words).filter(w => w.start >= x.start - .01 && w.start < x.end - .01).map(w => w.w).join(' '); });
