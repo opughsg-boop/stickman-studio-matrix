@@ -21,7 +21,8 @@ const easeOutBack = t => { t = clamp(t); const c1 = 1.70158, c3 = c1 + 1; return
 function rng(seed) { let s = (seed * 9301 + 49297) % 233280 || 1; return () => (s = (s * 9301 + 49297) % 233280) / 233280; }
 const hash = str => { let h = 7; for (const c of String(str)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h % 100000; };
 const col = c => new THREE.Color(c);
-const std = (c, o = {}) => new THREE.MeshStandardMaterial({ color: col(c), roughness: o.r ?? .85, metalness: o.m ?? 0, ...(o.extra || {}) });
+let TOON = false; // plan.style.toon: flat cartoon shading for the 3D cartoon sample
+const std = (c, o = {}) => TOON ? new THREE.MeshToonMaterial({ color: col(c) }) : new THREE.MeshStandardMaterial({ color: col(c), roughness: o.r ?? .85, metalness: o.m ?? 0, ...(o.extra || {}) });
 function shadowed(o) { o.traverse(m => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } }); return o; }
 function canvasTex(w, h, draw, rep = [1, 1]) {
   const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h);
@@ -617,6 +618,7 @@ function fadeAlpha(t) { let a = 0; for (const f of plan.fades || []) { const d =
 
 // ---------- public API ----------
 window.setup = async (p, opts = {}) => {
+  TOON = !!(p.style && p.style.toon);
   plan = p; Object.assign(style, p.style || {}, opts.style || {});
   R.W = opts.width || 540; R.H = opts.height || 960;
   renderer = new THREE.WebGLRenderer({ antialias: style.post === false, preserveDrawingBuffer: true }); // v2: the post chain has its own MSAA scene target
