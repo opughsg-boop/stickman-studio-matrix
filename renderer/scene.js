@@ -1030,7 +1030,7 @@ Object.assign(ASSETS, { ant_farm: antFarm, clock24, film_cam: filmCam, sleeper }
 // modes on the object may switch the clip: modes: { cow: { clip: 'Walk' } }
 const GLB = {};
 async function preloadGLB(p) {
-  const names = new Set(); for (const b of p.beats || []) for (const a of b.add || []) { if (a.type === 'glb') names.add(a.params.model); if (a.params?.rider) names.add(a.params.rider); if (a.type === 'raker') names.add(a.params?.man || 'modular_men/Worker'); if (a.type === 'roof_person') names.add(a.params?.model || 'modular_men/Casual'); if (a.type === 'buffalo') names.add(a.params?.model || 'animals_pack/Bull'); if (a.type === 'fellah') names.add('modular_men/Farmer'); if (a.type === 'carpenter') names.add(a.params?.model || 'modular_men/Worker'); if (a.type === 'rig_person') names.add(a.params?.model || 'modular_men/Casual'); if (a.params?.hanger) names.add(a.params.hanger.model || 'modular_women/Casual'); }
+  const names = new Set(); for (const b of p.beats || []) for (const a of b.add || []) { if (a.type === 'glb') names.add(a.params.model); if (a.type === 'waggle_bee') names.add('insects/bee_single'); if (a.params?.rider) names.add(a.params.rider); if (a.type === 'raker') names.add(a.params?.man || 'modular_men/Worker'); if (a.type === 'roof_person') names.add(a.params?.model || 'modular_men/Casual'); if (a.type === 'buffalo') names.add(a.params?.model || 'animals_pack/Bull'); if (a.type === 'fellah') names.add('modular_men/Farmer'); if (a.type === 'carpenter') names.add(a.params?.model || 'modular_men/Worker'); if (a.type === 'rig_person') names.add(a.params?.model || 'modular_men/Casual'); if (a.params?.hanger) names.add(a.params.hanger.model || 'modular_women/Casual'); }
   const l = new GLTFLoader();
   await Promise.all([...names].map(async n => { GLB[n] = await l.loadAsync(n.startsWith('ph/') ? `/assets/${n}/${n.slice(3)}.gltf` : n.startsWith('models/') ? `/assets/${n}.glb` : `/assets/lib/${n}.glb`); }));
   // 3D-sky (realistic) plans: smooth the low-poly animal meshes so facets do not show as flat triangles.
@@ -3353,7 +3353,40 @@ function pulseAsset(p = {}) {
   return g;
 }
 
-Object.assign(ASSETS, { pulse: pulseAsset, planet: planetAsset, glass_rain: glassRain, chick: chickWalker, hen_coop: henCoop, coop_floor: coopFloor, nest_row: nestRow, coop_lamp: coopLamp, coop_timer: coopTimer, sky_sun: skySun, hen: henWalker });
+// honey bee dance (bee_dance 2026-11-25): the realistic bee model (assets/lib/insects/bee_single.glb) walks a track [t, x, z, mode]:
+// mode 'run' = waggle run (the body wiggles side to side fast, the bee faces its heading), 'walk' = slow walk on the comb, 'turn' = a half turn.
+// Heading follows the track direction; the bee hovers at p.y. No overlap with the comb: the caller keeps tracks inside the comb frame.
+function waggleBee(p = {}) {
+  const g = new THREE.Group(), inner = ASSETS.glb({ model: 'insects/bee_single', height: p.height || .014 }); g.add(inner);
+  const K = (p.track || [[0, 0, 0, 'walk']]).map(k => ({ t: k[0], x: k[1], z: k[2], mode: k[3] || 'walk' }));
+  const y = p.y ?? 0;
+  g.userData.tick = t => {
+    let i = 0; while (i < K.length - 2 && t >= K[i + 1].t) i++;
+    const a = K[i], b = K[Math.min(i + 1, K.length - 1)], u = b.t > a.t ? Math.min(1, Math.max(0, (t - a.t) / (b.t - a.t))) : 1, e = u * u * (3 - 2 * u);
+    const x = a.x + (b.x - a.x) * e, z = a.z + (b.z - a.z) * e, moving = Math.hypot(b.x - a.x, b.z - a.z) > .001;
+    g.position.set(x, y, z);
+    if (moving) g.rotation.y = Math.atan2(b.x - a.x, b.z - a.z);
+    const run = a.mode === 'run' && moving;
+    inner.position.x = run ? Math.sin(t * 2 * Math.PI * 13) * .0022 : 0;
+    inner.position.y = run ? Math.abs(Math.sin(t * 2 * Math.PI * 13)) * .0008 : 0;
+    if (inner.userData.tick) inner.userData.tick(t);
+  };
+  return g;
+}
+// comb frame (bee_dance): a thin wooden frame with a sheet of six-sided wax cells, built from primitives
+function flatComb(p = {}) {
+  const g = new THREE.Group(), W = p.w || .22, H = p.h || .14, wood = std('#b68a58', { r: .85 }), wax = std('#e3b451', { r: .6 });
+  const top = box(W, .012, .02, wood); top.position.y = H / 2; g.add(top);
+  const bot = box(W, .012, .02, wood); bot.position.y = -H / 2; g.add(bot);
+  for (const x of [-W / 2, W / 2]) { const sd = box(.012, H, .02, wood); sd.position.set(x, 0, 0); g.add(sd); }
+  const cd = .0054, row = cd * .87, cells = [];
+  for (let r = 0, y = -H / 2 + cd; y < H / 2 - cd; r++, y += row) for (let x = -W / 2 + cd, c = 0; x < W / 2 - cd; c++, x += cd) {
+    const xx = x + (r % 2) * cd / 2; if (Math.abs(xx) > W / 2 - cd) continue;
+    const cell = cyl(cd * .46, cd * .46, .0045, wax, 6); cell.rotation.x = Math.PI / 2; cell.position.set(xx, y, .011); g.add(cell); }
+  if (p.flat) g.rotation.x = -Math.PI / 2; // lying flat on a table: cells point up
+  return g;
+}
+Object.assign(ASSETS, { waggle_bee: waggleBee, flat_comb: flatComb, pulse: pulseAsset, planet: planetAsset, glass_rain: glassRain, chick: chickWalker, hen_coop: henCoop, coop_floor: coopFloor, nest_row: nestRow, coop_lamp: coopLamp, coop_timer: coopTimer, sky_sun: skySun, hen: henWalker });
 // reaching up to a wall (lamp at ~1.85 m) and turning a dial at ~1.25 m (Farmer; tuned with a palm probe, see plans/hens_winter.mjs)
 Object.assign(RIG_POSES, { mountUp: { adL: 1.3, adR: 1.3, fL: 2.15, fR: 2.1, eL: .15, eR: .2, sp: 0, hd: -.45 },     // facing the wall from .37 m: palms ~1.67 m high, .27 m forward
   dialSet: { fR: 1.2, eR: .85, adR: 1.25, fL: .1, eL: .2, sp: .08, hd: .15, tw: .1 }, dialTurn: { fR: 1.2, eR: .85, adR: 1.25, fL: .1, eL: .2, sp: .08, hd: .15, tw: .1, shake: .35 }, // right palm ~1.5 m, .3 m right
