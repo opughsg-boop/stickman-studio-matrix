@@ -2121,7 +2121,9 @@ function buffaloA(p = {}) {
     for (const a of Object.values(acts)) a.setEffectiveWeight(0);
     const setA = (n, w, tm) => { const a = acts[n]; if (!a || w <= 0) return; const D = a.getClip().duration; a.time = ((tm % D) + D) % D; a.setEffectiveWeight(a.getEffectiveWeight() + w); };
     tweak.forEach((b, i) => b.quaternion.copy(restQ[i]));
-    setA('Walk', wWalk, st.dist / vClip); setA(cB, (1 - wWalk) * (cB === cP ? 1 : xf), t * .9 + (p.offset || 0)); if (cB !== cP) setA(cP, (1 - wWalk) * (1 - xf), t * .9 + (p.offset || 0));
+    setA('Walk', wWalk, st.dist / vClip); // one-shot clips (lie down, kick): a mode with onceT plays its clip once from that time and holds the last frame (no loop)
+    const tmOf = (m, n) => { const a = acts[n]; if (m.onceT == null || !a) return t * .9 + (p.offset || 0); return clamp((t - m.onceT) * .9 * (m.onceSpeed ?? 1), 0, a.getClip().duration - .03); };
+    setA(cB, (1 - wWalk) * (cB === cP ? 1 : xf), tmOf(mo, cB)); if (cB !== cP) setA(cP, (1 - wWalk) * (1 - xf), tmOf(pm, cP));
     mixer.update(0);
     // breathing (slow at rest, fast shallow panting in heat), lower head carriage with the nose out, head tosses at flies, tail swish with lag
     const br = lerp(.012, .03, pant) * Math.sin(Math.PI * 2 * lerp(.3, 1.25, pant) * t);
@@ -2505,7 +2507,8 @@ function rigPerson(p = {}) { const g = new THREE.Group(), mover = new THREE.Grou
     const bob = gaitAdd(P, st, t); mover.position.set(st.pos.x, st.pos.y + bob, st.pos.z); mover.rotation.y = st.yaw;
     mover.rotation.z = st.gait === 'shuffle' ? .03 * Math.sin(st.dist / .5 * Math.PI * 2) : 0; rig.apply(P);
     if (p.link) { rig.w.updateWorldMatrix(true, true); const pa = s => { const h = rig.w.getObjectByName('Hand' + s), m = rig.w.getObjectByName('Middle2' + s); return h ? h.getWorldPosition(new THREE.Vector3()).lerp(m ? m.getWorldPosition(new THREE.Vector3()) : h.getWorldPosition(new THREE.Vector3()), .5) : null; };
-      LINK[p.link] = { L: pa('L'), R: pa('R'), yaw: st.yaw, pos: st.pos.clone() }; } // palms for props carried between the hands (salt block)
+      const hb = rig.w.getObjectByName('Head'), beak = hb ? hb.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(Math.sin(st.yaw) * .13, .02, Math.cos(st.yaw) * .13)) : null;
+      LINK[p.link] = { L: pa('L'), R: pa('R'), yaw: st.yaw, pos: st.pos.clone(), beak }; } // beak = mouth point (call_arcs when a person speaks) // palms for props carried between the hands (salt block)
     const hid = kv(p.hideK, t, 0) > .5; mover.visible = !hid;
     if (csh) { csh.position.set(st.pos.x, st.pos.y + .015, st.pos.z); csh.visible = !hid && (!p.noShadowAbove || st.pos.y < p.noShadowAbove); } };
   return g; }
