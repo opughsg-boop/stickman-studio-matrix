@@ -9,14 +9,14 @@
  {
   "code": "too_dark",
   "rule": "Keep night scenes readable: dim the light but keep the subject clearly visible.",
-  "count": 21,
+  "count": 23,
   "last_seen": "2026-11-26",
-  "example": "beat 5 too dark (luma 45)"
+  "example": "beat 5 too dark (luma 50)"
  },
  {
   "code": "beat_too_long",
   "rule": "Split long sentences into two beats with a camera change.",
-  "count": 31,
+  "count": 32,
   "last_seen": "2026-11-26",
   "example": "beat 2 lasts 7.9s without a new idea"
  },
@@ -58,9 +58,9 @@
  {
   "code": "ref_static",
   "rule": "Keep the camera always moving (push/orbit/handheld) like the reference.",
-  "count": 8,
+  "count": 9,
   "last_seen": "2026-11-26",
-  "example": "less motion than reference (4.2 vs 22.1)"
+  "example": "less motion than reference (4.5 vs 22.1)"
  },
  {
   "code": "subject_lost",
