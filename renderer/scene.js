@@ -1343,7 +1343,7 @@ ASSETS.sticker = (p = {}) => {
   const sp = new THREE.Sprite(mat), S = p.size || .5; sp.scale.set(S, S, 1); if (p.onTop) sp.renderOrder = 999; g.add(sp);
   g.userData.tick = (t, age) => { const a = Math.max(0, age ?? 0), pop = a < .45 ? 1 + Math.sin(a / .45 * Math.PI) * .25 : 1; // overshoot on arrival
     const sq = a < .45 ? 1 - Math.sin(a / .45 * Math.PI) * .12 : 1, pulse = p.pulse ? 1 + Math.sin(t * 5) * .06 : 1;
-    sp.scale.set(S * pop * pulse, S * sq * pulse, 1); sp.position.y = Math.sin(t * 3 + (p.phase || 0)) * (p.bob ?? .04);
+    const sk = p.scaleK ? kv(p.scaleK, t, 1) : 1; sp.scale.set(S * pop * pulse * sk, S * sq * pulse * sk, 1); sp.position.y = Math.sin(t * 3 + (p.phase || 0)) * (p.bob ?? .04);
     if (p.nudge) { const d = Math.sin(t * 6) * .05; sp.position.x = Math.cos(p.rot || 0) * d; sp.position.z = 0; } };
   return g;
 };
@@ -2489,7 +2489,7 @@ function rigTrack(keys) { const K = keys.map(k => ({ t: k[0], p: new THREE.Vecto
   return t => { if (!seg.length || t <= K[0].t) return { pos: K[0].p, yaw: seg[0]?.y0 ?? yp, A: K[0].pose, B: K[0].pose, pk: 1, gait: null, dist: 0, speed: 0 };
     const i = seg.findIndex(q => t < q.b.t); if (i < 0) { const q = seg[seg.length - 1]; return { pos: q.b.p, yaw: q.y1, A: q.a.pose, B: q.b.pose, pk: 1, gait: null, dist: cum, speed: 0 }; }
     const q = seg[i], D = Math.max(.001, q.b.t - q.a.t), u = (t - q.a.t) / D, g = q.b.gait, e = g ? trapE(u) : sEase(u);
-    return { pos: q.a.p.clone().lerp(q.b.p, e), yaw: lerp(q.y0, q.y1, easeIO(u / .3)), A: q.a.pose, B: q.b.pose, pk: q.b.ease === 'in' ? Math.pow(clamp((t - q.a.t) / Math.min(.45, D * .6)), 2.2) : easeIO((t - q.a.t) / Math.min(.45, D * .6)), gait: g, // 'in' = accelerate into the pose (a hammer blow)
+    return { pos: q.a.p.clone().lerp(q.b.p, e), yaw: lerp(q.y0, q.y1, easeIO(u / .3)), A: q.a.pose, B: q.b.pose, pk: q.b.ease === 'sync' ? e : q.b.ease === 'in' ? Math.pow(clamp((t - q.a.t) / Math.min(.45, D * .6)), 2.2) : easeIO((t - q.a.t) / Math.min(.45, D * .6)), gait: g, // 'in' = accelerate into the pose (a hammer blow)
      
       dist: q.cum + q.len * e, speed: q.len / D * (g ? trapV(u) : Math.PI / 2 * Math.sin(Math.PI * u)) }; }; }
 function gaitAdd(P, st, t) { const G = GAIT[st.gait]; let bob = 0; if (!G) return bob; const a = clamp(st.speed / G.v), ph = st.dist / G.stride * Math.PI * 2, s = Math.sin(ph), c = Math.cos(ph);
@@ -5230,7 +5230,8 @@ function sunGlowTex() { return SPR.sunG ||= canvasT(256, 256, (c, w, h) => { con
   for (let i = 0; i < 16; i++) { c.rotate(Math.PI / 8); const gr = c.createLinearGradient(0, 0, w / 2, 0); gr.addColorStop(0, 'rgba(255,240,200,.55)'); gr.addColorStop(1, 'rgba(255,240,200,0)'); c.fillStyle = gr; c.beginPath(); c.moveTo(0, -3); c.lineTo(w / 2, -(i % 2 ? 1 : 3)); c.lineTo(w / 2, i % 2 ? 1 : 3); c.lineTo(0, 3); c.fill(); }
   c.restore(); const gr = c.createRadialGradient(cx, cy, 0, cx, cy, w * .22); gr.addColorStop(0, 'rgba(255,250,232,1)'); gr.addColorStop(.35, 'rgba(255,236,180,.85)'); gr.addColorStop(1, 'rgba(255,220,150,0)'); c.fillStyle = gr; c.fillRect(0, 0, w, h); }); }
 function sunGlow(p = {}) { const g = new THREE.Group(), sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: sunGlowTex(), transparent: true, depthWrite: false, toneMapped: false, fog: false, opacity: .8 })); const S = p.size || 1; sp.scale.set(S, S, 1); g.add(sp);
-  g.userData.tick = t => { const k = kv(p.showK, t, 1); sp.visible = k > .01; sp.material.opacity = .65 * k; sp.material.rotation = t * .05; const pu = 1 + .04 * Math.sin(t * 1.3); sp.scale.set(S * pu, S * pu, 1); };
+  const PK = p.posK ? [1, 2, 3].map(j => p.posK.map(q => [q[0], q[j]])) : null;
+  g.userData.tick = t => { const k = kv(p.showK, t, 1); sp.visible = k > .01; sp.material.opacity = .65 * k; if (PK) sp.position.set(kv(PK[0], t), kv(PK[1], t), kv(PK[2], t)); sp.material.rotation = t * .05; const pu = 1 + .04 * Math.sin(t * 1.3); sp.scale.set(S * pu, S * pu, 1); };
   return g; }
 Object.assign(ASSETS, { tomato_plant: tomatoPlant, tomato_stake: tomatoStake, tomato_basket: tomatoBasket, tomato_fruit: tomatoFruit, tomato_bug: tomatoBug, breeze: breezeFluff, sun_glow: sunGlow });
 Object.assign(RIG_POSES, { // tomato staking (Farmer 1.75 m, facing +z at the origin; palm mid points from the auto-tune probe in plans/tomato_stake.mjs)
@@ -5668,3 +5669,157 @@ function soilSection(p = {}) { const g = new THREE.Group(), X0 = p.x0 ?? -.5, X1
     const pk = kv(p.pourK, t, 0), st = kv(p.streamK, t, 0); stream.visible = st > .02; stream.scale.set(st, 1, st); stream.position.x = pt0[0] + .002 * Math.sin(t * 13); pool.visible = st > .02 || (pk > 0 && pk < .9); const pr = .012 + .02 * st * (1 - .6 * pk); pool.scale.setScalar(pool.visible ? pr : .001); };
   return g; }
 Object.assign(ASSETS, { wet_field: wetField, rain_fall: rainFall, earthworm, sparrows: sparrowFlock, soil_section: soilSection });
+
+// ================= Maize pack (2026-11-26, plans/corn_leaf_roll.mjs) =================
+// maize_field: field maize (Zea mays) at real size, built from the plant itself (no library mesh), so the leaves can roll:
+//   a 2-2.6 cm stalk with nodes and brace roots, 12-14 strap leaves in two ranks (0.45-1 m long, 6-10 cm wide, pale midrib, parallel
+//   veins, wavy margins) arching out and drooping, a branched tassel and a husked ear with silk. Drought leaf rolling: each blade curls
+//   along its length round the midrib (the upper face inward) into a tube, stands more erect and shows the paler grey-green underside;
+//   rollK 0 flat .. 1 tight tube (as real maize does at midday in heat and dry soil, unrolling after water).
+//   plants [{x, z, h, seed, rollK, az, ear, lod:'hi'|'lo', reg}] (local, metres) or rows {x0, x1, dx, zs:[...], h, jit} (lo-res).
+//   rollK / rollLag on the field are the default for every plant (lag in s grows with x so a wave runs along the rows); ridges:
+//   [[z, x0, x1]] soil ridges the rows stand on; windK sway. window.__mz()[reg] = { mid:[world mid point of each leaf], tip:[...], base }.
+const MZREG = {}; window.__mz = () => MZREG;
+function mzLeafTex() { return SPR.mzLeaf ||= (() => { const r = rng(811); return canvasT(64, 256, (c, w, h) => {
+  const gr = c.createLinearGradient(0, 0, w, 0); gr.addColorStop(0, '#2f5718'); gr.addColorStop(.3, '#426f22'); gr.addColorStop(.46, '#4f7f2b'); gr.addColorStop(.5, '#c6d69c'); gr.addColorStop(.54, '#4f7f2b'); gr.addColorStop(.7, '#426f22'); gr.addColorStop(1, '#2f5718');
+  c.fillStyle = gr; c.fillRect(0, 0, w, h);
+  for (let x = 2; x < w; x += 3) { if (Math.abs(x - w / 2) < 3) continue; c.strokeStyle = `rgba(${r() > .5 ? '200,225,150' : '25,50,12'},${.12 + r() * .1})`; c.lineWidth = .8; c.beginPath(); c.moveTo(x, 0); c.lineTo(x + (r() - .5) * 2, h); c.stroke(); }
+  for (let i = 0; i < 220; i++) { c.fillStyle = r() < .6 ? `rgba(20,45,10,${.04 + r() * .06})` : `rgba(190,215,140,${.04 + r() * .06})`; c.fillRect(r() * w, r() * h, 1 + r() * 2, 2 + r() * 8); }
+  const tip = c.createLinearGradient(0, 0, 0, h * .12); tip.addColorStop(0, 'rgba(150,140,80,.55)'); tip.addColorStop(1, 'rgba(150,140,80,0)'); c.fillStyle = tip; c.fillRect(0, 0, w, h * .12); }); })(); }
+function mzStalkTex() { return SPR.mzStalk ||= (() => { const r = rng(813); return canvasT(32, 128, (c, w, h) => { const gr = c.createLinearGradient(0, 0, w, 0); gr.addColorStop(0, '#5a7f2c'); gr.addColorStop(.5, '#86a648'); gr.addColorStop(1, '#55782a'); c.fillStyle = gr; c.fillRect(0, 0, w, h);
+  for (let i = 0; i < 40; i++) { c.fillStyle = `rgba(${r() > .5 ? '210,220,160' : '40,60,20'},${.08 + r() * .1})`; c.fillRect(r() * w, r() * h, 1, 6 + r() * 30); } }, [1, 3]); })(); }
+function maizeField(p = {}) { const g = new THREE.Group(), R0 = rng(p.seed || 801), PL = [];
+  (p.plants || []).forEach(q => PL.push({ ...q }));
+  if (p.rows) { const Rw = p.rows; for (const z of Rw.zs) for (let x = Rw.x0; x <= Rw.x1 + 1e-6; x += Rw.dx) { const jx = (R0() - .5) * (Rw.jit ?? .08), jz = (R0() - .5) * (Rw.jit ?? .08);
+      if ((Rw.skip || []).some(([a, b, c, d]) => x >= a && x <= b && z >= c && z <= d)) continue; PL.push({ x: x + jx, z: z + jz, h: (Rw.h || 2.2) * (.9 + R0() * .18), seed: 1 + Math.floor(R0() * 9999), lod: 'lo', ear: R0() < .7 }); } }
+  const ridgeH = p.ridgeH ?? .1; const ridgeAt = (x, z) => { for (const [rz, x0, x1] of p.ridges || []) if (Math.abs(z - rz) < .2 && x > x0 - .2 && x < x1 + .2) return ridgeH * Math.cos(Math.abs(z - rz) / .2 * Math.PI / 2); return 0; };
+  // ---- per plant layout (leaves, stalk pieces)
+  let nLV = 0, nLI = 0; const sParts = [];
+  PL.forEach((pl, pi) => { const R = rng(pl.seed || (pi * 37 + 5)), H = pl.h || 2.2, hi = pl.lod === 'hi'; pl.NA = hi ? 7 : 3; pl.NL = hi ? 14 : 7; pl.y0 = pl.y0 ?? ridgeAt(pl.x, pl.z); pl.H = H;
+    pl.ph = R() * 6.3; pl.az0 = pl.az ?? (Math.PI / 2 + (R() - .5) * .5); const n = hi ? 13 : 11; pl.leaves = [];
+    for (let j = 0; j < n; j++) { const f = j / (n - 1), L = H * (.2 + .26 * Math.sin(Math.PI * (j + 1.2) / (n + 1.4))) * (.92 + R() * .16);
+      pl.leaves.push({ y: H * (.05 + .66 * Math.pow(f, .92)), az: pl.az0 + (j % 2) * Math.PI + (R() - .5) * .45 + j * .04, L, W: Math.min(.11, L * .115), el0: lerp(.55, 1.05, f) + (R() - .5) * .15,
+        droop: lerp(1.7, .9, f) * (.85 + R() * .3), ph: R() * 6.3, old: j < 2 && !hi ? 1 : j < 1 ? .6 : 0, v0: nLV }); nLV += pl.NA * pl.NL; nLI += (pl.NA - 1) * (pl.NL - 1) * 6; }
+    // stalk: tapered segments with node collars, brace roots, tassel, ear (local to the plant, base at y0)
+    const parts = [], seg = hi ? 8 : 5, rad = y => .013 * (1 - .55 * y / H);
+    const top = H * .8; { const c = new THREE.CylinderGeometry(rad(top), rad(0), top, seg, hi ? 10 : 4); c.translate(0, top / 2, 0); parts.push(c.toNonIndexed()); }
+    pl.leaves.forEach(lf => { if (!hi) return; const t = new THREE.TorusGeometry(rad(lf.y) + .002, .0035, 4, seg); t.rotateX(Math.PI / 2); t.translate(0, lf.y, 0); parts.push(t.toNonIndexed()); });
+    const nb = hi ? 7 : 4; for (let k = 0; k < nb; k++) { const a = k / nb * 6.28 + R(), b = new THREE.CylinderGeometry(.003, .004, .13, 4); b.translate(0, -.065, 0); b.rotateZ(.75); b.rotateY(a); b.translate(0, .07 + (k % 2) * .03, 0); parts.push(b.toNonIndexed()); }
+    { const sp = new THREE.CylinderGeometry(.003, .006, H - top, 5); sp.translate(0, top + (H - top) / 2, 0); parts.push(sp.toNonIndexed());
+      const nbr = hi ? 9 : 5; for (let k = 0; k < nbr; k++) { const l = .12 + R() * .12, b = new THREE.CylinderGeometry(.0022, .0038, l, 4); b.translate(0, l / 2, 0); b.rotateZ(.55 + R() * .5); b.rotateY(k / nbr * 6.28 + R()); b.translate(0, top + .03 + R() * .1, 0); parts.push(b.toNonIndexed()); } }
+    pl.tasselV = 0; if (pl.ear !== false) { const ey = H * .46, ea = pl.az0 + Math.PI / 2, e = new THREE.CylinderGeometry(.018, .028, .2, hi ? 9 : 5, 3); const P = e.attributes.position; for (let i = 0; i < P.count; i++) { const y = P.getY(i) / .2 + .5; const k = Math.sin(Math.PI * Math.min(1, y * 1.05)) * .6 + .4; P.setX(i, P.getX(i) * k); P.setZ(i, P.getZ(i) * k); }
+      e.translate(0, .1, 0); e.rotateZ(-.42); e.rotateY(ea); e.translate(0, ey, 0); parts.push(e.toNonIndexed());
+      const s = new THREE.ConeGeometry(.012, .06, 5); s.rotateZ(Math.PI); s.translate(0, .23, 0); s.rotateZ(-.62); s.rotateY(ea); s.translate(0, ey, 0); parts.push(s.toNonIndexed()); }
+    const geo = mergeGeometries(parts.map(q => { if (!q.attributes.uv) q.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(q.attributes.position.count * 2), 2)); return q; }));
+    const P = geo.attributes.position, cl = new Float32Array(P.count * 3); for (let i = 0; i < P.count; i++) { const y = P.getY(i), tas = y > top + .005, silk = false; const c2 = tas ? [1.05, .92, .55] : [1, 1, 1]; cl.set(c2, i * 3); }
+    geo.setAttribute('color', new THREE.BufferAttribute(cl, 3)); geo.translate(pl.x, pl.y0, pl.z); pl.sGeo = geo; sParts.push(geo); });
+  // ---- leaf buffer (all plants): positions rebuilt per plant when its roll changes; sway is a shear on top
+  const lPos = new Float32Array(nLV * 3), lRest = new Float32Array(nLV * 3), lUV = new Float32Array(nLV * 2), lCol = new Float32Array(nLV * 3), lW = new Float32Array(nLV), lPh = new Float32Array(nLV), idx = new Uint32Array(nLI);
+  let ii = 0; PL.forEach(pl => pl.leaves.forEach(lf => { const NA = pl.NA, NL = pl.NL; for (let i = 0; i < NL; i++) for (let k = 0; k < NA; k++) { const v = lf.v0 + i * NA + k; lUV[v * 2] = k / (NA - 1); lUV[v * 2 + 1] = i / (NL - 1); lPh[v] = lf.ph; }
+    for (let i = 0; i < NL - 1; i++) for (let k = 0; k < NA - 1; k++) { const a = lf.v0 + i * NA + k, b = a + 1, c2 = a + NA, d = c2 + 1; idx.set([a, c2, b, b, c2, d], ii); ii += 6; } }));
+  const lGeo = new THREE.BufferGeometry(); lGeo.setAttribute('position', new THREE.BufferAttribute(lPos, 3)); lGeo.setAttribute('uv', new THREE.BufferAttribute(lUV, 2)); lGeo.setAttribute('color', new THREE.BufferAttribute(lCol, 3)); lGeo.setIndex(new THREE.BufferAttribute(idx, 1));
+  const lMesh = new THREE.Mesh(lGeo, new THREE.MeshStandardMaterial({ map: mzLeafTex(), vertexColors: true, side: THREE.DoubleSide, roughness: .52, metalness: 0 })); lMesh.castShadow = lMesh.receiveShadow = true; lMesh.frustumCulled = false; g.add(lMesh);
+  const sGeo = mergeGeometries(sParts), sRest = sGeo.attributes.position.array.slice(), sPl = new Uint16Array(sGeo.attributes.position.count); { let o = 0; PL.forEach((pl, pi) => { const n = pl.sGeo.attributes.position.count; sPl.fill(pi, o, o + n); pl.s0 = o; pl.s1 = o + n; o += n; }); }
+  const sMesh = new THREE.Mesh(sGeo, new THREE.MeshStandardMaterial({ map: mzStalkTex(), vertexColors: true, roughness: .6 })); sMesh.castShadow = sMesh.receiveShadow = true; sMesh.frustumCulled = false; g.add(sMesh);
+  // soil ridges under the rows (half cylinders of field soil)
+  if (p.ridges) { const rt = tiled(cloverSoilTex()), rM = new THREE.MeshStandardMaterial({ map: rt, color: col(p.ridgeColor || '#cdb79a'), roughness: .97 });
+    for (const [rz, x0, x1] of p.ridges) { const len = x1 - x0 + .4, geo = new THREE.CylinderGeometry(.2, .2, len, 10, Math.max(2, Math.round(len * 3)), false, 0, Math.PI), P = geo.attributes.position;
+      for (let i = 0; i < P.count; i++) { const y = P.getY(i); P.setX(i, P.getX(i) * (1 + .1 * Math.sin(y * 7 + rz * 3))); } geo.computeVertexNormals(); rt.repeat.set(len / 1.2, .4);
+      const m = new THREE.Mesh(geo, rM); m.rotation.set(0, 0, Math.PI / 2); m.scale.set(ridgeH / .2, 1, 1); m.position.set((x0 + x1) / 2, 0, rz); m.castShadow = m.receiveShadow = true; g.add(m); } }
+  // ---- roll one plant's leaves into lRest
+  const fillPlant = (pl, r) => { const NA = pl.NA, NL = pl.NL;
+    pl.leaves.forEach(lf => { const Dx = Math.sin(lf.az), Dz = Math.cos(lf.az), Bx = Dz, Bz = -Dx, droop = lf.droop * (1 - .5 * r), el0 = lf.el0 + .28 * r, ds = lf.L / (NL - 1);
+      let cx = pl.x + Dx * .014, cy = pl.y0 + lf.y, cz = pl.z + Dz * .014;
+      const tint = [lerp(1, .9, r), lerp(1, .95, r), lerp(1, .8, r)];
+      for (let i = 0; i < NL; i++) { const u = i / (NL - 1), a = el0 - droop * Math.pow(u, 1.25), ca = Math.cos(a), sa = Math.sin(a);
+        const Nx = -sa * Dx, Ny = ca, Nz = -sa * Dz;   // blade upper-face normal
+        const hw = lf.W / 2 * (.4 + .6 * Math.sin(Math.min(1, u / .35) * Math.PI / 2)) * (u > .55 ? Math.pow((1 - u) / .45, .85) : 1) + .0015;
+        const th = r * 2.95 * (.35 + .65 * Math.min(1, u / .12));
+        for (let k = 0; k < NA; k++) { const s = -1 + 2 * k / (NA - 1); let lat, off; if (th < 1e-3) { lat = s * hw; off = 0; } else { const Rr = hw / th, q = s * th; lat = Rr * Math.sin(q); off = Rr * (1 - Math.cos(q)); }
+          off += (1 - r) * .006 * s * s * Math.sin(u * lf.L * 38 + s * 2 + lf.ph) * (u > .1 ? 1 : 0);
+          const v = lf.v0 + i * NA + k; lRest[v * 3] = cx + Bx * lat + Nx * off; lRest[v * 3 + 1] = cy + Ny * off; lRest[v * 3 + 2] = cz + Bz * lat + Nz * off; lW[v] = u;
+          const old = lf.old * Math.max(0, (u - .55) / .45); lCol[v * 3] = tint[0] * lerp(1, 1.5, old); lCol[v * 3 + 1] = tint[1] * lerp(1, 1.05, old); lCol[v * 3 + 2] = tint[2] * lerp(1, .55, old); }
+        cx += ca * Dx * ds; cy += sa * ds; cz += ca * Dz * ds; } }); };
+  const Wd = V3(...(p.wind ? [p.wind[0], 0, p.wind[1]] : [1, 0, .3])).normalize(); let first = true;
+  PL.forEach(pl => { pl.r = -1; if (pl.reg) MZREG[pl.reg] = { mid: [], tip: [], base: null }; });
+  g.userData.tick = t => { const wk = kv(p.windK, t, 1); let rolled = false;
+    PL.forEach(pl => { const lag = pl.rollK ? 0 : (p.rollLag || 0) * ((pl.x - (p.lagX0 ?? -5)) / 10), r = clamp(kv(pl.rollK || p.rollK, t - lag, 0)); if (Math.abs(r - pl.r) > .003 || first) { fillPlant(pl, r); pl.r = r; rolled = true; } });
+    first = false;
+    PL.forEach(pl => { const A = (.022 + .012 * wk) * (pl.H / 2.2), sw = A * (Math.sin(t * 1.25 + pl.ph) + .45 * Math.sin(t * 2.7 + pl.ph * 1.7)), sx = Wd.x * sw, sz = Wd.z * sw, H = pl.H;
+      for (const lf of pl.leaves) { const n = pl.NA * pl.NL, fl = .014 * (1 - .6 * pl.r) * wk; for (let v = lf.v0; v < lf.v0 + n; v++) { const y = lRest[v * 3 + 1] - pl.y0, w = (y / H) * (y / H), u = lW[v], f = fl * u * u * Math.sin(t * 3.3 + lPh[v] + u * 2);
+        lPos[v * 3] = lRest[v * 3] + sx * w; lPos[v * 3 + 1] = lRest[v * 3 + 1] + f; lPos[v * 3 + 2] = lRest[v * 3 + 2] + sz * w; } }
+      const SP = sGeo.attributes.position.array; for (let v = pl.s0; v < pl.s1; v++) { const y = sRest[v * 3 + 1] - pl.y0, w = (y / H) * (y / H); SP[v * 3] = sRest[v * 3] + sx * w; SP[v * 3 + 1] = sRest[v * 3 + 1]; SP[v * 3 + 2] = sRest[v * 3 + 2] + sz * w; }
+      if (pl.reg) { const RG = MZREG[pl.reg]; g.updateWorldMatrix(true, false); RG.base = g.localToWorld(V3(pl.x, pl.y0, pl.z)); RG.mid = pl.leaves.map(lf => { const v = lf.v0 + Math.floor(pl.NL / 2) * pl.NA + (pl.NA >> 1); return g.localToWorld(V3(lPos[v * 3], lPos[v * 3 + 1], lPos[v * 3 + 2])); });
+        RG.tip = pl.leaves.map(lf => { const v = lf.v0 + (pl.NL - 1) * pl.NA + (pl.NA >> 1); return g.localToWorld(V3(lPos[v * 3], lPos[v * 3 + 1], lPos[v * 3 + 2])); }); RG.r = pl.r; } });
+    lGeo.attributes.position.needsUpdate = true; sGeo.attributes.position.needsUpdate = true; if (rolled) { lGeo.attributes.color.needsUpdate = true; } lGeo.computeVertexNormals(); };
+  return g; }
+// maize_dry: a patch of dry silt between the ridges, pale and cracked into plates (crackK opens the cracks), with curled flakes.
+function maizeDry(p = {}) { const g = new THREE.Group(), W = p.w || 1.2, D = p.d || .9, r = rng(p.seed || 821);
+  const mask = (c, w, h) => { const path = new Path2D(); for (let k = 0; k <= 40; k++) { const a = k / 40 * 6.283, rr = .44 + .05 * Math.sin(a * 3 + 1) + .03 * Math.sin(a * 7); const x = w / 2 + Math.cos(a) * rr * w, y = h / 2 + Math.sin(a) * rr * h; k ? path.lineTo(x, y) : path.moveTo(x, y); } path.closePath(); return path; };
+  const base = canvasT(256, 256, (c, w, h) => { c.clearRect(0, 0, w, h); const pa = mask(c, w, h); c.save(); c.clip(pa); const gr = c.createRadialGradient(w / 2, h / 2, 10, w / 2, h / 2, w * .5); gr.addColorStop(0, '#a88e6c'); gr.addColorStop(.75, '#9a805f'); gr.addColorStop(1, 'rgba(120,95,70,0)'); c.fillStyle = gr; c.fillRect(0, 0, w, h);
+    for (let i = 0; i < 900; i++) { c.fillStyle = `rgba(${r() > .5 ? '240,228,200' : '110,85,55'},${r() * .14})`; c.fillRect(r() * w, r() * h, 1 + r() * 2, 1 + r() * 2); } c.restore(); });
+  const crack = canvasT(256, 256, (c, w, h) => { c.clearRect(0, 0, w, h); const pa = mask(c, w, h); c.save(); c.clip(pa); c.strokeStyle = '#3b2a1a'; c.lineCap = 'round'; c.lineJoin = 'round';
+    const pts = []; for (let i = 0; i < 34; i++) pts.push([r() * w, r() * h]);
+    for (let y = 0; y < h; y += 2) for (let x = 0; x < w; x += 2) { let a = 1e9, b = 1e9; for (const [px, py] of pts) { const d = (x - px) ** 2 + (y - py) ** 2; if (d < a) { b = a; a = d; } else if (d < b) b = d; } const gap = Math.sqrt(b) - Math.sqrt(a); if (gap < 1.4) { c.fillStyle = `rgba(48,34,22,${.85 - gap * .3})`; c.fillRect(x - 1, y - 1, 2, 2); } else if (gap < 4) { c.fillStyle = 'rgba(70,52,34,.18)'; c.fillRect(x, y, 2, 2); } }
+    c.restore(); });
+  const mk = (tex, y, op) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(W, D), new THREE.MeshStandardMaterial({ map: tex, transparent: true, opacity: op, roughness: 1, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 })); m.rotation.x = -Math.PI / 2; m.position.y = y; m.receiveShadow = true; g.add(m); return m; };
+  mk(base, .012, 1); const cr = mk(crack, .014, 0);
+  const fm = std('#9c8262', { r: 1 }), fl = []; for (let i = 0; i < 9; i++) { const f = new THREE.Mesh(new THREE.CylinderGeometry(.03 + r() * .03, .035 + r() * .03, .008, 5), fm); const a = r() * 6.28, d = r() * .32; f.position.set(Math.cos(a) * d * W, .016, Math.sin(a) * d * D); f.rotation.set((r() - .5) * .5, r() * 3, (r() - .5) * .5); f.castShadow = true; g.add(f); fl.push(f); }
+  g.userData.tick = t => { const k = clamp(kv(p.crackK, t, 1)); cr.material.opacity = k; fl.forEach((f, i) => { f.visible = k > .4 + i * .05; }); };
+  return g; }
+// water_bucket: a 10-litre galvanised pail (base r .12, mouth r .15, .27 m deep, wire bail). Hangs from LINK[by].R by its bail while
+//   carried; pour [t0, t1, t2, t3]: blends to both palms (bottom on the left palm, axis toward the right palm, so the mouth tips forward
+//   when the right palm is lower and ahead), a stream falls on a ballistic arc from the low lip to the ground, splashes, and a dark wet
+//   patch grows at wet:[x, z] (local) by wetK. down [t, x, z]: set on the soil at that spot from t (blends .35 s).
+function bucketTex() { return SPR.bucket ||= (() => { const r = rng(831); return canvasT(128, 64, (c, w, h) => { c.fillStyle = '#a9adae'; c.fillRect(0, 0, w, h);
+  for (let i = 0; i < 160; i++) { const v = 140 + r() * 70 | 0; c.fillStyle = `rgba(${v},${v + 2},${v + 4},${.15 + r() * .25})`; c.beginPath(); c.arc(r() * w, r() * h, 2 + r() * 7, 0, 6.3); c.fill(); }
+  for (const y of [h * .18, h * .55]) { c.fillStyle = 'rgba(60,62,64,.35)'; c.fillRect(0, y, w, 2); c.fillStyle = 'rgba(240,240,240,.3)'; c.fillRect(0, y + 2, w, 1); }
+  for (let i = 0; i < 30; i++) { c.fillStyle = `rgba(110,90,60,${r() * .2})`; c.fillRect(r() * w, h * .7 + r() * h * .3, 2 + r() * 4, 1 + r() * 3); } }, [3, 1]); })(); }
+function waterBucket(p = {}) { const g = new THREE.Group(), inner = new THREE.Group(); g.add(inner); const H = .27, R1 = .12, R2 = .15, BAIL = H + .13;
+  const metal = new THREE.MeshStandardMaterial({ map: bucketTex(), metalness: .55, roughness: .42, side: THREE.DoubleSide });
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(R2, R1, H, 24, 1, true), metal); body.position.y = H / 2; inner.add(body);
+  const bot = new THREE.Mesh(new THREE.CircleGeometry(R1, 24), metal); bot.rotation.x = -Math.PI / 2; bot.position.y = .004; inner.add(bot);
+  const rim = new THREE.Mesh(new THREE.TorusGeometry(R2, .006, 6, 28), std('#c4c8c9', { r: .35, m: .6 })); rim.rotation.x = Math.PI / 2; rim.position.y = H; inner.add(rim);
+  const wire = std('#8b8f90', { r: .4, m: .7 }); const bail = new THREE.Mesh(new THREE.TorusGeometry(R2 + .005, .0035, 5, 24, Math.PI), wire); bail.scale.y = (BAIL - H + .03) / (R2 + .005); bail.position.y = H - .03; inner.add(bail);
+  const grip = new THREE.Mesh(new THREE.CylinderGeometry(.011, .011, .09, 8), std('#3d3a36', { r: .7 })); grip.rotation.z = Math.PI / 2; grip.position.y = BAIL; inner.add(grip);
+  const water = new THREE.Mesh(new THREE.CircleGeometry(R2 - .012, 20), new THREE.MeshStandardMaterial({ color: col('#5f7f86'), roughness: .08, metalness: .2, transparent: true, opacity: .85 })); water.rotation.x = -Math.PI / 2; water.position.y = H * .78; inner.add(water);
+  shadowed(inner); const cs = contactShadow(.17, .17, .4); cs.position.y = .007; g.add(cs);
+  const wM = new THREE.MeshStandardMaterial({ color: col('#dbeef5'), roughness: .05, metalness: .15, transparent: true, opacity: .62, emissive: col('#4d6d78'), emissiveIntensity: .25, depthWrite: false });
+  let stream = null; const wet = contactShadow(.2, .2, .55); wet.material.color.set('#2a1c10'); wet.position.y = .02; if (p.wet) { wet.position.x = p.wet[0]; wet.position.z = p.wet[1]; } g.add(wet);
+  const ND = 26, dG = new THREE.BufferGeometry(), dP = new Float32Array(ND * 3); dG.setAttribute('position', new THREE.BufferAttribute(dP, 3));
+  const drops = new THREE.Points(dG, new THREE.PointsMaterial({ size: .018, map: dotTex(), color: col('#eef8fc'), transparent: true, opacity: .9, depthWrite: false })); drops.frustumCulled = false; g.add(drops);
+  const Qa = new THREE.Quaternion(), Qb = new THREE.Quaternion(), Pa = V3(0, 0, 0), Pb = V3(0, 0, 0), M = new THREE.Matrix4();
+  g.userData.state = {}; if (p.reg) MZREG[p.reg] = g.userData.state;
+  g.userData.tick = t => { const Lk = LINK[p.by || 'farmer']; g.updateWorldMatrix(true, false); const toL = v => g.worldToLocal(v.clone());
+    // carried transform (hangs from the right palm), pour transform (bottom on L palm, axis to R palm), ground transform
+    let pos = V3(0, 0, 0), q = new THREE.Quaternion(), carried = false;
+    const hang = () => { const pr = toL(Lk.R); Pa.copy(pr).add(V3(0, -BAIL, 0)); Qa.setFromAxisAngle(Y_UP, (Lk.yaw || 0) + Math.PI / 2 - (g.parent?.rotation.y || 0)); Qa.multiply(new THREE.Quaternion().setFromAxisAngle(V3(1, 0, 0), .05 * Math.sin(t * 3.1))); };
+    const pour = () => { const pl = toL(Lk.L), pr = toL(Lk.R), d = pr.clone().sub(pl); let ax = d.clone().normalize();   // R palm grips the upper lip
+      for (let k = 0; k < 3; k++) { const u = Y_UP.clone().addScaledVector(ax, -ax.y).normalize(); ax = d.clone().addScaledVector(u, -R2 * .9).normalize(); }
+      Pb.copy(pl).addScaledVector(ax, -.02); Qb.setFromUnitVectors(Y_UP, ax); };
+    const C = p.carry || [-1, 1e9], PO = p.pour, DN = p.down;
+    if (Lk?.R && t >= C[0] && t < C[1]) { carried = true; hang(); pos.copy(Pa); q.copy(Qa);
+      if (PO && t >= PO[0] && t < PO[3]) { pour(); const k = t < PO[1] ? sEase((t - PO[0]) / (PO[1] - PO[0])) : t < PO[2] ? 1 : 1 - sEase((t - PO[2]) / (PO[3] - PO[2])); pos.lerpVectors(Pa, Pb, k); q.slerpQuaternions(Qa, Qb, k); }
+      if (DN && t >= DN[0] - .35) { const k = sEase((t - DN[0] + .35) / .35); pos.lerp(V3(DN[1], 0, DN[2]), k); q.slerp(new THREE.Quaternion(), k); } }
+    else if (DN && t >= C[1]) { pos.set(DN[1], 0, DN[2]); }
+    inner.position.copy(pos); inner.quaternion.copy(q); cs.visible = pos.y < .05; cs.position.set(pos.x, .007, pos.z);
+    const ax = Y_UP.clone().applyQuaternion(q), flow = PO && carried ? clamp((-ax.y + .15) / .35) * clamp(kv(p.flowK, t, 1)) : 0; water.visible = flow < .5;
+    if (stream) { inner.parent.remove(stream); stream.geometry.dispose(); stream = null; }
+    g.userData.state.flow = flow; g.userData.state.land = null; drops.visible = false;
+    if (flow > .02) { const lo = Y_UP.clone().addScaledVector(ax, -ax.y); if (lo.lengthSq() < 1e-6) lo.set(0, 0, 1); lo.normalize().negate(); const lip = pos.clone().addScaledVector(ax, H).addScaledVector(lo, R2 * .95);
+      const v0 = ax.clone().multiplyScalar(.55 + .25 * flow), pts = []; let land = lip.clone();
+      for (let i = 0; i <= 18; i++) { const s = i / 18 * .7, P = lip.clone().addScaledVector(v0, s); P.y -= 4.9 * s * s; if (P.y <= .02) { P.y = .02; pts.push(P); land = P; break; } pts.push(P); land = P; }
+      if (pts.length > 1) { stream = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 24, .012 + .012 * flow, 6), wM); inner.parent.add(stream); }
+      g.updateWorldMatrix(true, false); g.userData.state.land = g.localToWorld(land.clone());
+      drops.visible = true; for (let i = 0; i < ND; i++) { const ph = (t * 2.2 + hr(i, 1)) % 1, a = hr(i, 2) * 6.28, sp = .25 + hr(i, 3) * .35; dP[i * 3] = land.x + Math.cos(a) * sp * ph * .5; dP[i * 3 + 1] = .02 + (1.6 * ph - 2.4 * ph * ph) * .35 * flow; dP[i * 3 + 2] = land.z + Math.sin(a) * sp * ph * .5; }
+      dG.attributes.position.needsUpdate = true; }
+    const wk = clamp(kv(p.wetK, t, 0)); wet.visible = wk > .02; wet.scale.setScalar(Math.max(.01, wk)); g.userData.state.pos = g.localToWorld(pos.clone()); g.userData.state.axis = ax; };
+  return g; }
+Object.assign(ASSETS, { maize_field: maizeField, maize_dry: maizeDry, water_bucket: waterBucket });
+Object.assign(RIG_POSES, { // maize watering (Farmer 1.75 m, facing +z; tuned with the palm probe in plans/corn_leaf_roll.mjs)
+  bucketWalk: { adR: 1.42, fR: .02, eR: .12, hold: .5 },
+  leafLook: { adR: 1.42, fR: .02, eR: .12, hd: -.55, sp: -.06, ht: .15, adL: 1.0, fL: 1.2, eL: 1.5 },
+  pourTip: { adL: 1.97, fL: -.07, eL: 1.46, adR: 1.51, fR: .48, eR: .07, sp: 1.27, tw: .35, hd: -.35 },              // L palm under the pail bottom (-.14, .95, 5.57), R on the upper lip (-.14, .91, 5.27); err 5 mm
+  setDownHalf: { adR: 1.2, fR: -.1, eR: .14, sp: .9, hd: -.3, hL: .45, hR: .45, kL: .75, kR: .75 },
+  setDown: { adR: 1.03, fR: -.23, eR: .15, sp: 1.56, hd: -.3, hL: .93, hR: .93, kL: 1.58, kR: 1.58 },                // track y -.3: R palm at .42 m (pail on the soil), feet at .03
+  ctaWave: { adL: 1.42, fL: .1, eL: .39, adR: .95, fR: .85, eR: .35, ht: .3, sp: -.02 } });
