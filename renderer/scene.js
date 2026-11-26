@@ -5670,7 +5670,6 @@ function soilSection(p = {}) { const g = new THREE.Group(), X0 = p.x0 ?? -.5, X1
   return g; }
 Object.assign(ASSETS, { wet_field: wetField, rain_fall: rainFall, earthworm, sparrows: sparrowFlock, soil_section: soilSection });
 
-<<<<<<< HEAD
 // ================= Arugula pack (2026-11-26, plans/arugula_hot.mjs) =================
 // Real shapes (refs: Eruca sativa / Raphanus sativus / Brassica juncea field photos): rocket leaves 6-20 cm, pinnatifid (2-4 pairs of
 // small rounded side lobes + a big rounded end lobe), dark green, pale midrib; rocket flowers 1.5-2 cm, 4 cream petals with purple veins;
@@ -5895,7 +5894,6 @@ function aruBunch(p = {}) { const g = new THREE.Group(), b = new THREE.Group(); 
       M.makeBasis(BX, BY, BZ); M.multiply(new THREE.Matrix4().makeRotationZ(l.roll)); M.scale(S.setScalar(l.len)); M.setPosition(0, .01, 0); im.setMatrixAt(i, M); }); im.instanceMatrix.needsUpdate = true; };
   return g; }
 Object.assign(ASSETS, { arugula_plant: arugulaPlant, aru_bed: aruBed, aru_leaf: aruLeaf, aru_chilli: aruChilli, aru_board: aruBoard, dry_crust: dryCrust, aru_hose: aruHose, aru_bunch: aruBunch });
-=======
 // ================= Maize pack (2026-11-26, plans/corn_leaf_roll.mjs) =================
 // maize_field: field maize (Zea mays) at real size, built from the plant itself (no library mesh), so the leaves can roll:
 //   a 2-2.6 cm stalk with nodes and brace roots, 12-14 strap leaves in two ranks (0.45-1 m long, 6-10 cm wide, pale midrib, parallel
@@ -6049,4 +6047,3 @@ Object.assign(RIG_POSES, { // maize watering (Farmer 1.75 m, facing +z; tuned wi
   setDownHalf: { adR: 1.2, fR: -.1, eR: .14, sp: .9, hd: -.3, hL: .45, hR: .45, kL: .75, kR: .75 },
   setDown: { adR: 1.03, fR: -.23, eR: .15, sp: 1.56, hd: -.3, hL: .93, hR: .93, kL: 1.58, kR: 1.58 },                // track y -.3: R palm at .42 m (pail on the soil), feet at .03
   ctaWave: { adL: 1.42, fL: .1, eL: .39, adR: .95, fR: .85, eR: .35, ht: .3, sp: -.02 } });
->>>>>>> origin/diorama-studio
