@@ -8,7 +8,7 @@ grass_medium_01 grass_medium_02 grass_bermuda_01 shrub_01 shrub_02 shrub_03 fern
 boulder_01 rock_07 rock_moss_set_01 namaqualand_stones_01 stone_01
 food_apple_01 bananas yellow_onion sweet_potato lemon
 Barrel_01 garden_sprinkler_01 hatchet plastic_broom metal_jerrycan compost_bag_02 ladder_sectioned_01 wooden_cutting_board
-modular_chainlink_fence modular_wooden_pier stone_fire_pit""".split()
+modular_chainlink_fence modular_wooden_pier stone_fire_pit wicker_basket_01 wicker_basket_02 wooden_crate_01 wooden_bucket_01""".split()
 TEXTURES = ["brown_mud_leaves_01", "forrest_ground_01", "aerial_grass_rock", "coast_sand_rocks_02"]
 ROOT = os.path.dirname(os.path.abspath(__file__))
 get = lambda u: urllib.request.urlopen(urllib.request.Request(u, headers={"User-Agent": "diorama-studio"}), timeout=60).read()

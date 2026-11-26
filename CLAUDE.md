@@ -119,3 +119,11 @@ For the "Lola & Chico" page (US English, farming and animals), follow `memory/lo
 - `imports/poultry-feed-v2/`: the poultry-feed video handoff (style notes, script, plan, GRAPHICS.md, project code for reference). Its final MP4 and voice file are not in git.
 - `imports/style-locked-x3/`: older copies of files that also exist in the repo (CLAUDE.md, memory, critic/render code). Kept for reference only. The repo files above are the active ones.
 - Note: the poultry handoff's "numerical readings on measurement graphics" conflicts with the STYLE LOCK (no counters). The STYLE LOCK wins unless the user asks otherwise.
+
+## User decisions 2026-11-24 (apply from the next video on)
+- **Sound first:** every new video adds sound effects (animal calls, sea and environment beds) through the sound library (`assets/fetch_sfx.sh`), kept low under the voice (bed .03, calls .05).
+- **Natural animal movement:** each animal uses its own natural moves (clips from the library, not generic ones); check each animal's motion against a real reference before the render.
+- **No overlap:** every animal and object sits inside its own frame; no animal or object may pass into another. Check this in the preview.
+- **Graphics for every spoken thing:** each thing that is said gets a clear graphic of it on screen (wordless).
+- **Full scenes:** no dead beats; each shot has new action, so the scene stays busy.
+- **Motion capture (freemocap):** not available from this repo scope; use the library clips unless the user supplies recorded footage.

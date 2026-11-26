@@ -71,3 +71,12 @@
 {"run": "hens_winter", "time": "2026-11-18 03:54", "score": 95, "issues": 1, "codes": ["too_bright"]}
 {"run": "sheep_circle", "time": "2026-11-19 18:21", "score": 88, "issues": 3, "codes": ["beat_too_short", "dead_beat"]}
 {"run": "palm_pollen", "time": "2026-11-19 20:46", "score": 47, "issues": 13, "codes": ["beat_too_short", "dead_beat", "loudness"]}
+{"run": "olive_cutting", "time": "2026-11-19 18:48", "score": 51, "issues": 11, "codes": ["beat_too_short", "dead_beat", "loudness"]}
+{"run": "hen_laying", "time": "2026-11-19 20:36", "score": 58, "issues": 9, "codes": ["dead_beat", "loudness"]}
+{"run": "pigeon_cage", "time": "2026-11-20 20:44", "score": 85, "issues": 3, "codes": ["dead_beat"]}
+{"run": "hen_coop", "time": "2026-11-21 02:07", "score": 0, "issues": 21, "codes": ["beat_too_long", "dead_beat"]}
+{"run": "tilapia_tank", "time": "2026-11-24 15:18", "score": 0, "issues": 26, "codes": ["beat_too_long", "dead_beat", "loudness"]}
+{"run": "hen_twenty", "time": "2026-11-24 19:35", "score": 53, "issues": 10, "codes": ["caption_too_long", "dead_beat"]}
+{"run": "glass_rain", "time": "2026-11-24 20:29", "score": 6, "issues": 26, "codes": ["beat_too_long", "dead_beat", "no_context", "too_dark"]}
+{"run": "fly_taste", "time": "2026-11-24 23:25", "score": 29, "issues": 22, "codes": ["beat_too_long", "dead_beat", "no_context"]}
+{"run": "bee_dance", "time": "2026-11-26 00:21", "score": 48, "issues": 11, "codes": ["caption_flash", "dead_beat"]}

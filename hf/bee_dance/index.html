@@ -1,0 +1,19 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+<style>html,body{margin:0;background:#0b1a0f}</style>
+</head>
+<body>
+<div id="root" data-composition-id="main" data-start="0" data-duration="14" data-width="1080" data-height="1920">
+  <div id="s1" data-composition-id="s1" data-composition-src="compositions/s1.html" data-start="0" data-duration="7" data-track-index="1" data-width="1080" data-height="1920"></div>
+  <div id="s2" data-composition-id="s2" data-composition-src="compositions/s2.html" data-start="7" data-duration="7" data-track-index="1" data-width="1080" data-height="1920"></div>
+  <audio id="voice" src="assets/voice.wav" data-start="0" data-duration="14"></audio>
+</div>
+<script>
+  window.__timelines["main"] = gsap.timeline({ paused: true });
+</script>
+</body>
+</html>

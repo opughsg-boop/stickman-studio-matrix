@@ -2,37 +2,37 @@
  {
   "code": "loudness",
   "rule": "Normalize audio to -14 LUFS.",
-  "count": 5,
-  "last_seen": "2026-11-19",
-  "example": "integrated loudness -16.1 LUFS (target -14)"
+  "count": 6,
+  "last_seen": "2026-11-24",
+  "example": "integrated loudness -15.8 LUFS (target -14)"
  },
  {
   "code": "too_dark",
   "rule": "Keep night scenes readable: dim the light but keep the subject clearly visible.",
-  "count": 17,
-  "last_seen": "2026-11-13",
-  "example": "beat 4 too dark (luma 48)"
+  "count": 19,
+  "last_seen": "2026-11-24",
+  "example": "beat 4 too dark (luma 29)"
  },
  {
   "code": "beat_too_long",
   "rule": "Split long sentences into two beats with a camera change.",
-  "count": 8,
-  "last_seen": "2026-11-19",
-  "example": "beat 7 lasts 10.4s without a new idea"
+  "count": 30,
+  "last_seen": "2026-11-24",
+  "example": "beat 4 lasts 7.5s without a new idea"
  },
  {
   "code": "caption_flash",
   "rule": "Hold each caption until the next word starts.",
-  "count": 3,
-  "last_seen": "2026-11-16",
-  "example": "caption \"like\" shown only 0.04s"
+  "count": 4,
+  "last_seen": "2026-11-26",
+  "example": "caption \"ثمانية\" shown only 0.00s"
  },
  {
   "code": "beat_too_short",
   "rule": "Merge very short sentences; a beat should last at least ~1.5 s.",
-  "count": 22,
+  "count": 19,
   "last_seen": "2026-11-19",
-  "example": "beat 10 lasts 1.1s"
+  "example": "beat 17 lasts 1.1s"
  },
  {
   "code": "too_bright",
@@ -44,8 +44,8 @@
  {
   "code": "caption_too_long",
   "rule": "Captions: 1 to 3 words only.",
-  "count": 2,
-  "last_seen": "2026-11-11",
+  "count": 3,
+  "last_seen": "2026-11-24",
   "example": "some captions exceed 3 words"
  },
  {
@@ -93,16 +93,16 @@
  {
   "code": "no_context",
   "rule": "Show some of the blueprint room in most shots so the diorama look is preserved.",
-  "count": 2,
-  "last_seen": "2026-11-12",
-  "example": "beat 3: blueprint room not visible, framing too tight"
+  "count": 27,
+  "last_seen": "2026-11-24",
+  "example": "beat 12: blueprint room not visible, framing too tight"
  },
  {
   "code": "dead_beat",
   "rule": "Each beat must add an object, change a character mode, add an effect or change the camera.",
-  "count": 56,
-  "last_seen": "2026-11-19",
-  "example": "beat 17 adds nothing new visually"
+  "count": 122,
+  "last_seen": "2026-11-26",
+  "example": "beat 12 adds nothing new visually"
  },
  {
   "code": "flat_primitive_water",

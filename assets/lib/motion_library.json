@@ -1,0 +1,588 @@
+{
+ "source": "Quaternius animals pack (CC0), assets/lib/animals_pack",
+ "animals": {
+  "Alpaca": {
+   "clips": [
+    "Attack_Headbutt",
+    "Attack_Kick",
+    "Death",
+    "Eating",
+    "Gallop",
+    "Gallop_Jump",
+    "Idle",
+    "Idle_2",
+    "Idle_Headlow",
+    "Idle_HitReact_Left",
+    "Idle_HitReact_Right",
+    "Jump_toIdle",
+    "Walk"
+   ],
+   "file": "animals_pack/Alpaca.glb",
+   "has": {
+    "walk": [
+     "Walk"
+    ],
+    "run": [
+     "Gallop"
+    ],
+    "jump": [
+     "Gallop_Jump"
+    ],
+    "graze": [
+     "Eating",
+     "Idle_Headlow"
+    ],
+    "rest": [
+     "Idle",
+     "Idle_2"
+    ],
+    "alert": [
+     "Idle"
+    ],
+    "react": [
+     "Idle_HitReact_Left",
+     "Idle_HitReact_Right"
+    ],
+    "fight": [
+     "Attack_Headbutt",
+     "Attack_Kick"
+    ]
+   }
+  },
+  "Bull": {
+   "clips": [
+    "Attack_Headbutt",
+    "Attack_Kick",
+    "Death",
+    "Eating",
+    "Gallop",
+    "Gallop_Jump",
+    "Idle",
+    "Idle_2",
+    "Idle_Headlow",
+    "Idle_HitReact_Left",
+    "Jump_toIdle",
+    "Walk"
+   ],
+   "file": "animals_pack/Bull.glb",
+   "has": {
+    "walk": [
+     "Walk"
+    ],
+    "run": [
+     "Gallop"
+    ],
+    "jump": [
+     "Gallop_Jump"
+    ],
+    "graze": [
+     "Eating",
+     "Idle_Headlow"
+    ],
+    "rest": [
+     "Idle",
+     "Idle_2"
+    ],
+    "alert": [
+     "Idle"
+    ],
+    "react": [
+     "Idle_HitReact_Left"
+    ],
+    "fight": [
+     "Attack_Headbutt",
+     "Attack_Kick"
+    ]
+   }
+  },
+  "Cow": {
+   "clips": [
+    "Attack_Headbutt",
+    "Attack_Kick",
+    "Death",
+    "Eating",
+    "Gallop",
+    "Gallop_Jump",
+    "Idle",
+    "Idle_2",
+    "Idle_Headlow",
+    "Idle_HitReact_Left",
+    "Jump_toIdle",
+    "Walk"
+   ],
+   "file": "animals_pack/Cow.glb",
+   "has": {
+    "walk": [
+     "Walk"
+    ],
+    "run": [
+     "Gallop"
+    ],
+    "jump": [
+     "Gallop_Jump"
+    ],
+    "graze": [
+     "Eating",
+     "Idle_Headlow"
+    ],
+    "rest": [
+     "Idle",
+     "Idle_2"
+    ],
+    "alert": [
+     "Idle"
+    ],
+    "react": [
+     "Idle_HitReact_Left"
+    ],
+    "fight": [
+     "Attack_Headbutt",
+     "Attack_Kick"
+    ]
+   }
+  },
+  "Deer": {
+   "clips": [
+    "Attack_Headbutt",
+    "Attack_Kick",
+    "Death",
+    "Eating",
+    "Gallop",
+    "Gallop_Jump",
+    "Idle",
+    "Idle_2",
+    "Idle_Headlow",
+    "Idle_HitReact_Left",
+    "Idle_HitReact_Right",
+    "Jump_toIdle",
+    "Walk"
+   ],
+   "file": "animals_pack/Deer.glb",
+   "has": {
+    "walk": [
+     "Walk"
+    ],
+    "run": [
+     "Gallop"
+    ],
+    "jump": [
+     "Gallop_Jump"
+    ],
+    "graze": [
+     "Eating",
+     "Idle_Headlow"
+    ],
+    "rest": [
+     "Idle",
+     "Idle_2"
+    ],
+    "alert": [
+     "Idle"
+    ],
+    "react": [
+     "Idle_HitReact_Left",
+     "Idle_HitReact_Right"
+    ],
+    "fight": [
+     "Attack_Headbutt",
+     "Attack_Kick"
+    ]
+   }
+  },
+  "Donkey": {
+   "clips": [
+    "Attack_Headbutt",
+    "Attack_Kick",
+    "Death",
+    "Eating",
+    "Gallop",
+    "Gallop_Jump",
+    "Idle",
+    "Idle_2",
+    "Idle_Headlow",
+    "Idle_HitReact_Left",
+    "Idle_HitReact_Right",
+    "Jump_toIdle",
+    "Walk"
+   ],
+   "file": "animals_pack/Donkey.glb",
+   "has": {
+    "walk": [
+     "Walk"
+    ],
+    "run": [
+     "Gallop"
+    ],
+    "jump": [
+     "Gallop_Jump"
+    ],
+    "graze": [
+     "Eating",
+     "Idle_Headlow"
+    ],
+    "rest": [
+     "Idle",
+     "Idle_2"
+    ],
+    "alert": [
+     "Idle"
+    ],
+    "react": [
+     "Idle_HitReact_Left",
+     "Idle_HitReact_Right"
+    ],
+    "fight": [
+     "Attack_Headbutt",
+     "Attack_Kick"
+    ]
+   }
+  },
+  "Fox": {
+   "clips": [
+    "Attack",
+    "Death",
+    "Eating",
+    "Gallop",
+    "Gallop_Jump",
+    "Idle",
+    "Idle_2",
+    "Idle_2_HeadLow",
+    "Idle_HitReact_Left",
+    "Idle_HitReact_Right",
+    "Jump_ToIdle",
+    "Walk"
+   ],
+   "file": "animals_pack/Fox.glb",
+   "has": {
+    "walk": [
+     "Walk"
+    ],
+    "run": [
+     "Gallop"
+    ],
+    "jump": [
+     "Gallop_Jump"
+    ],
+    "graze": [
+     "Eating"
+    ],
+    "rest": [
+     "Idle",
+     "Idle_2"
+    ],
+    "alert": [
+     "Idle"
+    ],
+    "react": [
+     "Idle_HitReact_Left",
+     "Idle_HitReact_Right"
+    ]
+   }
+  },
+  "Horse": {
+   "clips": [
+    "Attack_Headbutt",
+    "Attack_Kick",
+    "Death",
+    "Eating",
+    "Gallop",
+    "Gallop_Jump",
+    "Idle",
+    "Idle_2",
+    "Idle_Headlow",
+    "Idle_HitReact_Left",
+    "Idle_HitReact_Right",
+    "Jump_toIdle",
+    "Walk"
+   ],
+   "file": "animals_pack/Horse.glb",
+   "has": {
+    "walk": [
+     "Walk"
+    ],
+    "run": [
+     "Gallop"
+    ],
+    "jump": [
+     "Gallop_Jump"
+    ],
+    "graze": [
+     "Eating",
+     "Idle_Headlow"
+    ],
+    "rest": [
+     "Idle",
+     "Idle_2"
+    ],
+    "alert": [
+     "Idle"
+    ],
+    "react": [
+     "Idle_HitReact_Left",
+     "Idle_HitReact_Right"
+    ],
+    "fight": [
+     "Attack_Headbutt",
+     "Attack_Kick"
+    ]
+   }
+  },
+  "Horse_White": {
+   "clips": [
+    "Attack_Headbutt",
+    "Attack_Kick",
+    "Death",
+    "Eating",
+    "Gallop",
+    "Gallop_Jump",
+    "Idle",
+    "Idle_2",
+    "Idle_Headlow",
+    "Idle_HitReact_Left",
+    "Idle_HitReact_Right",
+    "Jump_toIdle",
+    "Walk"
+   ],
+   "file": "animals_pack/Horse_White.glb",
+   "has": {
+    "walk": [
+     "Walk"
+    ],
+    "run": [
+     "Gallop"
+    ],
+    "jump": [
+     "Gallop_Jump"
+    ],
+    "graze": [
+     "Eating",
+     "Idle_Headlow"
+    ],
+    "rest": [
+     "Idle",
+     "Idle_2"
+    ],
+    "alert": [
+     "Idle"
+    ],
+    "react": [
+     "Idle_HitReact_Left",
+     "Idle_HitReact_Right"
+    ],
+    "fight": [
+     "Attack_Headbutt",
+     "Attack_Kick"
+    ]
+   }
+  },
+  "Husky": {
+   "clips": [
+    "Attack",
+    "Death",
+    "Eating",
+    "Gallop",
+    "Gallop_Jump",
+    "Idle",
+    "Idle_2",
+    "Idle_2_HeadLow",
+    "Idle_HitReact_Left",
+    "Idle_HitReact_Right",
+    "Jump_ToIdle",
+    "Walk"
+   ],
+   "file": "animals_pack/Husky.glb",
+   "has": {
+    "walk": [
+     "Walk"
+    ],
+    "run": [
+     "Gallop"
+    ],
+    "jump": [
+     "Gallop_Jump"
+    ],
+    "graze": [
+     "Eating"
+    ],
+    "rest": [
+     "Idle",
+     "Idle_2"
+    ],
+    "alert": [
+     "Idle"
+    ],
+    "react": [
+     "Idle_HitReact_Left",
+     "Idle_HitReact_Right"
+    ]
+   }
+  },
+  "ShibaInu": {
+   "clips": [
+    "Attack",
+    "Death",
+    "Eating",
+    "Gallop",
+    "Gallop_Jump",
+    "Idle",
+    "Idle_2",
+    "Idle_2_HeadLow",
+    "Idle_HitReact_Left",
+    "Idle_HitReact_Right",
+    "Jump_ToIdle",
+    "Walk"
+   ],
+   "file": "animals_pack/ShibaInu.glb",
+   "has": {
+    "walk": [
+     "Walk"
+    ],
+    "run": [
+     "Gallop"
+    ],
+    "jump": [
+     "Gallop_Jump"
+    ],
+    "graze": [
+     "Eating"
+    ],
+    "rest": [
+     "Idle",
+     "Idle_2"
+    ],
+    "alert": [
+     "Idle"
+    ],
+    "react": [
+     "Idle_HitReact_Left",
+     "Idle_HitReact_Right"
+    ]
+   }
+  },
+  "Stag": {
+   "clips": [
+    "Attack_Headbutt",
+    "Attack_Kick",
+    "Death",
+    "Eating",
+    "Gallop",
+    "Gallop_Jump",
+    "Idle",
+    "Idle_2",
+    "Idle_Headlow",
+    "Idle_HitReact_Left",
+    "Idle_HitReact_Right",
+    "Jump_toIdle",
+    "Walk"
+   ],
+   "file": "animals_pack/Stag.glb",
+   "has": {
+    "walk": [
+     "Walk"
+    ],
+    "run": [
+     "Gallop"
+    ],
+    "jump": [
+     "Gallop_Jump"
+    ],
+    "graze": [
+     "Eating",
+     "Idle_Headlow"
+    ],
+    "rest": [
+     "Idle",
+     "Idle_2"
+    ],
+    "alert": [
+     "Idle"
+    ],
+    "react": [
+     "Idle_HitReact_Left",
+     "Idle_HitReact_Right"
+    ],
+    "fight": [
+     "Attack_Headbutt",
+     "Attack_Kick"
+    ]
+   }
+  },
+  "Wolf": {
+   "clips": [
+    "Attack",
+    "Death",
+    "Eating",
+    "Gallop",
+    "Gallop_Jump",
+    "Idle",
+    "Idle_2",
+    "Idle_2_HeadLow",
+    "Idle_HitReact_Left",
+    "Idle_HitReact_Right",
+    "Jump_ToIdle",
+    "Walk"
+   ],
+   "file": "animals_pack/Wolf.glb",
+   "has": {
+    "walk": [
+     "Walk"
+    ],
+    "run": [
+     "Gallop"
+    ],
+    "jump": [
+     "Gallop_Jump"
+    ],
+    "graze": [
+     "Eating"
+    ],
+    "rest": [
+     "Idle",
+     "Idle_2"
+    ],
+    "alert": [
+     "Idle"
+    ],
+    "react": [
+     "Idle_HitReact_Left",
+     "Idle_HitReact_Right"
+    ]
+   }
+  }
+ },
+ "natural_use": {
+  "walk": [
+   "Walk"
+  ],
+  "run": [
+   "Gallop"
+  ],
+  "jump": [
+   "Gallop_Jump"
+  ],
+  "graze": [
+   "Eating",
+   "Idle_Headlow"
+  ],
+  "rest": [
+   "Idle",
+   "Idle_2"
+  ],
+  "alert": [
+   "Idle"
+  ],
+  "react": [
+   "Idle_HitReact_Left",
+   "Idle_HitReact_Right"
+  ],
+  "fight": [
+   "Attack_Headbutt",
+   "Attack_Kick"
+  ]
+ },
+ "rules": [
+  "pick the clip for the action; never reuse Death in a diorama",
+  "walk speed matches the step length (no sliding feet)",
+  "keep each animal inside its own footprint; check overlap in the preview"
+ ]
+}
