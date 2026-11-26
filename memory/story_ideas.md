@@ -25,3 +25,16 @@ Rule of thumb for picking ideas: a surprising secret, OR an everyday thing nobod
 19. Cracking clay soil in summer: clay shrinks; mulch and steady irrigation. Hook: "ليه الأرض بتتشقق في الصيف… وبتبلّع الميّه؟"
 20. Bee waggle dance: direction and distance. Hook: "إزاي النحلة بتقول لأخواتها فين الزهور؟"
 Strongest picks: 13, 14, 15.
+
+## Batch 3 (suggested 2026-11-26; none repeats the done list or batches 1-2)
+Done already: cow salt lick, hens in winter, sheep circling, date palm pollination, clover regrowth, tomato staking, olive cutting, three sisters.
+21. Shaduf: counterweight lever lifts heavy water with little effort. Hook: "ليه الشادوف بيرفع ميّه تقيلة من غير ما الفلاح يشيل؟" Visual: stone counterweight swings, bucket dips in the canal.
+22. Sakia: an ox walks in a circle to turn gears that lift water. Hook: "ليه البهيمة بتلف في دايرة طول اليوم عشان الأرض تشرب؟" Visual: gear wheel and pots turning.
+23. Duck feathers shed water: oil from the preen gland. Hook: "ليه البطة بتنزل الميه وريشها ما بيتبلّش؟" Visual: water beads roll off the back.
+24. Hen dust bath: soil cleans feathers and removes parasites. Hook: "ليه الفرخة بتقعد تتمرغ في التراب؟" Visual: dust cloud around the hen. Check parasite claim before scripting.
+25. Onion tears: cut cells release a gas that irritates the eye. Hook: "ليه البصلة بتخلي عينك تدمع وإنت بتقطّعها؟" Visual: knife, onion halves, tear sticker.
+26. Silage: fodder sealed in a black bag ferments without air. Hook: "ليه العلف بيتقفل في كيس أسود ويطلع ريحة حامضة؟" Visual: black bag sealed and pressed.
+27. Palm trunk does not branch: one growing tip, leaf scars on the trunk. Hook: "ليه النخلة ما بتتفرعش زي الشجرة؟" Visual: tip bud and rings of leaf scars. Keep it distinct from palm_pollen.
+28. Donkey bray carries far: sound waves from an open mouth. Hook: "ليه الحمار بينهق بصوت يتسمع من بعيد؟" Visual: donkey braying with the donkey call SFX (licence check first).
+29. Hen head bob while walking: stabilises the view. Hook: "ليه الفرخة بتهز راسها وهي بتمشي؟" Visual: slow-motion hen steps.
+30. Maize leaves roll in heat: less water loss in drought. Hook: "ليه ورق الذرة بيتلف في الحر؟" Visual: corn field at noon, leaves curl.
