@@ -38,3 +38,15 @@ Done already: cow salt lick, hens in winter, sheep circling, date palm pollinati
 28. Donkey bray carries far: sound waves from an open mouth. Hook: "ليه الحمار بينهق بصوت يتسمع من بعيد؟" Visual: donkey braying with the donkey call SFX (licence check first).
 29. Hen head bob while walking: stabilises the view. Hook: "ليه الفرخة بتهز راسها وهي بتمشي؟" Visual: slow-motion hen steps.
 30. Maize leaves roll in heat: less water loss in drought. Hook: "ليه ورق الذرة بيتلف في الحر؟" Visual: corn field at noon, leaves curl.
+
+## Batch 4 (suggested 2026-11-26; none repeats the done list or batches 1-3)
+31. Fallow: a field rests a season without planting. Hook: "ليه الفلاح بيسيب أرضه من غير زراعة سنة كاملة؟" Visual: bare field, plough, then the next crop.
+32. Tomato cracking after sudden heavy watering. Hook: "ليه الطماطمة بتتشقق لما الري يتزود فجأة؟" Visual: split fruit on the vine.
+33. Earthworm: tunnels aerate soil and castings feed it. Hook: "ليه الدودة الصغيرة اللي في الأرض بتخلّي الزرع أحسن؟" Visual: worm in a tunnel, castings heap.
+34. Hen incubation: 21 days at a steady warmth, egg turned. Hook: "ليه الفرخة بتقعد على البيض 21 يوم بالظبط؟" Visual: hen on the nest, eggs turned. Check the figure first.
+35. Honeycomb: hexagons use the least wax for the most space. Hook: "ليه النحل بيبني خلايا سداسية، مش مربعة؟" Visual: close-up on a comb.
+36. Pigeon drinks with the beak down, sucking water. Hook: "ليه الحمامة بتشرب والراس تحت، ومش بترفعه؟" Visual: pigeon drinking at a trough.
+37. Cactus stores water in its stem, leaves are spines. Hook: "ليه الصبار مفيهوش ورق عريض زي باقي النباتات؟" Visual: cut cactus pad showing the water tissue.
+38. Unwashed eggs: the bloom protects against germs. Hook: "ليه البيض اللي متغسلش بيتحفظ أطول؟" Visual: egg held up, bloom shown, washing sink as contrast.
+39. Chick pips out of the shell with its beak. Hook: "إزاي الكتكوت بيطلع من البيضة من جوه بنقرة؟" Visual: egg cracking open, chick's beak inside. Check the egg tooth fact.
+40. Grape thinning: cutting bunches early for bigger fruit. Hook: "ليه الفلاح بيقص نص عناقيد العنب قبل ما تنضج؟" Visual: scissors on a vine, bunches dropping.
