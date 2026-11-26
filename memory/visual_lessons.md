@@ -296,3 +296,11 @@ Rule: when a preview or final video shows a mistake, add one entry here (what wa
 - **Mistake:** a trio of plants 0.76 m wide framed at dist 1.25 showed one plant. **Fix:** dist 2.0-2.3 for a 0.8 m wide subject in 9:16.
 - Contact by probe: knife edge 0.012 m from the cut line, seedling palm 0.11 m, hose pick-up palm 0.16 m, picked-leaf palm 0.105 m.
 - Source: runs/arugula_hot/sheet_preview.jpg (first pass). Fixes applied after the one preview, not re-checked by eye.
+
+## Horse care (preview 2026-11-26, plans/horse_care.mjs)
+- **Mistake:** close cameras (1.3-2.4 m) on a squatting farmer, farrier or person who sits between the lens and the hoof or bucket filled the frame with his back (blue/orange blobs). **Fix:** shoot hoof and bucket work from the side the worker is NOT on (az 1.35-1.75 from +x when he squats on the +z side), dist 1.9-3.0.
+- **Mistake:** a 2.35 m horse framed at 3-6 m showed only a body part in 9:16 (head cut). **Fix:** about 1.25x those distances (whole horse 7-8 m, head and shoulders 4-5 m).
+- **Mistake (repeated):** `kind: 'problem'|'solution'` corner badges doubled the check/cross stickers. **Fix:** all beats `info` when the plan places its own stickers.
+- **Mistake:** a horse standing at a station on the camera line (mud pen) blocked the city shot later. **Fix:** remove station actors once their line is done.
+- Probe: horse glb at height 2.35 is centred: body z -1.36..1.34 m from its origin, flank surface 0.3 m from the centre line, muzzle y 1.72-1.94 in Idle; cheek teeth sit about 0.85-1.15 m ahead of the origin.
+- Source: runs/horse_care/sheet_preview.jpg (first pass). Fixes applied after the one preview, not re-checked by eye.
