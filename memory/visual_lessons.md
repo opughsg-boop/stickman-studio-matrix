@@ -270,3 +270,9 @@ Rule: when a preview or final video shows a mistake, add one entry here (what wa
 - **Mistake (repeated from olive cutting):** the hand looked like a plastic toy: smooth fingers, no knuckle or nail detail, a flat palm that did not curve around the egg. **Fix for next videos:** build the hand with visible knuckles, nails and skin folds, and check the egg-in-palm contact by probe before any render. Do not call the hand "realistic" until it is checked on a close frame.
 - **Mistake:** 8 dead beats in a 14-beat plan. **Fix:** a new camera or a new subject state in each beat; merge the rest.
 - **Mistake:** the review step crashed on a broken `memory/lessons.json` left by a merge (duplicate keys). **Fix:** after any merge, run `python3 -m json.tool` on every memory JSON file before rendering.
+
+## Clover regrow (preview 2026-11-26, plans/clover_regrow.mjs)
+- **Mistake:** procedural berseem read as grass or bamboo: 6-8 small leaves per stem, leaflets mostly flat (seen edge-on from a low camera), stems lighter than the leaves. **Fix:** 8-11 trifoliates per stem, 5.2 cm leaflets, droop spread +-.55 rad so faces show, stems darker (#6f9a3f) than the leaves. Real berseem: a leafy closed canopy, oblong leaflets, hollow stems hidden under the leaves.
+- **Mistake:** root nodules drawn at 2-4 cm read as pink balls; real clover nodules are 2-5 mm. **Fix:** `nodS: .28` on `roots`.
+- **Mistake:** cameras at elev .1-.2 in front of the island edge filled the lower half of the frame with the soil face. **Fix:** elev .3-.48 for field shots; keep the low face camera only for root beats.
+- Source: runs/clover_regrow/sheet_preview.jpg (first pass). Fixes applied after the one preview, not yet re-checked.

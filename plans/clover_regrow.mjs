@@ -101,7 +101,7 @@ const fieldB = obj('fieldB', 'clover_field', [B.x, 0, B.z], { w: B.w, d: B.d, de
 const bedB = obj('bedB', 'clover_bed', [B.x, 0, B.z], { w: B.w, d: B.d, ridges: 'lrb' });
 const fieldC = obj('fieldC', 'clover_field', [C.x, 0, C.z], { w: C.w, d: C.d, dens: 26, seed: 619, weak: 1, stubAlways: true, wind: .8, front: rootXC.map(x => loc(C, x)) });
 const bedC = obj('bedC', 'clover_bed', [C.x, 0, C.z], { w: C.w, d: C.d, ridges: 'lrb' });
-const rootsA = obj('rootsA', 'roots', [0, 0, 8], { xs: rootXA, depth: .62, nodules: true, color: '#e6d7b4', rad: .011, growTime: .1 });
+const rootsA = obj('rootsA', 'roots', [0, 0, 8], { xs: rootXA, depth: .62, nodules: true, nodS: .28, color: '#e6d7b4', rad: .009, growTime: .1 });
 const rootsC = obj('rootsC', 'roots', [0, 0, 8], { xs: rootXC, depth: .26, color: '#a8936c', rad: .0045, lat: 1, seed: 41, growTime: .1 });
 // heaps: A (lines 1-3, carried to the yard, the animals eat it), B (line 7 armful, tossed on top), C (the tiny early-cut crop)
 const heapAo = obj('heapA', 'clover_heap', [heapA[0], 0, heapA[1]], { r: .26, h: .2, count: 240, by: 'farmer', growK: [[0, .35], [8.8, 1]], carry: [11.0, 16.45],
@@ -127,17 +127,17 @@ const beats = [
   // 1 hook: squatting in the tall clover, the sickle cuts; ring round the fresh stubble behind him
   { t: 0, kind: 'info', add: [bedA, bedB, bedC, fieldA, fieldB, fieldC, rootsA, rootsC, heapAo, heapBo, heapCo, farmer, sickle, ...world,
       stk('ring0', 'circle_ring', [-3.42, .1, 7.62], .42, { delay: 1.3 })],
-    camera: { target: [-2.95, .32, 7.35], dist: 2.5, elev: .14, az: .38, zoom: 'in' } },
+    camera: { target: [-2.95, .35, 7.3], dist: 2.6, elev: .32, az: .38, zoom: 'in' } },
   // 2 it does not die when cut: the live green crown on a stub (green dot, check) ...
   { t: T.l1, kind: 'info', remove: ['ring0'], add: [stk('dotG', 'dot_green', [-3.45, .15, 7.97], .06, { delay: T.notDie - T.l1 - .3 }),
       stk('okStub', 'check', [-3.45, .44, 7.9], .17, { delay: T.dies - T.l1 })],
-    camera: { target: [-4.3, .25, 7.3], dist: 3.4, elev: .2, az: .1, zoom: 'out' } },
+    camera: { target: [-4.3, .25, 7.2], dist: 3.5, elev: .36, az: .1, zoom: 'out' } },
   //   ... like a tree dies when cut from its root: the dead stump (cross)
   { t: T.tree - .15, kind: 'info', add: [stk('xStump', 'cross', [-5.25, .9, 7.05], .2, { delay: .3, pulse: true })],
-    camera: { target: [-4.85, .3, 7.15], dist: 2.7, elev: .16, az: -.15, zoom: 'in' } },
+    camera: { target: [-4.85, .3, 7.05], dist: 2.8, elev: .32, az: -.15, zoom: 'in' } },
   // 3 the farmer cuts: close on the sickle pull, tops toppling
   { t: T.l2, kind: 'info', remove: ['dotG', 'okStub', 'xStump'],
-    camera: { target: [-2.0, .25, 7.35], dist: 1.9, elev: .12, az: .55, zoom: 'in' } },
+    camera: { target: [-1.75, .3, 7.3], dist: 2.3, elev: .3, az: .9, zoom: 'in' } },
   //   ... leaves and stems are taken away: he lifts the heap and carries it off
   { t: T.leaves - .1, kind: 'info',
     camera: { target: [-3.3, .55, 6.95], dist: 3.7, elev: .15, az: .2, zoom: 'out' } },
@@ -146,20 +146,20 @@ const beats = [
     camera: { target: [-2.85, -.22, 8.0], dist: 1.75, elev: .03, az: .05, zoom: 'in' } },
   // 4 a few days later (hourglass): new shoots from the same stubs
   { t: T.l3, kind: 'info', remove: ['ptCrown'], modes: { rootsA: { glow: 0 } }, add: [stk('hg1', 'hourglass', [-3.0, .4, 7.66], .1, { delay: .2 })],
-    camera: { target: [-3.25, .1, 7.6], dist: 1.05, elev: .32, az: .2, zoom: 'in' } },
+    camera: { target: [-3.25, .1, 7.55], dist: 1.1, elev: .48, az: .2, zoom: 'in' } },
   //   ... small green buds come out (sparkles)
   { t: T.buds4 - .1, kind: 'info', remove: ['hg1'], add: [stk('spk', 'sparkles', [-3.3, .2, 7.72], .09, { delay: .25 })],
-    camera: { target: [-3.3, .08, 7.7], dist: .8, elev: .26, az: -.1, zoom: 'out' } },
+    camera: { target: [-3.3, .08, 7.65], dist: .85, elev: .42, az: -.1, zoom: 'out' } },
   // 5 cut again and again: the small patch grown, cut, grown, cut ... a ring per cut
   { t: T.l4, kind: 'info', remove: ['spk'], modes: { cow: { clip: 'Eating' }, donkey: { clip: 'Eating' } },
     add: cB.map((c, i) => stk('ringB' + i, 'circle_ring', [2.0 + i * .32, .3, 7.55], .3, { delay: c + .3 - T.l4 })),
-    camera: { target: [2.1, .3, 7.4], dist: 2.4, elev: .18, az: .3, zoom: 'out' } },
+    camera: { target: [2.1, .3, 7.35], dist: 2.5, elev: .3, az: .3, zoom: 'out' } },
   // 6 careful: the patch cut too early (eyes)
   { t: T.l5, kind: 'info', remove: cB.map((c, i) => 'ringB' + i), add: [stk('eyes', 'eyes', [5.25, .55, 7.25], .15, { delay: .3 })],
-    camera: { target: [5.25, .22, 7.3], dist: 2.6, elev: .22, az: .1, zoom: 'in' } },
+    camera: { target: [5.25, .22, 7.2], dist: 2.7, elev: .36, az: .1, zoom: 'in' } },
   //   ... before it has grown: thin short plants next to the full patch (point down on them)
   { t: T.early6 - .15, kind: 'info', remove: ['eyes'], add: [stk('ptC', 'point_down', [5.0, .45, 7.6], .14, { delay: .3 })],
-    camera: { target: [3.9, .3, 7.4], dist: 3.4, elev: .14, az: 0, zoom: 'out' } },
+    camera: { target: [3.9, .3, 7.3], dist: 3.5, elev: .3, az: 0, zoom: 'out' } },
   //   ... the root weakens: the thin pale root on the soil face
   { t: T.root6 - .1, kind: 'info', remove: ['ptC'], add: [stk('ptR', 'point_down', [5.2, .14, 8.05], .12, { delay: .2, pulse: true })],
     camera: { target: [5.2, -.16, 8.0], dist: 1.7, elev: .03, az: .05, zoom: 'in' } },
@@ -168,7 +168,7 @@ const beats = [
     camera: { target: [3.75, .15, 7.55], dist: 1.5, elev: .3, az: .15, zoom: 'out' } },
   // 7 he waits for the right time by the full, flowering strip (hourglass) ...
   { t: T.l6, kind: 'info', remove: ['arD'], add: [stk('hg2', 'hourglass', [-4.2, 2.05, 7.27], .15, { delay: T.wait7 - T.l6 })],
-    camera: { target: [-3.75, .55, 7.3], dist: 2.9, elev: .1, az: .4, zoom: 'in' } },
+    camera: { target: [-3.6, .95, 7.2], dist: 3.8, elev: .14, az: .4, zoom: 'in' } },
   //   ... then cuts it again (check)
   { t: T.cut7 - .1, kind: 'info', remove: ['hg2'], add: [stk('okCut', 'check', [-3.65, .5, 7.62], .16, { delay: T.again7 - T.cut7 + .25 })],
     camera: { target: [-3.6, .25, 7.4], dist: 2.0, elev: .12, az: .5, zoom: 'out' } },

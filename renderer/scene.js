@@ -1211,7 +1211,7 @@ function roots(p = {}) { // drawn on the island's front cross-section (z = p.fac
   const g = new THREE.Group(), r = rng(p.seed || 37), depth = p.depth || 1, rootM = std(p.color || '#dccaa2', { r: .8 }), nodM = std('#e9c3b0', { r: .45, extra: { emissive: col('#ff6f91'), emissiveIntensity: 0 } }), nods = [], tubes = [];
   for (const x0 of p.xs || [0]) { const branch = (pt, dir, len, rad, lvl) => { const pts = [pt.clone()]; let q = pt.clone(), dv = dir.clone(); for (let k = 0; k < 6; k++) { dv.x += (r() - .5) * .5; dv.y -= .15; dv.normalize(); q = q.clone().add(dv.clone().multiplyScalar(len / 6)); q.z = Math.min(q.z, .06); pts.push(q); }
       const tube = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 12, rad, 5), rootM); g.add(tube); tubes.push(tube);
-      if (p.nodules && lvl < 2) for (let k = 0; k < 5 - lvl * 2; k++) { const c = pts[1 + Math.floor(r() * 4)]; const nd = sph(.022 + r() * .018, nodM); nd.position.set(c.x + (r() - .5) * .04, c.y + (r() - .5) * .04, .05); g.add(nd); nods.push(nd); }
+      if (p.nodules && lvl < 2) for (let k = 0; k < 5 - lvl * 2; k++) { const c = pts[1 + Math.floor(r() * 4)]; const ns = p.nodS ?? 1, nd = sph((.022 + r() * .018) * ns, nodM); nd.position.set(c.x + (r() - .5) * .04 * ns, c.y + (r() - .5) * .04 * ns, .03 + .02 * ns); g.add(nd); nods.push(nd); }
       if (lvl < 2) for (let k = 0; k < (p.lat ?? 3); k++) branch(pts[2 + k], new THREE.Vector3((r() - .5) * 2, -.6, 0), len * .55, rad * .6, lvl + 1); };
     branch(new THREE.Vector3(x0, 0, .03), new THREE.Vector3(0, -1, 0), depth, p.rad || .012, 0); }
   g.userData.tick = (t, age) => { const grow = clamp(age / (p.growTime || 1.6)); tubes.forEach((tb, i) => { tb.scale.setScalar(Math.max(.001, easeIO(clamp(grow * 1.6 - (i % 7) * .08)))); });
@@ -4960,21 +4960,21 @@ function cloverField(p = {}) { const g = new THREE.Group(), W = p.w || 4, D = p.
   const pos = []; for (let i = 0; i < n; i++) pos.push([(R() - .5) * (W - .06), (R() - .5) * (D - .06)]);
   for (const x of p.front || []) pos.push([x, D / 2 - .04]);
   const plants = pos.map(([x, z]) => { const ns = weak ? 2 + (R() * 2 | 0) : 3 + (R() * 4 | 0), stems = [];
-    for (let j = 0; j < ns; j++) { const az = j / ns * 6.283 + R() * .8, lean = (weak ? .25 : .12) + R() * .28, len = .78 + R() * .26, nl = weak ? 3 + (R() * 2 | 0) : 6 + (R() * 3 | 0), leaves = [];
-      for (let k = 0; k < nl; k++) leaves.push({ u: .28 + .72 * (k + R() * .5) / nl, az: az + (k % 2 ? 1.9 : -1.9) + (R() - .5) * .9, droop: (R() - .5) * .35, s: (weak ? .55 : .85) + R() * .35 - (k / nl) * .15 });
+    for (let j = 0; j < ns; j++) { const az = j / ns * 6.283 + R() * .8, lean = (weak ? .25 : .12) + R() * .28, len = .78 + R() * .26, nl = weak ? 3 + (R() * 2 | 0) : 8 + (R() * 4 | 0), leaves = [];
+      for (let k = 0; k < nl; k++) leaves.push({ u: .28 + .72 * (k + R() * .5) / nl, az: az + (k % 2 ? 1.9 : -1.9) + (R() - .5) * .9, droop: (R() - .5) * 1.1, s: (weak ? .55 : .85) + R() * .35 - (k / nl) * .15 });
       stems.push({ az, lean, len, leaves, flower: !weak && R() < .35, stubH: .065 + R() * .045 }); }
     const passT = cuts.map(c => { if (z < c.z0 || z > c.z1) return Infinity; const k = c.k; if (x < k[0][1] || x > k[k.length - 1][1]) return Infinity;
       for (let i = 0; i < k.length - 1; i++) if (x >= k[i][1] && x <= k[i + 1][1]) return k[i][0] + (k[i + 1][0] - k[i][0]) * ((x - k[i][1]) / Math.max(1e-4, k[i + 1][1] - k[i][1])); return Infinity; });
     return { x, z, h: HF * (.8 + R() * .3), stems, passT, ph: R() * 6.3, sw: .7 + R() * .6, cg: .86 + R() * .22 }; });
-  const leafG = trifoliateGeo(weak ? .036 : .046), stemG = new THREE.CylinderGeometry(.0042, .0056, 1, 5); stemG.translate(0, .5, 0);
-  const stubG = new THREE.CylinderGeometry(.0034, .0038, 1, 6); stubG.translate(0, .5, 0); { const P = stubG.attributes.position, cl = new Float32Array(P.count * 3);
-    for (let i = 0; i < P.count; i++) { const top = P.getY(i) > .99; cl.set(top ? [1.25, 1.2, .9] : [1, 1, 1], i * 3); } stubG.setAttribute('color', new THREE.BufferAttribute(cl, 3)); }
+  const leafG = trifoliateGeo(weak ? .036 : .052), stemG = new THREE.CylinderGeometry(.0042, .0056, 1, 5); stemG.translate(0, .5, 0);
+  const stubG = new THREE.CylinderGeometry(.0026, .003, 1, 6); stubG.translate(0, .5, 0); { const P = stubG.attributes.position, cl = new Float32Array(P.count * 3);
+    for (let i = 0; i < P.count; i++) { const top = P.getY(i) > .99; cl.set(top ? [1.1, 1.08, .88] : [1, 1, 1], i * 3); } stubG.setAttribute('color', new THREE.BufferAttribute(cl, 3)); }
   const nS = plants.reduce((s, q) => s + q.stems.length, 0), nL = plants.reduce((s, q) => s + q.stems.reduce((a, st) => a + st.leaves.length, 0), 0), nF = plants.reduce((s, q) => s + q.stems.filter(st => st.flower).length, 0);
   const leafM = new THREE.MeshStandardMaterial({ map: cloverLeafTex(), alphaTest: .5, side: THREE.DoubleSide, roughness: .62 });
   const mk = (geo, mat, cnt, cast = true) => { const im = new THREE.InstancedMesh(geo, mat, Math.max(1, cnt)); im.frustumCulled = false; im.castShadow = cast; im.receiveShadow = true; g.add(im); return im; };
-  const stemIM = mk(stemG, std(weak ? '#a9b86a' : '#86ad4e', { r: .55 }), nS), leafIM = mk(leafG, leafM, nL), stubIM = mk(stubG, new THREE.MeshStandardMaterial({ color: col(weak ? '#a3a466' : '#7f9f48'), roughness: .7, vertexColors: true }), nS, false);
+  const stemIM = mk(stemG, std(weak ? '#a9b86a' : '#6f9a3f', { r: .55 }), nS), leafIM = mk(leafG, leafM, nL), stubIM = mk(stubG, new THREE.MeshStandardMaterial({ color: col(weak ? '#a3a466' : '#7f9f48'), roughness: .7, vertexColors: true }), nS, false);
   const flG = new THREE.SphereGeometry(.0085, 8, 6); flG.scale(1, 1.35, 1); const flIM = mk(flG, std('#efe9cf', { r: .8 }), nF);
-  const budIM = mk(new THREE.SphereGeometry(.0065, 6, 5), new THREE.MeshStandardMaterial({ color: col('#9ad84e'), roughness: .5, emissive: col('#4f8a1c'), emissiveIntensity: .25 }), nS * 2, false);
+  const budIM = mk(new THREE.SphereGeometry(.0045, 6, 5), new THREE.MeshStandardMaterial({ color: col('#8fcf48'), roughness: .5, emissive: col('#4f8a1c'), emissiveIntensity: .12 }), nS * 2, false);
   const tint = weak ? ['#d9d79a', '#cfd08e', '#e0dba4'] : ['#ffffff', '#f1f6e8', '#e6efd9', '#fbfff2'];
   { let li = 0; plants.forEach((q, pi) => q.stems.forEach(st => st.leaves.forEach(() => { leafIM.setColorAt(li, col(tint[li % tint.length]).multiplyScalar(q.cg)); li++; }))); }
   const Z = new THREE.Matrix4().makeScale(0, 0, 0), PM = new THREE.Matrix4(), L = new THREE.Matrix4(), M = new THREE.Matrix4(), Q = new THREE.Quaternion(), Q2 = new THREE.Quaternion(), V = new THREE.Vector3(), S = new THREE.Vector3(), AX = new THREE.Vector3(), E = new THREE.Euler();
