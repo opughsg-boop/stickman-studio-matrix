@@ -23,3 +23,4 @@ fetch_cat ambience 10
 fetch_cat wind 8
 fetch_cat forest 8
 fetch_cat bird 8
+fetch_cat rain 8
