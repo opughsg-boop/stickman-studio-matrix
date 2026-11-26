@@ -5270,7 +5270,7 @@ function pnLeafletTex() { return SPR.pnLeaf ||= (() => { const r = rng(57); retu
 function pnLeafGeo() { if (SPR.pnLeafG) return SPR.pnLeafG; const parts = [];   // one leaf in metres along +Z (petiole 4.5 cm, two leaflet pairs), faces +Y
   const leaflet = (z, a, len, wid) => { const q = new THREE.PlaneGeometry(wid, len, 2, 2); q.translate(0, len / 2, 0); const P = q.attributes.position; for (let i = 0; i < P.count; i++) P.setZ(i, -.32 * Math.abs(P.getX(i)));
     q.rotateX(Math.PI / 2); q.rotateX(-.16); q.rotateY(a); q.translate(0, .001, z); return q.toNonIndexed(); };
-  for (const s of [-1, 1]) { parts.push(leaflet(.045, s * 1.05, .036, .021)); parts.push(leaflet(.063, s * .4, .043, .024)); }
+  for (const s of [-1, 1]) { parts.push(leaflet(.045, s * 1.05, .043, .026)); parts.push(leaflet(.063, s * .4, .05, .029)); }
   const pt = new THREE.CylinderGeometry(.0008, .0012, .064, 4); pt.rotateX(Math.PI / 2); pt.translate(0, .001, .032); const n = pt.toNonIndexed(); n.attributes.uv.array.fill(.5); parts.push(n);
   return SPR.pnLeafG = mergeGeometries(parts); }
 function pnFlowerTex() { return SPR.pnFlower ||= canvasT(64, 64, (c, w, h) => { c.clearRect(0, 0, w, h); const gr = c.createRadialGradient(w / 2, h * .82, 2, w / 2, h * .6, w * .55);
@@ -5298,7 +5298,7 @@ function peanutPlant(p = {}) { const g = new THREE.Group(), body = new THREE.Gro
     for (let j = 1; j < NN; j++) { const f = j / (NN - 1), el = Math.min(1.5, st.el + f * (st.main ? 0 : .5) + b * .55), hz = Math.cos(el) * (1 - .4 * b);
       P = P.clone().add(V3(Math.sin(st.az) * hz, Math.sin(el), Math.cos(st.az) * hz).multiplyScalar(st.len / (NN - 1))); pts.push(P); } return pts; };
   const ptAt = (P, f) => { const x = f * (P.length - 1), i = Math.min(P.length - 2, Math.floor(x)); return P[i].clone().lerp(P[i + 1], x - i); };
-  const leaves = []; stems.forEach((st, si) => { const nl = dry ? 3 : st.main ? 6 : 8; for (let k = 0; k < nl; k++) { const f = .2 + .78 * (k + .3 + R() * .4) / nl;
+  const leaves = []; stems.forEach((st, si) => { const nl = dry ? 4 : st.main ? 9 : 12; for (let k = 0; k < nl; k++) { const f = .2 + .78 * (k + .3 + R() * .4) / nl;
     let az = st.main ? k * 2.4 + R() * .4 : st.az + (k % 2 ? 1 : -1) * (.9 + R() * .55); const lowFront = p.clearFront && f * st.len * Math.sin(st.el) < .16 && Math.abs(angTo(0, az)) < .55;
     if (lowFront) az = (az >= 0 ? 1 : -1) * (.65 + R() * .3);
     leaves.push({ si, f, az, el: .2 + R() * .45 + f * .2, roll: (R() - .5) * .5, s: (dry ? .6 : .95) * (.85 + R() * .3) * (1.06 - .22 * f), ph: R() * 6.3 }); } });
@@ -5329,8 +5329,8 @@ function peanutPlant(p = {}) { const g = new THREE.Group(), body = new THREE.Gro
     const tap = [V3(0, soilY, 0), V3(.004, soilY - .035, rz * .7), V3(-.008, soilY - .1, rz), V3(.01, soilY - .2, rz + .002), V3(-.004, soilY - .31, rz)];
     body.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(tap), 20, .0026, 5), rm));
     const nodM = new THREE.MeshStandardMaterial({ color: col('#c99a86'), roughness: .5 }), nodG = new THREE.SphereGeometry(.0022, 6, 4);
-    for (let k = 0; k < 9; k++) { const y0 = soilY - .05 - k * .027, s = k % 2 ? 1 : -1, P0 = V3(lerp(-.006, .008, R()), y0, rz + (R() - .5) * .006), L = .05 + R() * .08 * (1 - k / 12);
-      const pts = [P0]; let P = P0; for (let j = 1; j <= 4; j++) { P = P.clone().add(V3(s * L / 4, -L * (.12 + R() * .2) / 4, (R() - .5) * .004)); pts.push(P); }
+    for (let k = 0; k < 9; k++) { const y0 = soilY - .05 - k * .027, s = k % 2 ? 1 : -1, P0 = V3(lerp(-.006, .008, R()), y0, rz + (R() - .5) * .006), L = .04 + R() * .06 * (1 - k / 12);
+      const pts = [P0]; let P = P0; for (let j = 1; j <= 4; j++) { P = P.clone().add(V3(s * L / 4 * (1 - j * .12), -L * (.5 + R() * .5) / 4, (R() - .5) * .004)); pts.push(P); }
       body.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 10, .0012, 4), rm)); rootTips.push(pts[2], pts[4]);
       for (let n = 0; n < 2; n++) { const nd = new THREE.Mesh(nodG, nodM); nd.position.copy(pts[1 + n * 2]).add(V3(0, .002, .0015)); body.add(nd); } }
     const crG = new THREE.IcosahedronGeometry(1, 0), crIM = new THREE.InstancedMesh(crG, new THREE.MeshStandardMaterial({ color: col('#7d6246'), roughness: 1 }), 40); crIM.castShadow = true; body.add(crIM);
@@ -5363,7 +5363,7 @@ function peanutPlant(p = {}) { const g = new THREE.Group(), body = new THREE.Gro
     if (hole) hole.visible = lift > .03;
     if (built && !dynamic) return; built = true;
     const pts = stems.map(st => stemPts(st, b)); let si = 0;
-    stems.forEach((st, k) => { const P = pts[k]; for (let i = 0; i < P.length - 1; i++) seg(si++, P[i], P[i + 1], lerp(st.main ? .0035 : .0028, .0016, i / (P.length - 1))); });
+    stems.forEach((st, k) => { const P = pts[k]; for (let i = 0; i < P.length - 1; i++) seg(si++, P[i], P[i + 1], lerp(st.main ? .003 : .0024, .0014, i / (P.length - 1))); });
     leaves.forEach((lf, i) => { const P = pts[lf.si], base = ptAt(P, lf.f), el = lf.el + b * .5 + (dynamic ? .05 * Math.sin(t * 2.3 + lf.ph) : 0);
       BZ.set(Math.sin(lf.az) * Math.cos(el), Math.sin(el), Math.cos(lf.az) * Math.cos(el)); BX.crossVectors(Y_UP, BZ).normalize(); BY.crossVectors(BZ, BX); M.makeBasis(BX, BY, BZ);
       M.multiply(new THREE.Matrix4().makeRotationZ(lf.roll + (dynamic ? .09 * Math.sin(t * (3 + lf.ph * .3) + lf.ph) : 0))); M.scale(S.setScalar(lf.s)); M.setPosition(base.x, Math.max(base.y, soilY + .012), base.z); leafIM.setMatrixAt(i, M); });

@@ -283,3 +283,9 @@ Rule: when a preview or final video shows a mistake, add one entry here (what wa
 - **Mistake:** five side palms showed as bare leaning trunks across the sky in low shots. **Fix:** four palms only, 6-8 m back and 5-8 m to the sides.
 - Works: auto-tuned rig poses (coordinate search on palm targets) put both palms on the cane within 0.03 m, on the stem at 0.1 m, on the fruit at 0.05-0.07 m.
 - Source: runs/tomato_stake/sheet_preview.jpg (first pass). Fixes applied after the one preview, not re-checked by eye.
+
+## Peanut peg (preview 2026-11-26, plans/peanut_peg.mjs)
+- **Mistake:** the procedural groundnut read as bare green sticks in close-ups (6-8 leaves per stem, leaflets 3.6-4.3 cm). **Fix:** 9 + 12 leaves per stem, leaflets 4.3-5 cm long and 2.6-2.9 cm wide, thinner stems (5-6 mm). Real peanut: a dense low canopy of tetrafoliate leaves that hides the stems.
+- **Mistake:** root laterals on the soil section ran almost horizontal and straight (wires). **Fix:** laterals 4-10 cm angled 25-45 degrees downward and tapering. Real peanut roots: a taproot with fine laterals spreading down and out.
+- Works: peg curve rotating from upright to the soil and extending underground, pod forming horizontally at the tip on the island face, plant riding the palm mid when pulled, luma 106-156 on every frame with under 4 % above 205.
+- Source: runs/peanut_peg/sheet_preview.jpg (first pass). Fixes applied after the one preview, not re-checked by eye.
