@@ -304,3 +304,11 @@ Rule: when a preview or final video shows a mistake, add one entry here (what wa
 - **Mistake:** a horse standing at a station on the camera line (mud pen) blocked the city shot later. **Fix:** remove station actors once their line is done.
 - Probe: horse glb at height 2.35 is centred: body z -1.36..1.34 m from its origin, flank surface 0.3 m from the centre line, muzzle y 1.72-1.94 in Idle; cheek teeth sit about 0.85-1.15 m ahead of the origin.
 - Source: runs/horse_care/sheet_preview.jpg (first pass). Fixes applied after the one preview, not re-checked by eye.
+
+## Donkey load (preview 2026-11-26, plans/donkey_load.mjs)
+- **Mistake (repeated from tomato_stake):** palms 6-8 m back at the sides showed as bare curved trunks across the upper frame in low shots. **Fix:** only two palms, 11 m out to the sides and 8.5 m back.
+- **Mistake:** a coarse high-contrast jute weave (4 px threads, bump 1.2, pale yellow) read as wicker baskets. **Fix:** 2 px threads at low contrast, 3x repeat, bump .5, tan-brown tint. Real jute sacks: fine dull brown weave, soft folds.
+- **Mistake:** an emissive-only muscle glow (0.4) vanished on the light grey donkey in sun. **Fix:** tint the diffuse toward muscle red as well (up to 80 %), glow strength .85.
+- **Mistake:** a 1.9 m close-up on the sore showed only a blank grey flank; the line-6 camera behind the farmer showed his back. **Fix:** 2.7 m at az .4 (saddle + sore in one frame); side camera az 1.15 for the farmer facing -z.
+- Works: Donkey glb at height 1.95 = 1.3 m at the withers (Torso3 bone ~1.06 m, back top ~1.27 m); a saddle anchored 0.2 m above the Torso2 bone sits on the back; sacks riding the palm mid point keep hand contact by construction; mean luma 112-130 on every beat (exposure lowered to 1.0 after 4 frames had 5-6 % above 205).
+- Source: runs/donkey_load/sheet_preview.jpg (first pass) plus a luma count on the preview frames. Fixes applied after the one preview, not re-checked by eye.

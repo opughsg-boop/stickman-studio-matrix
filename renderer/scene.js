@@ -1344,7 +1344,10 @@ ASSETS.sticker = (p = {}) => {
   g.userData.tick = (t, age) => { const a = Math.max(0, age ?? 0), pop = a < .45 ? 1 + Math.sin(a / .45 * Math.PI) * .25 : 1; // overshoot on arrival
     const sq = a < .45 ? 1 - Math.sin(a / .45 * Math.PI) * .12 : 1, pulse = p.pulse ? 1 + Math.sin(t * 5) * .06 : 1;
     const sk = p.scaleK ? kv(p.scaleK, t, 1) : 1; sp.scale.set(S * pop * pulse * sk, S * sq * pulse * sk, 1); sp.position.y = Math.sin(t * 3 + (p.phase || 0)) * (p.bob ?? .04);
-    if (p.nudge) { const d = Math.sin(t * 6) * .05; sp.position.x = Math.cos(p.rot || 0) * d; sp.position.z = 0; } };
+    if (p.nudge) { const d = Math.sin(t * 6) * .05; sp.position.x = Math.cos(p.rot || 0) * d; sp.position.z = 0; }
+    // follow: [LINK key, field, [dx, dy, dz]]: the sticker rides a moving point (a sack on a walking donkey, a sore on its back)
+    if (p.follow) { const F = LINK[p.follow[0]], P = F && F[p.follow[1] || 'anchor']; if (P && P.isVector3 && g.parent) { g.parent.updateWorldMatrix(true, false);
+      g.position.copy(P).add(new THREE.Vector3(...(p.follow[2] || [0, 0, 0]))).applyMatrix4(g.parent.matrixWorld.clone().invert()); } } };
   return g;
 };
 ASSETS.glb = (p = {}) => {
@@ -2072,6 +2075,30 @@ function buffaloA(p = {}) {
       if (/Main_Light/.test(n)) c.color.set('#3b3a3b'); else if (/Main/.test(n)) c.color.set('#353436'); else if (/Muzzle/.test(n)) c.color.set('#232120'); else if (/Hoove/.test(n)) c.color.set('#26221e');
       if (/Main|Muzzle/.test(n)) hideShader(c, U, k); return c; });
     if (m.material.length === 1) m.material = m.material[0]; });
+  // load fx (p.fx, donkey_load): a world-space back sag under an overload (sagK), a raw saddle sore on the skin (soreK, soreAt [fwd, up, lat]
+  // from the Torso3 bone), a warm striated muscle glow over the back, loin, thighs and forearms (glowK). Per-instance material clones.
+  const FX = p.fx ? { uSag: { value: 0 }, uSagC: { value: new THREE.Vector3() }, uSagF: { value: new THREE.Vector3(0, 0, 1) }, uLat: { value: new THREE.Vector3(1, 0, 0) }, uSore: { value: new THREE.Vector3(0, -99, 0) },
+    uSoreK: { value: 0 }, uGlow: { value: 0 }, uMus: { value: Array.from({ length: 6 }, () => new THREE.Vector3(0, -99, 0)) }, uMusR: { value: [.2, .2, .2, .2, .2, .2] } } : null;
+  if (FX) o.traverse(m => { if (!m.isMesh) return; const arr = [].concat(m.material).map(mt => { const c = mt.clone(), prev = mt.onBeforeCompile;
+      c.onBeforeCompile = (sh, rr) => { if (prev && prev !== THREE.Material.prototype.onBeforeCompile) prev.call(c, sh, rr); Object.assign(sh.uniforms, FX);
+        sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nuniform float uSag; uniform vec3 uSagC; uniform vec3 uSagF; varying vec3 vDW;')
+          .replace('#include <project_vertex>', `vec4 dWP = modelMatrix * vec4(transformed, 1.0);
+  { float a = dot(dWP.xyz - uSagC, uSagF); dWP.y -= uSag * exp(-a * a / .1) * smoothstep(uSagC.y - .1, uSagC.y + .17, dWP.y); }
+  vDW = dWP.xyz; vec4 mvPosition = viewMatrix * dWP; gl_Position = projectionMatrix * mvPosition;`);
+        sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform vec3 uSore; uniform vec3 uLat; uniform vec3 uSagF; uniform float uSoreK; uniform float uGlow; uniform vec3 uMus[6]; uniform float uMusR[6]; varying vec3 vDW;')
+          .replace('#include <color_fragment>', `#include <color_fragment>
+  float dkGm = 0.; if (uGlow > .001) { for (int i = 0; i < 6; i++) { vec3 dv = vDW - uMus[i]; dkGm = max(dkGm, exp(-dot(dv, dv) / (uMusR[i] * uMusR[i]))); }
+    dkGm *= .62 + .38 * sin(dot(vDW, uSagF) * 95. + vDW.y * 45.); diffuseColor.rgb = mix(diffuseColor.rgb, vec3(.72, .16, .1), clamp(dkGm * uGlow, 0., .8)); }
+  if (uSoreK > .001) { vec3 dv = vDW - uSore; float e = length(vec3(dot(dv, uSagF) / .075, dv.y / .12, dot(dv, uLat) / .065));
+    float n = fract(sin(dot(floor(vDW * 170.), vec3(12.9, 78.2, 37.7))) * 43758.5);
+    float raw = (1. - smoothstep(.5, 1., e + n * .14)) * uSoreK, rim = (1. - smoothstep(.85, 1.5, e)) * uSoreK;
+    diffuseColor.rgb = mix(diffuseColor.rgb, vec3(.66, .34, .3), rim * .6);
+    diffuseColor.rgb = mix(diffuseColor.rgb, mix(vec3(.62, .09, .07), vec3(.3, .05, .04), smoothstep(.3, .9, n) * (1. - e)), raw); }`)
+          .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+  totalEmissiveRadiance += vec3(.55, .1, .05) * dkGm * uGlow;`); };
+      c.customProgramCacheKey = () => 'dkfx_' + (mt.name || '') + (prev ? '_p' : ''); c.needsUpdate = true; return c; });
+    m.material = arr.length === 1 ? arr[0] : arr; });
+  const dkB = ['Back', 'Torso', 'Torso2', 'Torso3', 'Neck1', 'Head', 'FrontUpperLegL', 'FrontUpperLegR', 'BackUpperLegL', 'BackUpperLegR'].map(n => [n, o.getObjectByName(n)]).filter(q => q[1]);
   const hornM = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .5, metalness: 0 }), horns = new THREE.Group(); g.add(horns);
   if (!plain) for (const sd of [1, -1]) { const hm = new THREE.Mesh(hornGeo(sd), hornM); hm.castShadow = true; horns.add(hm); }
   // animation: every clip plays, weights and times are set from t each frame (stateless, so any frame renders alone)
@@ -2116,6 +2143,9 @@ function buffaloA(p = {}) {
     const pant = val('pant', 0), haz = val('haze', 0), rollA = val('roll', 0), wet = val('wet', 0), mud = val('mud', 0), mudDry = val('mudDry', 0), flies = val('flies', 0), swish = val('swish', 0), stm = val('steam', 0), flyR = val('flyR', 1);
     const baseY = (hF + hB) / 2 + st.s; mover.position.set(st.x, baseY - .03 * settle, st.z); mover.rotation.y = st.yaw;
     roller.rotation.x = -Math.atan2(hF - hB, 1.7) * (st.s < -.3 ? 0 : 1) + .02 * settle; roller.rotation.z = rollA * .3 * Math.sin(t * 1.05) + rollA * .08;
+    // stumble (p.stumbles = [t, ...]): the forehand drops and the nose dips fast, then a damped recovery (follow-through)
+    let stE = 0; for (const s0 of p.stumbles || []) { const u = t - s0; if (u > 0 && u < 2.4) stE += u < .3 ? Math.sin(u / .3 * Math.PI / 2) : Math.exp(-3.4 * (u - .3)) * Math.cos(5.6 * (u - .3)); }
+    if (stE) { roller.rotation.x += .1 * stE; mover.position.y -= .045 * Math.max(0, stE); }
     // clips: walk weight from ground speed, walk time from distance walked; the base clip cross-fades on mode changes (slow in/out)
     const wW = acts.Walk ? clamp(st.speed / .4) : 0, wWalk = wW * wW * (3 - 2 * wW), cB = mo.clip || p.clip || 'Idle', cP = pm.clip || p.clip || 'Idle', xf = easeIO(clamp(ma / .9));
     for (const a of Object.values(acts)) a.setEffectiveWeight(0);
@@ -2129,7 +2159,7 @@ function buffaloA(p = {}) {
     const br = lerp(.012, .03, pant) * Math.sin(Math.PI * 2 * lerp(.3, 1.25, pant) * t);
     if (bones.t2 && bones.t3) { bones.t2.scale.setScalar(1 + br); bones.t3.scale.setScalar(1 / (1 + br)); }
     g.updateMatrixWorld(true);
-    bendBone(bones.neck, lat, .08); bendBone(bones.head, lat, -.12 + br * 2);
+    bendBone(bones.neck, lat, .08); bendBone(bones.head, lat, -.12 + br * 2); if (stE) bendBone(bones.neck, lat, .3 * stE);
     if (flies > .25) { const toss = flies * .32 * Math.pow(Math.max(0, Math.sin(t * 1.9)), 8) * (Math.sin(t * .95) > 0 ? 1 : -1); bendBone(bones.neck, up, toss); bendBone(bones.head, fwd, toss * .5); }
     const amp = lerp(.1, .55, swish), fq = lerp(.3, 1.35, swish);
     bones.tail.forEach((b, k) => { bendBone(b, up, amp * .32 * Math.sin(Math.PI * 2 * fq * t - k * .55)); bendBone(b, lat, .04 * Math.sin(Math.PI * 2 * fq * t * .5 - k * .4)); });
@@ -2141,6 +2171,15 @@ function buffaloA(p = {}) {
     U.uWet.value = wet; U.uMud.value = mud; U.uMudDry.value = mudDry; U.uDust.value = (p.dust ?? .6) * (1 - wet) * (1 - mud); U.uBaseY.value = baseY; U.uH.value = H;
     const back = new THREE.Vector3(st.x, baseY + H * .845, st.z).addScaledVector(fwd, -.2); const headP = hp.clone();
     LINK.buf = { x: st.x, z: st.z, yaw: st.yaw, baseY, back, head: headP, fwd: fwd.clone(), lat: lat.clone(), sink: st.s };
+    if (p.link) { const bp = {}; for (const [n, b] of dkB) bp[n] = b.getWorldPosition(new THREE.Vector3()); const sagV = kv(p.sagK, t, 0), D2 = { x: st.x, z: st.z, yaw: st.yaw, speed: st.speed, dist: st.dist,
+        baseY, fwd: fwd.clone(), lat: lat.clone(), q: roller.getWorldQuaternion(new THREE.Quaternion()), bp, sag: sagV * (p.sagDepth ?? .07), sore: null };
+      if (FX && bp.Torso && bp.Torso2) { FX.uSag.value = D2.sag; FX.uSagC.value.copy(bp.Torso).lerp(bp.Torso2, .55); FX.uSagF.value.copy(fwd); FX.uLat.value.copy(lat);
+        const so = p.soreAt || [.12, .2, -.1]; FX.uSore.value.copy(bp.Torso3 || bp.Torso2).addScaledVector(fwd, so[0]).addScaledVector(up, so[1]).addScaledVector(lat, so[2]); FX.uSoreK.value = kv(p.soreK, t, 0); D2.sore = FX.uSore.value.clone();
+        FX.uGlow.value = kv(p.glowK, t, 0) * (.72 + .28 * Math.sin(st.dist * 5.4));
+        const U2 = (v, dy, r, i) => { if (v) { FX.uMus.value[i].copy(v).add(_v1.set(0, dy, 0)); FX.uMusR.value[i] = r; } };
+        U2(bp.Torso.clone().lerp(bp.Torso2, .3), .17, .21, 0); U2(bp.Back && bp.Back.clone().lerp(bp.Torso, .5), .1, .19, 1);
+        U2(bp.BackUpperLegL, -.12, .17, 2); U2(bp.BackUpperLegR, -.12, .17, 3); U2(bp.FrontUpperLegL, -.1, .13, 4); U2(bp.FrontUpperLegR, -.1, .13, 5); }
+      LINK['buf:' + p.link] = D2; }
     // contact shadow on dry ground only
     const reg = regionAt(st.x, st.z); cs.position.set(st.x, gH(st.x, st.z) + .02, st.z); cs.rotation.z = st.yaw; cs.material.opacity = cs.userData.op * clamp(1 + st.s * 4) * (reg && st.s < -.05 ? 0 : 1);
     // heat shimmer rising off the dark back
@@ -3019,7 +3058,12 @@ function saltWall(p = {}) { const g = new THREE.Group(), L = p.len || 3.4, H = p
 
 // ---- concrete water trough (1.6 x 0.5 m, 0.5 m high), water at .42 m with ripple rings from the drinking muzzle (drinks [[t0,t1]], drinkAt [x,z] local)
 function trough(p = {}) { const g = new THREE.Group(), L = p.len || 1.6, W = p.w || .5, H = p.h || .5, th = .07, r = rng(p.seed || 12);
-  const tex = canvasT(256, 128, (c, w, h) => { c.fillStyle = '#8f8a80'; c.fillRect(0, 0, w, h); for (let i = 0; i < 2200; i++) { c.fillStyle = `rgba(${r() > .5 ? '250,248,240' : '60,58,52'},${r() * .12})`; c.fillRect(r() * w, r() * h, 1 + r() * 3, 1 + r() * 2); }
+  // p.wood: weathered timber planks (grey-brown, dark seams, grain, iron bands at the ends) instead of the concrete trough
+  const tex = p.wood ? canvasT(256, 128, (c, w, h) => { c.fillStyle = '#7a634a'; c.fillRect(0, 0, w, h); const n = 4;
+    for (let k = 0; k < n; k++) { const y0 = k * h / n, v = .85 + r() * .25; c.fillStyle = `rgb(${122 * v | 0},${100 * v | 0},${76 * v | 0})`; c.fillRect(0, y0 + 1, w, h / n - 2);
+      for (let i = 0; i < 26; i++) { c.strokeStyle = `rgba(${r() > .5 ? '60,44,30' : '170,150,120'},${.12 + r() * .18})`; c.lineWidth = .7 + r(); c.beginPath(); const yy = y0 + 2 + r() * (h / n - 4); c.moveTo(0, yy); c.bezierCurveTo(w * .3, yy + (r() - .5) * 5, w * .7, yy + (r() - .5) * 5, w, yy + (r() - .5) * 3); c.stroke(); }
+      c.fillStyle = 'rgba(30,20,12,.75)'; c.fillRect(0, y0, w, 1.5); for (let i = 0; i < 2; i++) { const x = r() * w; c.fillStyle = 'rgba(50,34,20,.5)'; c.beginPath(); c.ellipse(x, y0 + h / n / 2, 4, 2.5, 0, 0, 7); c.fill(); } }
+    for (const x of [6, w - 14]) { c.fillStyle = '#4b4743'; c.fillRect(x, 0, 8, h); c.fillStyle = 'rgba(150,80,40,.35)'; c.fillRect(x, 0, 8, h); } }, [L / 1.2, H / .6]) : canvasT(256, 128, (c, w, h) => { c.fillStyle = '#8f8a80'; c.fillRect(0, 0, w, h); for (let i = 0; i < 2200; i++) { c.fillStyle = `rgba(${r() > .5 ? '250,248,240' : '60,58,52'},${r() * .12})`; c.fillRect(r() * w, r() * h, 1 + r() * 3, 1 + r() * 2); }
     for (let i = 0; i < 14; i++) { c.fillStyle = `rgba(90,95,70,${.05 + r() * .1})`; c.fillRect(r() * w, h * (.1 + r() * .3), 4 + r() * 30, 20 + r() * 60); } c.fillStyle = 'rgba(70,90,50,.25)'; c.fillRect(0, h * .12, w, 6); }, [L / 1.2, H / .6]);
   const cm = new THREE.MeshStandardMaterial({ map: tex, roughness: .9 });
   const part = (w, h, d, x, y, z) => { const m = box(w, h, d, cm); m.position.set(x, y, z); g.add(m); };
@@ -6050,3 +6094,125 @@ Object.assign(RIG_POSES, { // maize watering (Farmer 1.75 m, facing +z; tuned wi
   setDownHalf: { adR: 1.2, fR: -.1, eR: .14, sp: .9, hd: -.3, hL: .45, hR: .45, kL: .75, kR: .75 },
   setDown: { adR: 1.03, fR: -.23, eR: .15, sp: 1.56, hd: -.3, hL: .93, hR: .93, kL: 1.58, kR: 1.58 },                // track y -.3: R palm at .42 m (pail on the soil), feet at .03
   ctaWave: { adL: 1.42, fL: .1, eL: .39, adR: .95, fR: .85, eR: .35, ht: .3, sp: -.02 } });
+
+// ================= donkey load pack (plans/donkey_load.mjs) =================
+// donkey_pack: an Egyptian pack saddle (a padded, striped felt pad with front and rear rolls), a wooden sawbuck frame (side bars + crossed
+// sticks), a leather girth, and jute sacks (0.5 long x 0.3 wide x 0.5 tall, gathered and tied at the neck, crossed sisal rope over the
+// outer face) riding a buffalo-walker donkey (LINK['buf:' + link]). Sacks move between slots by keys [t, slot, dur]: 'L' | 'R' (hung on the
+// donkey's left / right side), 'L2' | 'R2' (an extra sack on top of that side), 'T' (lying across the saddle), 'H:<rig link>' (between a
+// person's palms), [x, z, yaw, lying] (on the ground), 'hide'. The saddle rolls toward the heavier side; sacks swing with the stride.
+// Lead rope (lead: { by, hand, k }) sags from the halter ring under the jaw to the palm. Place at pos [0,0,0] (world frame).
+// Pack-local frame: x = the donkey's left (lat), y = up, z = forward; origin = the saddle top centre.
+function juteTex() { return SPR.jute ||= canvasT(256, 256, (c, w, h) => { const r = rng(141); c.fillStyle = '#9c825c'; c.fillRect(0, 0, w, h);
+  for (let y = 0; y < h; y += 2) { c.fillStyle = `rgba(${r() > .5 ? '200,178,136' : '96,74,46'},${.07 + r() * .08})`; c.fillRect(0, y, w, 1); }
+  for (let x = 0; x < w; x += 2) { c.fillStyle = `rgba(${r() > .5 ? '192,170,128' : '90,68,40'},${.06 + r() * .07})`; c.fillRect(x, 0, 1, h); }
+  for (let i = 0; i < 800; i++) { c.strokeStyle = `rgba(${r() > .5 ? '238,218,168' : '66,48,24'},${.14 + r() * .24})`; c.lineWidth = .6; c.beginPath(); const x = r() * w, y = r() * h; c.moveTo(x, y); c.lineTo(x + (r() - .5) * 16, y + (r() - .5) * 16); c.stroke(); }
+  for (let i = 0; i < 12; i++) { const x = r() * w, y = r() * h, R = 12 + r() * 34, g2 = c.createRadialGradient(x, y, 0, x, y, R); g2.addColorStop(0, `rgba(${r() > .6 ? '60,44,28' : '120,100,70'},.2)`); g2.addColorStop(1, 'rgba(70,50,30,0)'); c.fillStyle = g2; c.fillRect(x - R, y - R, 2 * R, 2 * R); } }, [3, 3]); }
+const SACK_N = 4.44, sackSurf = (v, w) => { const s = Math.pow(Math.max(0, 1 - Math.pow(Math.abs(v), SACK_N) - Math.pow(Math.abs(w), SACK_N)), 1 / SACK_N); const nk = clamp((v - .5) / .5); return .15 * s * (.78 + .22 * (1 - v * v)) * (1 - .8 * nk * nk); };
+function sackGeo(seed) { const geo = new THREE.SphereGeometry(1, 26, 18), P = geo.attributes.position, r = rng(seed), ph = [r() * 6, r() * 6, r() * 6], se = q => Math.sign(q) * Math.pow(Math.abs(q), 2 / SACK_N);
+  for (let i = 0; i < P.count; i++) { const sx = P.getX(i), sy = P.getY(i), sz = P.getZ(i); let x = .15 * se(sx), y = .25 * se(sy), z = .25 * se(sz); const v = y / .25;
+    x *= .78 + .22 * (1 - v * v); z *= .9 + .1 * (1 - v * v); const nk = clamp((v - .5) / .5), sq = 1 - .8 * nk * nk; x *= sq; z *= sq; y += nk * nk * .05;
+    if (v < -.8) y = -.25 + (y + .25) * .4; // flat, settled bottom
+    const wr = .005 * Math.sin(y * 70 + ph[0] + z * 20) + .004 * Math.sin(z * 55 + ph[1]) * Math.sin(y * 40 + ph[2]); x += wr * Math.sign(x); z += wr * .6 * Math.sign(z);
+    P.setXYZ(i, x, y, z); }
+  geo.computeVertexNormals(); return geo; }
+function sackMesh(seed, ropeM) { const g = new THREE.Group(), jm = new THREE.MeshStandardMaterial({ map: juteTex(), bumpMap: juteTex(), bumpScale: .5, roughness: 1, color: col(seed % 2 ? '#d9c9ad' : '#e2d3b8') });
+  const s = new THREE.Mesh(sackGeo(seed), jm); s.castShadow = s.receiveShadow = true; g.add(s);
+  const tie = new THREE.Mesh(new THREE.TorusGeometry(.034, .009, 6, 14), ropeM); tie.rotation.x = Math.PI / 2; tie.position.y = .258; g.add(tie);
+  const ear = new THREE.Mesh(new THREE.ConeGeometry(.045, .06, 9, 1, true), jm); ear.position.y = .3; ear.rotation.x = Math.PI; g.add(ear);
+  // crossed rope over both broad faces (follows the bulge of the cloth)
+  for (const sx of [1, -1]) for (const d of [1, -1]) { const pts = []; for (let k = 0; k <= 10; k++) { const u = k / 10, v = .78 - 1.5 * u, w = d * (-.8 + 1.6 * u); pts.push(new THREE.Vector3(sx * (sackSurf(v, w) + .007), v * .25, w * .25)); }
+    const tm = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 16, .0065, 5), ropeM); tm.castShadow = true; g.add(tm); }
+  return g; }
+function blanketTex() { return SPR.dkBlanket ||= canvasT(256, 256, (c, w, h) => { const r = rng(147); c.fillStyle = '#7d2f22'; c.fillRect(0, 0, w, h);
+  const bands = [['#1f1a17', 6], ['#c9973c', 10], ['#1f1a17', 4], ['#2f5a3a', 14], ['#1f1a17', 4], ['#d8cdb5', 6]]; for (const y0 of [18, 150]) { let y = y0; for (const [cl, hh] of bands) { c.fillStyle = cl; c.fillRect(0, y, w, hh); y += hh; } }
+  for (let i = 0; i < 2600; i++) { c.fillStyle = `rgba(${r() > .5 ? '255,235,200' : '20,10,5'},${r() * .09})`; c.fillRect(r() * w, r() * h, 1 + r() * 3, 1); }
+  for (let i = 0; i < 9; i++) { const x = r() * w, y = r() * h, R = 20 + r() * 40, g2 = c.createRadialGradient(x, y, 0, x, y, R); g2.addColorStop(0, 'rgba(150,120,80,.22)'); g2.addColorStop(1, 'rgba(150,120,80,0)'); c.fillStyle = g2; c.fillRect(x - R, y - R, 2 * R, 2 * R); } }, [1, 1]); }
+function woodTex() { return SPR.dkWood ||= canvasT(64, 256, (c, w, h) => { const r = rng(149); c.fillStyle = '#6e4d30'; c.fillRect(0, 0, w, h);
+  for (let i = 0; i < 40; i++) { c.strokeStyle = `rgba(${r() > .5 ? '40,26,14' : '150,115,80'},${.15 + r() * .2})`; c.lineWidth = .8 + r(); c.beginPath(); const x = r() * w; c.moveTo(x, 0); c.bezierCurveTo(x + 4, h * .3, x - 4, h * .7, x + 2, h); c.stroke(); } }, [1, 1]); }
+function packSaddle(ropeM) { const g = new THREE.Group(), R0 = .3, cy = -.33;
+  // padded pad: a thick arc of felt over the back, rounded (bevelled) edges, the striped cloth on top
+  const sh = new THREE.Shape(), a0 = Math.PI / 2 - 1.62, a1 = Math.PI / 2 + 1.62, ri = R0 + .005, ro = R0 + .07;
+  sh.absarc(0, 0, ro, a0, a1, false); sh.absarc(0, 0, ri, a1, a0, true);
+  const pg = new THREE.ExtrudeGeometry(sh, { depth: .62, bevelEnabled: true, bevelThickness: .04, bevelSize: .025, bevelSegments: 3, curveSegments: 28 }); pg.translate(0, cy, -.31);
+  { const P = pg.attributes.position, U = pg.attributes.uv; for (let i = 0; i < P.count; i++) U.setXY(i, (Math.atan2(P.getY(i) - cy, P.getX(i)) - a0) / (a1 - a0), (P.getZ(i) + .35) / .7); }
+  const pad = new THREE.Mesh(pg, new THREE.MeshStandardMaterial({ map: blanketTex(), roughness: .95, bumpMap: juteTex(), bumpScale: .6 })); pad.castShadow = pad.receiveShadow = true; g.add(pad);
+  const rollM = new THREE.MeshStandardMaterial({ color: col('#5b2a1f'), roughness: .9, bumpMap: juteTex(), bumpScale: .5 });
+  for (const z of [.33, -.33]) { const tr = new THREE.Mesh(new THREE.TorusGeometry(ro + .015, .042, 10, 28, 2.5), rollM); tr.rotation.z = Math.PI / 2 - 1.25; tr.position.set(0, cy, z); tr.castShadow = true; g.add(tr); }
+  // wooden sawbuck: side bars on the pad, two crossed sticks front and rear, pegs
+  const wm = new THREE.MeshStandardMaterial({ map: woodTex(), roughness: .75 });
+  for (const s of [1, -1]) { const b = new THREE.Mesh(new THREE.BoxGeometry(.07, .028, .6), wm); b.position.set(s * .13, .045, 0); b.rotation.z = -s * .45; b.castShadow = true; g.add(b); }
+  const rod2 = (a, b, r, m) => { const d = new THREE.Vector3().subVectors(b, a), c = new THREE.Mesh(new THREE.CylinderGeometry(r, r * 1.1, d.length(), 8), m); c.position.copy(a).add(b).multiplyScalar(.5); c.quaternion.setFromUnitVectors(YUP, d.normalize()); c.castShadow = true; return c; };
+  for (const z of [.21, -.21]) for (const s of [1, -1]) g.add(rod2(V3(s * .15, .05, z), V3(-s * .065, .24, z), .016, wm));
+  // girth under the barrel (leather strap) at the middle of the pad
+  const gc = new THREE.EllipseCurve(0, cy + .02, .345, .325, 0, Math.PI * 2), gp = gc.getPoints(48).map(q => V3(q.x, q.y, .04));
+  const girth = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(gp, true), 64, .018, 5, true), new THREE.MeshStandardMaterial({ color: col('#4a3624'), roughness: .7 })); girth.scale.z = 1; g.add(girth);
+  return g; }
+const PACK_SLOTS = { L: [[.45, -.31, 0], [0, 0, .1]], R: [[-.45, -.31, 0], [0, 0, -.1]], L2: [[.32, .11, 0], [0, 0, -1.17]], R2: [[-.32, .11, 0], [0, 0, 1.17]], T: [[0, .38, 0], [0, 0, Math.PI / 2]] };
+function donkeyPack(p = {}) { const g = new THREE.Group(), pk = new THREE.Group(); g.add(pk);
+  const ropeM = new THREE.MeshStandardMaterial({ color: col('#c7ad79'), roughness: .9 }); pk.add(packSaddle(ropeM));
+  // the crossed rope from the sawbuck tops over each hung sack (shown when that side is loaded)
+  const slotM = {}; for (const [k, [ps, rt]] of Object.entries(PACK_SLOTS)) slotM[k] = new THREE.Matrix4().compose(V3(...ps), new THREE.Quaternion().setFromEuler(new THREE.Euler(...rt)), V3(1, 1, 1));
+  const sideRopes = {}; for (const sd of ['L', 'R']) { const s = sd === 'L' ? 1 : -1, grp = new THREE.Group(); pk.add(grp); sideRopes[sd] = grp;
+    for (const zz of [.21, -.21]) { const top = V3(-s * .065, .245, zz), a = V3(s * (sackSurf(.6, zz / .25 * .9) + .006), .15, zz * .9).applyMatrix4(slotM[sd]), b = V3(s * (sackSurf(-.75, -zz / .25 * .8) + .006), -.19, -zz * .8).applyMatrix4(slotM[sd]);
+      const c2 = new THREE.CatmullRomCurve3([top, V3(s * .2, .12, zz * .95), a, b]); const m = new THREE.Mesh(new THREE.TubeGeometry(c2, 24, .0065, 5), ropeM); m.castShadow = true; grp.add(m); } }
+  const topRope = new THREE.Group(); pk.add(topRope); for (const zz of [.12, -.12]) { const c2 = new THREE.CatmullRomCurve3([V3(.15, .06, zz), V3(.2, .4, zz), V3(0, .545, zz), V3(-.2, .4, zz), V3(-.15, .06, zz)]); const m = new THREE.Mesh(new THREE.TubeGeometry(c2, 24, .0065, 5), ropeM); topRope.add(m); }
+  const sacks = (p.sacks || []).map((s, i) => { const m = sackMesh(s.seed ?? (i * 7 + 3), ropeM); g.add(m); return { m, keys: s.keys || [[0, 'hide']], id: s.id || 's' + i }; });
+  // lead rope: 22 short links on a sagging curve from the halter ring to the palm
+  const NL = 22, lead = new THREE.InstancedMesh(new THREE.CylinderGeometry(.0085, .0085, 1, 6), ropeM, NL); lead.frustumCulled = false; lead.castShadow = true; g.add(lead);
+  const qT = new THREE.Quaternion(), mT = new THREE.Matrix4(), pW = new THREE.Vector3(), Z = new THREE.Matrix4().makeScale(0, 0, 0);
+  const slotWorld = (sl, t, outP, outQ) => { // world transform of a slot at time t (null when hidden or unavailable)
+    if (sl === 'hide') return false;
+    if (Array.isArray(sl)) { const lying = !!sl[3]; outP.set(sl[0], lying ? .15 : .25, sl[1]); outQ.setFromEuler(new THREE.Euler(0, sl[2] || 0, lying ? Math.PI / 2 : 0, 'YXZ')); return true; }
+    if (sl.startsWith('H:')) { const L = LINK[sl.slice(2)]; if (!L || !L.L || !L.R) return false; outP.copy(L.L).add(L.R).multiplyScalar(.5); outP.y += p.handLift ?? .1; outQ.setFromAxisAngle(YUP, (L.yaw || 0) + Math.PI / 2); return true; }
+    const M = slotM[sl]; if (!M) return false; mT.multiplyMatrices(pk.matrixWorld, M); mT.decompose(outP, outQ, pW); return true; };
+  const A = [V3(0, 0, 0), new THREE.Quaternion()], Bq = [V3(0, 0, 0), new THREE.Quaternion()];
+  const occ = (s, t, name) => { const K = s.keys; let i = -1; for (let j = 0; j < K.length; j++) if (t >= K[j][0]) i = j; if (i < 0) return K[0][1] === name ? 1 : 0;
+    const cur = K[i][1] === name ? 1 : 0, prv = i > 0 && K[i - 1][1] === name ? 1 : 0, e = easeIO((t - K[i][0]) / (K[i][2] ?? .6)); return lerp(prv, cur, e); };
+  g.userData.tick = t => { const D = LINK['buf:' + p.link]; const ok = D && D.bp && D.bp.Torso2; pk.visible = !!ok;
+    if (ok) { // sway with the stride (follow-through) and roll toward the heavier side
+      const wL = sacks.reduce((a, s) => a + occ(s, t, 'L') + occ(s, t, 'L2') * 1.25, 0), wR = sacks.reduce((a, s) => a + occ(s, t, 'R') + occ(s, t, 'R2') * 1.25, 0);
+      const mv = clamp(D.speed / .5), sw = .022 * mv * Math.sin(D.dist * Math.PI * 2 / 1.05), tilt = clamp((wR - wL) * (p.tiltK ?? .075), -.2, .2);
+      pk.position.copy(D.bp.Torso2).addScaledVector(D.fwd, p.fwdOff ?? -.04); pk.position.y += (p.lift ?? .2) - D.sag * .85;
+      pk.quaternion.copy(D.q).multiply(qT.setFromAxisAngle(V3(0, 0, 1), tilt + sw)); pk.updateMatrixWorld(true);
+      for (const sd of ['L', 'R']) sideRopes[sd].visible = sacks.some(s => occ(s, t, sd) > .97);
+      topRope.visible = sacks.some(s => occ(s, t, 'T') > .97);
+      const P = { anchor: pk.position.clone(), sore: D.sore }; for (const k in slotM) { P[k] = V3(0, 0, 0).applyMatrix4(mT.multiplyMatrices(pk.matrixWorld, slotM[k])); } LINK['pack:' + p.link] = P; }
+    sacks.forEach(s => { const K = s.keys; let i = -1; for (let j = 0; j < K.length; j++) if (t >= K[j][0]) i = j; const k0 = i < 0 ? 0 : i;
+      const cur = K[k0][1], prv = k0 > 0 ? K[k0 - 1][1] : cur, dur = K[k0][2] ?? .6, e = i < 0 ? 1 : easeIO((t - K[k0][0]) / dur);
+      const okB = slotWorld(cur, t, Bq[0], Bq[1]); if (!okB || (typeof cur === 'string' && !cur.startsWith('H:') && !ok)) { s.m.visible = false; return; }
+      if (e < 1 && prv !== cur && slotWorld(prv, t, A[0], A[1])) { s.m.position.copy(A[0]).lerp(Bq[0], e); s.m.position.y += .07 * Math.sin(Math.PI * e); s.m.quaternion.copy(A[1]).slerp(Bq[1], e); }
+      else { s.m.position.copy(Bq[0]); s.m.quaternion.copy(Bq[1]); }
+      if (ok && typeof cur === 'string' && slotM[cur] && e >= 1) { const mv = clamp(D.speed / .5); s.m.quaternion.multiply(qT.setFromEuler(new THREE.Euler(.03 * mv * Math.sin(D.dist * 6 - .7), 0, .045 * mv * Math.sin(D.dist * Math.PI * 2 / 1.05 - .8)))); }
+      s.m.visible = true; });
+    // lead rope
+    const ld = p.lead, on = ld ? kv(ld.k, t, 0) > .5 : false, M0 = LINK[p.link]?.mouth, PL = ld && LINK[ld.by]?.[ld.hand || 'L'];
+    if (!on || !M0 || !PL || !ok) { for (let i = 0; i < NL; i++) lead.setMatrixAt(i, Z); lead.instanceMatrix.needsUpdate = true; return; }
+    const a = M0.clone().addScaledVector(D.fwd, -.1).add(V3(0, -.05, 0)), b = PL.clone(), span = a.distanceTo(b), sag = Math.max(.05, (ld.len ?? 1.4) - span) * .45;
+    const pt = u => a.clone().lerp(b, u).add(V3(0, -4 * sag * u * (1 - u), 0));
+    for (let i = 0; i < NL; i++) { const p0 = pt(i / NL), p1 = pt((i + 1) / NL), d = p1.clone().sub(p0), L = d.length(); qT.setFromUnitVectors(YUP, d.normalize());
+      lead.setMatrixAt(i, mT.compose(p0.add(p1).multiplyScalar(.5), qT, V3(1, L * 1.05, 1))); } lead.instanceMatrix.needsUpdate = true; };
+  return g; }
+// dirt_track: a trodden earth track along a smooth line (pts [[x, z], ...], w): pale compacted centre, darker cart ruts, hoof prints,
+// pebbles, ragged soft edges that fade into the soil. Also used wide for a trampled yard.
+function dirtTrack(p = {}) { const g = new THREE.Group(), W = p.w || 1.6, r = rng(p.seed || 151);
+  const curve = new THREE.CatmullRomCurve3((p.pts || [[-6, 0], [6, 0]]).map(q => V3(q[0], 0, q[1]))), len = curve.getLength(), N = Math.max(8, Math.round(len / .2)), NJ = 8;
+  const pos = [], uv = [], idx = [];
+  for (let i = 0; i <= N; i++) { const u = i / N, P = curve.getPointAt(u), T = curve.getTangentAt(u), Nn = V3(-T.z, 0, T.x);
+    for (let j = 0; j <= NJ; j++) { const s = j / NJ - .5, edge = Math.abs(s) > .45 ? (vnoise(u * len * 1.3, j * 2.7) - .5) * .35 : 0, q = P.clone().addScaledVector(Nn, s * W + edge * Math.sign(s));
+      pos.push(q.x, (p.y ?? .012) + (Math.abs(s) < .45 ? .002 : 0), q.z); uv.push(j / NJ, u * len / (p.rep || 3)); } }
+  for (let i = 0; i < N; i++) for (let j = 0; j < NJ; j++) { const a = i * (NJ + 1) + j, b = a + 1, c = a + NJ + 1, d = c + 1; idx.push(a, c, b, b, c, d); }
+  const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); geo.setIndex(idx); geo.computeVertexNormals();
+  const tex = canvasT(256, 512, (c, w, h) => { const rr = rng(p.seed || 151); c.fillStyle = p.color || '#a98b66'; c.fillRect(0, 0, w, h);
+    for (let i = 0; i < 5000; i++) { const v = rr(); c.fillStyle = `rgba(${v > .5 ? '214,192,158' : '92,70,48'},${.08 + rr() * .14})`; c.fillRect(rr() * w, rr() * h, 1 + rr() * 3, 1 + rr() * 3); }
+    if (p.ruts !== false) for (const x of [.3, .7]) { const gr = c.createLinearGradient(w * (x - .07), 0, w * (x + .07), 0); gr.addColorStop(0, 'rgba(70,52,34,0)'); gr.addColorStop(.5, 'rgba(70,52,34,.32)'); gr.addColorStop(1, 'rgba(70,52,34,0)'); c.fillStyle = gr; c.fillRect(w * (x - .07), 0, w * .14, h); }
+    for (let i = 0; i < 46; i++) { const x = w * (.38 + rr() * .24), y = rr() * h; c.strokeStyle = 'rgba(64,46,30,.42)'; c.lineWidth = 2.2; c.beginPath(); c.arc(x, y, 4.5, .3, Math.PI - .3); c.stroke(); }
+    for (let i = 0; i < 260; i++) { const x = rr() * w, y = rr() * h, R = 1 + rr() * 2.5; c.fillStyle = `rgb(${150 + rr() * 60 | 0},${135 + rr() * 50 | 0},${110 + rr() * 40 | 0})`; c.beginPath(); c.arc(x, y, R, 0, 7); c.fill(); c.fillStyle = 'rgba(40,30,20,.35)'; c.fillRect(x - R, y + R * .6, 2 * R, 1); }
+    c.globalCompositeOperation = 'destination-in'; const ga = c.createLinearGradient(0, 0, w, 0); ga.addColorStop(0, 'rgba(0,0,0,0)'); ga.addColorStop(.14, 'rgba(0,0,0,.92)'); ga.addColorStop(.86, 'rgba(0,0,0,.92)'); ga.addColorStop(1, 'rgba(0,0,0,0)'); c.fillStyle = ga; c.fillRect(0, 0, w, h); }, [1, 1]);
+  tex.wrapT = THREE.RepeatWrapping;
+  const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: tex, transparent: true, depthWrite: false, roughness: .97, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
+  m.receiveShadow = true; m.renderOrder = 1; g.add(m); return g; }
+Object.assign(ASSETS, { donkey_pack: donkeyPack, dirt_track: dirtTrack });
+Object.assign(RIG_POSES, { // sack loading (Farmer 1.75 m): carry = palms ~.99 m high, .23 m forward, .42 m apart (sack ends between them)
+  sackUp: { adL: 1.42, adR: 1.42, fL: .55, fR: .55, eL: 1.3, eR: 1.3, sp: -.05, hd: .05, hold: 1 },     // the sack raised to chest height over the saddle
+  sackPress: { adL: 1.42, adR: 1.42, fL: .45, fR: .45, eL: .7, eR: .7, sp: .12, hd: .2, hold: 1 } });   // settling the sack on the side of the saddle
