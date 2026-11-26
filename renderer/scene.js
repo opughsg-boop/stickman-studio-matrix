@@ -5434,11 +5434,11 @@ Object.assign(RIG_POSES, { // peanut pulling (Farmer 1.75 m, facing +z): squatRe
 //   down the tunnel (pourK) with a damp halo round it.
 const FIELD = { list: [], h(x, z) { let y = 0; for (const f of this.list) if (x >= f.x0 && x <= f.x1 && z >= f.z0 && z <= f.z1) y = Math.max(y, f.h(x, z)); return y; } };
 function wetMudMaps() { return SPR.wetMud ||= (() => { const r = rng(907), N = 512, cl = [];
-  for (let i = 0; i < 900; i++) cl.push([r() * N, r() * N, 3 + r() * 12, 2 + r() * 8, r() * 3, r()]);
+  for (let i = 0; i < 900; i++) { const a = 3 + r() * 9; cl.push([r() * N, r() * N, a, a * (.7 + r() * .3), r() * 3, r()]); }
   const mk = draw => { const c = document.createElement('canvas'); c.width = c.height = N; draw(c.getContext('2d')); const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; return t; };
   const diff = mk(x => { x.fillStyle = '#5b4532'; x.fillRect(0, 0, N, N);
     for (let i = 0; i < 2600; i++) { x.fillStyle = `rgba(${40 + r() * 50 | 0},${28 + r() * 36 | 0},${18 + r() * 24 | 0},${.25 + r() * .35})`; x.fillRect(r() * N, r() * N, 1 + r() * 3, 1 + r() * 3); }
-    cl.forEach(([cx, cy, a, b, rot, k]) => { const v = 70 + k * 45; x.fillStyle = `rgb(${v + 22 | 0},${v * .76 | 0},${v * .55 | 0})`; x.beginPath(); x.ellipse(cx, cy, a, b, rot, 0, 6.283); x.fill();
+    cl.forEach(([cx, cy, a, b, rot, k]) => { const v = 66 + k * 40; x.fillStyle = `rgb(${v + 10 | 0},${v * .82 | 0},${v * .64 | 0})`; x.beginPath(); x.ellipse(cx, cy, a, b, rot, 0, 6.283); x.fill();
       x.fillStyle = 'rgba(20,14,9,.35)'; x.beginPath(); x.ellipse(cx + 1.5, cy + 2, a * .9, b * .5, rot, 0, 3.14); x.fill(); });
     for (let i = 0; i < 40; i++) { x.strokeStyle = 'rgba(150,130,90,.35)'; x.lineWidth = 1; x.beginPath(); const sx = r() * N, sy = r() * N; x.moveTo(sx, sy); x.lineTo(sx + (r() - .5) * 30, sy + (r() - .5) * 30); x.stroke(); } }); // straw bits
   diff.colorSpace = THREE.SRGBColorSpace;
@@ -5632,7 +5632,7 @@ function soilSectionMaps(w, h, seed) { const key = 'ssec' + w + h + seed; return
     for (let i = 0; i < 70; i++) { const sx = r2() * W2, sy = r2() * H2 * .3; x.strokeStyle = 'rgba(210,190,150,.45)'; x.lineWidth = .8 + r2(); x.beginPath(); x.moveTo(sx, sy); let px = sx, py = sy; for (let k = 0; k < 6; k++) { px += (r2() - .5) * 14; py += 6 + r2() * 12; x.lineTo(px, py); } x.stroke(); } // fine roots
     for (let i = 0; i < 40; i++) { const sx = r2() * W2, sy = H2 * (.2 + r2() * .8), a = 3 + r2() * 7; x.fillStyle = `rgb(${130 + r2() * 50 | 0},${115 + r2() * 40 | 0},${95 + r2() * 30 | 0})`; x.beginPath(); x.ellipse(sx, sy, a, a * .7, r2() * 3, 0, 6.283); x.fill(); }   // stones
     pores.forEach(([px, py, a, rot]) => { x.fillStyle = 'rgba(22,15,9,.85)'; x.beginPath(); x.ellipse(px, py, a, a * .65, rot, 0, 6.283); x.fill(); }); }, true);
-  const wet = mk((x, W2, H2) => { x.fillStyle = '#3e2c1d'; x.fillRect(0, 0, W2, H2); pores.forEach(([px, py, a, rot]) => { x.fillStyle = 'rgba(190,220,240,.95)'; x.beginPath(); x.ellipse(px, py, a * .9, a * .6, rot, 0, 6.283); x.fill(); }); }, true);
+  const wet = mk((x, W2, H2) => { x.fillStyle = '#3e2c1d'; x.fillRect(0, 0, W2, H2); pores.forEach(([px, py, a, rot]) => { x.fillStyle = 'rgba(120,150,170,.55)'; x.beginPath(); x.ellipse(px, py, a * .55, a * .4, rot, 0, 6.283); x.fill(); }); }, true);
   const wetA = mk((x, W2, H2) => { x.fillStyle = '#000'; x.fillRect(0, 0, W2, H2); x.fillStyle = '#fff'; x.beginPath(); x.moveTo(0, 0); x.lineTo(W2, 0); x.lineTo(W2, H2 * .5); for (let px = W2; px >= 0; px -= 8) x.lineTo(px, H2 * .5 + Math.sin(px * .05) * 6 + Math.sin(px * .17) * 3); x.closePath(); x.fill(); });
   const bump = mk((x, W2, H2) => { x.fillStyle = '#9a9a9a'; x.fillRect(0, 0, W2, H2); const r3 = rng(seed + 9); for (let i = 0; i < 2500; i++) { x.fillStyle = `rgba(${r3() > .5 ? '230,230,230' : '60,60,60'},.5)`; x.beginPath(); x.arc(r3() * W2, r3() * H2, 1 + r3() * 4, 0, 6.283); x.fill(); }
     pores.forEach(([px, py, a]) => { x.fillStyle = '#202020'; x.beginPath(); x.arc(px, py, a, 0, 6.283); x.fill(); }); });
@@ -5647,10 +5647,10 @@ function soilSection(p = {}) { const g = new THREE.Group(), X0 = p.x0 ?? -.5, X1
   const NB = 60, bub = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 12, 8), new THREE.MeshPhysicalMaterial({ color: col('#f4faff'), roughness: .03, clearcoat: 1, transparent: true, opacity: .7, envMapIntensity: 2.2 }), NB); bub.frustumCulled = false; g.add(bub);
   const r = rng(p.seed || 61), BD = Array.from({ length: NB }, () => [X0 + .04 + r() * (W - .08), .3 + r() * .7, r(), .0016 + r() * .0026, .8 + r() * .5]);
   // tunnels
-  const lineM = std('#7a5b3e', { r: .9 }), darkM = std('#20160e', { r: 1 }), waterM = new THREE.MeshPhysicalMaterial({ color: col('#9fc6dc'), roughness: .05, clearcoat: 1, transparent: true, opacity: .85, envMapIntensity: 1.8 }), dampM = new THREE.MeshBasicMaterial({ color: col('#24180f'), transparent: true, opacity: .3, depthWrite: false });
+  const lineM = std('#8a6a4a', { r: .9 }), darkM = std('#3b2a1c', { r: 1 }), waterM = new THREE.MeshPhysicalMaterial({ color: col('#9fc6dc'), roughness: .05, clearcoat: 1, transparent: true, opacity: .85, envMapIntensity: 1.8 }), dampM = new THREE.MeshBasicMaterial({ color: col('#24180f'), transparent: true, opacity: .3, depthWrite: false });
   const tun = (p.tunnels || []).map((tp, ti) => { const curve = new THREE.CatmullRomCurve3(tp.pts.map(([x, y]) => V3(x, y, Z))), seg = 80, mk = (rad, mat, dz, sz) => { const geo = new THREE.TubeGeometry(curve, seg, rad, 8); const m = new THREE.Mesh(geo, mat); m.scale.z = 1; m.position.z = dz;
       geo.translate(0, 0, -Z); m.scale.set(1, 1, sz); m.position.z = Z + dz; g.add(m); return { m, n: geo.index.count }; };
-    return { tp, curve, len: curve.getLength(), damp: mk(.016, dampM, .001, .05), lin: mk(.0062, lineM, .0016, .25), dark: mk(.0046, darkM, .0024, .25), water: mk(.0036, waterM, .0034, .5) }; });
+    return { tp, curve, len: curve.getLength(), damp: mk(.016, dampM, .001, .05), lin: mk(.0058, lineM, .0012, .12), dark: mk(.004, darkM, .0018, .12), water: mk(.0036, waterM, .0034, .5) }; });
   // crumbs pushed out along tunnel 0 and casts on top of its mouth
   const NC = 70, crumbs = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 0), std('#8a6a48', { r: .9 }), NC); crumbs.castShadow = true; crumbs.frustumCulled = false; g.add(crumbs);
   const CR = tun.length ? Array.from({ length: NC }, (_, i) => { const s = (i + .5) / NC, pt = tun[0].curve.getPointAt(s), tg = tun[0].curve.getTangentAt(s), nx = -tg.y, ny = tg.x, sd = i % 2 ? 1 : -1; return { s, pt, n: V3(nx * sd, ny * sd, 0), r: .0018 + r() * .0025, rot: r() * 6 }; }) : [];
