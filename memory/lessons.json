@@ -30,9 +30,9 @@
  {
   "code": "beat_too_short",
   "rule": "Merge very short sentences; a beat should last at least ~1.5 s.",
-  "count": 26,
+  "count": 28,
   "last_seen": "2026-11-26",
-  "example": "beat 17 lasts 1.0s"
+  "example": "beat 11 lasts 1.1s"
  },
  {
   "code": "too_bright",
@@ -100,7 +100,7 @@
  {
   "code": "dead_beat",
   "rule": "Each beat must add an object, change a character mode, add an effect or change the camera.",
-  "count": 132,
+  "count": 138,
   "last_seen": "2026-11-26",
   "example": "beat 15 adds nothing new visually"
  },
