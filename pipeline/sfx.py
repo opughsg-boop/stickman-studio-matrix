@@ -109,6 +109,10 @@ for c in env_cfg.get('sfxBeds') or []:
     reps = int(np.ceil((D + 1) * SR / len(bed))) + 1
     loop = np.tile(bed, reps)[:int((D + 1) * SR)]
     fade = int(SR * .6); loop[:fade] *= np.linspace(0, 1, fade); loop[-fade:] *= np.linspace(1, 0, fade)
+    # optional window (seconds): the bed fades in after `start` and out before `end` (rain that stops, birds that arrive)
+    if c.get('start') or c.get('end'):
+        tt = np.arange(len(loop)) / SR; s0, s1, fw = c.get('start', 0), c.get('end', D + 1), c.get('fade', 1.0)
+        loop *= np.clip((tt - s0) / fw + (1 if not c.get('start') else 0), 0, 1) * np.clip((s1 - tt) / fw, 0, 1)
     put(loop, 0, min(BED_G, c.get('gain', BED_G)))
 for c in env_cfg.get('sfxCalls') or []:
     clip = lib_clip(c['cat'], c.get('idx', 0))
