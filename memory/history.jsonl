@@ -86,3 +86,4 @@
 {"run": "corn_leaf_roll", "time": "2026-11-26 16:07", "score": 80, "issues": 4, "codes": ["beat_too_long", "ref_static", "too_dark"]}
 {"run": "corn_leaf_roll_v2", "time": "2026-11-26 16:41", "score": 80, "issues": 4, "codes": ["beat_too_long", "ref_static", "too_dark"]}
 {"run": "birds_worms", "time": "2026-11-26 16:53", "score": 66, "issues": 8, "codes": ["beat_too_short", "dead_beat"]}
+{"run": "corn_leaf_v3", "time": "2026-11-26 18:14", "score": 78, "issues": 5, "codes": ["beat_too_short", "dead_beat"]}
