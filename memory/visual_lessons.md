@@ -289,3 +289,10 @@ Rule: when a preview or final video shows a mistake, add one entry here (what wa
 - **Mistake:** root laterals on the soil section ran almost horizontal and straight (wires). **Fix:** laterals 4-10 cm angled 25-45 degrees downward and tapering. Real peanut roots: a taproot with fine laterals spreading down and out.
 - Works: peg curve rotating from upright to the soil and extending underground, pod forming horizontally at the tip on the island face, plant riding the palm mid when pulled, luma 106-156 on every frame with under 4 % above 205.
 - Source: runs/peanut_peg/sheet_preview.jpg (first pass). Fixes applied after the one preview, not re-checked by eye.
+
+## Arugula hot (preview 2026-11-26, plans/arugula_hot.mjs)
+- **Mistake:** line 5-6 cameras at az .35-.6 behind a farmer who faces -z showed only his back filling the frame (seedling, hose spray, picked leaf and the old plant hidden). **Fix:** shoot a worker from his side (az 1.15-1.45 from outside the shade net) when he faces away from the default +z camera.
+- **Mistake:** a low dry-patch camera (elev .1) put 14 % of the frame above luma 205 (bright sky). **Fix:** elev .24, target y .15.
+- **Mistake:** a trio of plants 0.76 m wide framed at dist 1.25 showed one plant. **Fix:** dist 2.0-2.3 for a 0.8 m wide subject in 9:16.
+- Contact by probe: knife edge 0.012 m from the cut line, seedling palm 0.11 m, hose pick-up palm 0.16 m, picked-leaf palm 0.105 m.
+- Source: runs/arugula_hot/sheet_preview.jpg (first pass). Fixes applied after the one preview, not re-checked by eye.

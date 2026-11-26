@@ -5670,6 +5670,230 @@ function soilSection(p = {}) { const g = new THREE.Group(), X0 = p.x0 ?? -.5, X1
   return g; }
 Object.assign(ASSETS, { wet_field: wetField, rain_fall: rainFall, earthworm, sparrows: sparrowFlock, soil_section: soilSection });
 
+// ================= Arugula pack (2026-11-26, plans/arugula_hot.mjs) =================
+// Real shapes (refs: Eruca sativa / Raphanus sativus / Brassica juncea field photos): rocket leaves 6-20 cm, pinnatifid (2-4 pairs of
+// small rounded side lobes + a big rounded end lobe), dark green, pale midrib; rocket flowers 1.5-2 cm, 4 cream petals with purple veins;
+// radish leaves lyrate, rough, blue-green, root shoulder red above the soil; mustard leaves broad, frilled, light green, yellow flowers,
+// thin upright pods. All leaves share one bent unit geometry (base at the origin, along +Z, face +Y) and a per-kind alpha texture.
+const ARU = {
+  aru: { wid: .46, c0: '#2f5c1f', c1: '#4a7d2f', lobes: [[.24, .11, .045, .55], [.36, .15, .06, .5], [.49, .19, .07, .45]], term: [.76, .23, .25], pet: .2 },
+  rad: { wid: .5, c0: '#335c33', c1: '#58824a', lobes: [[.2, .1, .04, .5], [.3, .13, .05, .5], [.4, .16, .06, .45], [.51, .2, .07, .4]], term: [.77, .25, .24], pet: .16, hairy: true },
+  mus: { wid: .66, c0: '#4b7f2c', c1: '#79a94a', lobes: [[.18, .07, .035, .5]], term: [.6, .32, .4], pet: .12, frill: true } };
+function aruPath(K, w, h) { const P = new Path2D(), X = x => w / 2 + x * w / K.wid, Y = s => h * (1 - s);
+  P.rect(X(-.022), Y(K.pet + .05), X(.022) - X(-.022), Y(0) - Y(K.pet + .05));
+  for (const [s, rx, ry, a] of K.lobes) for (const sx of [-1, 1]) P.ellipse(X(sx * rx * .62), Y(s), rx * .62 * w / K.wid, ry * h, -sx * a, 0, 6.3);
+  P.rect(X(-.05), Y(K.term[0]), X(.05) - X(-.05), Y(K.lobes[0][0]) - Y(K.term[0]));
+  const [ts, trx, trY] = K.term; P.ellipse(X(0), Y(ts), trx * w / K.wid, trY * h, 0, 0, 6.3);
+  if (K.frill) for (let i = 0; i < 26; i++) { const a = i / 26 * 6.3, ex = Math.cos(a) * trx * .97, ey = ts + Math.sin(a) * trY * .97; if (ey < K.term[0] - trY * .9) continue; P.ellipse(X(ex), Y(ey), w * .035, h * .022, 0, 0, 6.3); }
+  return P; }
+function aruDraw(c, w, h, kind, o = {}) { const K = ARU[kind], r = rng(o.seed || 41), P = aruPath(K, w, h), X = x => w / 2 + x * w / K.wid, Y = s => h * (1 - s);
+  c.clearRect(0, 0, w, h); c.save(); c.clip(P); const gr = c.createLinearGradient(0, 0, w, 0); gr.addColorStop(0, K.c0); gr.addColorStop(.5, K.c1); gr.addColorStop(1, K.c0); c.fillStyle = gr; c.fillRect(0, 0, w, h);
+  for (let i = 0; i < 260; i++) { c.fillStyle = r() < .55 ? `rgba(12,34,8,${.05 + r() * .08})` : `rgba(150,195,105,${.04 + r() * .07})`; c.beginPath(); c.arc(r() * w, r() * h, 1 + r() * 3.2, 0, 6.3); c.fill(); }
+  if (K.hairy) for (let i = 0; i < 500; i++) { c.fillStyle = `rgba(215,235,200,${r() * .25})`; c.fillRect(r() * w, r() * h, 1, 1); }
+  c.strokeStyle = 'rgba(208,230,170,.75)'; c.lineWidth = Math.max(1.2, w / 70); c.beginPath(); c.moveTo(X(0), Y(0)); c.lineTo(X(0), Y(K.term[0] + K.term[2] * .8)); c.stroke();
+  c.strokeStyle = 'rgba(190,220,150,.42)'; c.lineWidth = Math.max(.8, w / 140);
+  for (const [s, rx, , a] of K.lobes) for (const sx of [-1, 1]) { c.beginPath(); c.moveTo(X(0), Y(s - .02)); c.quadraticCurveTo(X(sx * rx * .4), Y(s), X(sx * rx * 1.05), Y(s + Math.sin(a) * .04)); c.stroke(); }
+  for (let k = 0; k < 5; k++) { const s = K.term[0] - K.term[2] * .6 + k * K.term[2] * .32; for (const sx of [-1, 1]) { c.beginPath(); c.moveTo(X(0), Y(s)); c.quadraticCurveTo(X(sx * K.term[1] * .45), Y(s + .03), X(sx * K.term[1] * .92), Y(s + .07)); c.stroke(); } }
+  const sh = c.createRadialGradient(X(0), Y(K.term[0]), 2, X(0), Y(K.term[0]), w * .9); sh.addColorStop(0, 'rgba(255,255,255,0)'); sh.addColorStop(1, 'rgba(10,30,5,.22)'); c.fillStyle = sh; c.fillRect(0, 0, w, h);
+  c.restore(); c.strokeStyle = 'rgba(25,52,15,.55)'; c.lineWidth = 1.2; c.stroke(P);
+  if (o.clip) { const [s0, s1] = o.clip; c.clearRect(0, Y(s1), w, Y(s0) - Y(s1)); }
+  if (o.cutEdge != null) { c.fillStyle = 'rgba(176,214,120,.95)'; c.fillRect(0, Y(o.cutEdge) - 2, w, 4); c.globalCompositeOperation = 'destination-in'; c.fill(P); c.globalCompositeOperation = 'source-over'; }
+  for (const b of o.bites || []) { const bx = X(b[0]), by = Y(b[1]), br = b[2] * w / K.wid; c.strokeStyle = 'rgba(120,150,70,.95)'; c.lineWidth = 3; c.beginPath(); c.arc(bx, by, br + 1.5, 0, 6.3); c.stroke();
+    c.globalCompositeOperation = 'destination-out'; c.beginPath(); c.arc(bx, by, br, 0, 6.3); c.fill(); for (let k = 0; k < 9; k++) { const a = k / 9 * 6.3; c.beginPath(); c.arc(bx + Math.cos(a) * br, by + Math.sin(a) * br, br * .16, 0, 6.3); c.fill(); }
+    c.globalCompositeOperation = 'source-over'; } }
+function aruTex(kind) { const k = 'aruT_' + kind; return SPR[k] ||= canvasT(Math.round(256 * ARU[kind].wid), 256, (c, w, h) => aruDraw(c, w, h, kind, { seed: 41 + kind.length })); }
+function aruLeafGeo(kind, curve = .25, fold = .18, seg = [6, 12]) { const key = `aruG_${kind}_${curve}_${fold}_${seg}`; if (SPR[key]) return SPR[key]; const wid = ARU[kind].wid;
+  const g = new THREE.PlaneGeometry(wid, 1, seg[0], seg[1]); g.translate(0, .5, 0); const P = g.attributes.position;
+  for (let i = 0; i < P.count; i++) { const x = P.getX(i), y = P.getY(i); P.setXYZ(i, -x, -curve * y * y + fold * Math.abs(x) * Math.min(1, y * 3), y); } g.computeVertexNormals(); return SPR[key] = g; }
+const aruSurfY = (x, s, curve = .25, fold = .18) => -curve * s * s + fold * Math.abs(x) * Math.min(1, s * 3);
+function aruFlowerTex(yellow) { const k = yellow ? 'aruFy' : 'aruFw'; return SPR[k] ||= canvasT(32, 32, (c, w, h) => { c.clearRect(0, 0, w, h); c.fillStyle = yellow ? '#f2cf2a' : '#f3ecd6'; c.beginPath(); c.ellipse(w / 2, h * .55, w * .42, h * .45, 0, 0, 6.3); c.fill();
+  if (!yellow) { c.strokeStyle = 'rgba(110,60,120,.75)'; c.lineWidth = 1; for (let k = -2; k <= 2; k++) { c.beginPath(); c.moveTo(w / 2, h); c.lineTo(w / 2 + k * 4, h * .3); c.stroke(); } } }); }
+function aruFlowerGeo() { if (SPR.aruFG) return SPR.aruFG; const parts = []; for (let i = 0; i < 4; i++) { const q = new THREE.PlaneGeometry(.0075, .009); q.translate(0, .0048, 0); q.rotateX(-Math.PI / 2 + .35); q.rotateY(i * Math.PI / 2 + .785); parts.push(q.toNonIndexed()); } return SPR.aruFG = mergeGeometries(parts); }
+function aruSparks(n, seed) { const geo = new THREE.BufferGeometry(), pos = new Float32Array(n * 3); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  const m = new THREE.PointsMaterial({ size: .006, map: dotTex(), color: col('#fff3b0'), transparent: true, opacity: 0, depthWrite: false, alphaTest: .02, toneMapped: false }), pts = new THREE.Points(geo, m); pts.frustumCulled = false;
+  const R = rng(seed || 7), D = Array.from({ length: n }, () => ({ dx: (R() - .5) * 2, dz: (R() - .5) * 2, up: .5 + R(), ph: R() * 6.3, dt: R() * .5 })); return { pts, pos, geo, m, D }; }
+// arugula_plant: kind 'aru' | 'rad' | 'mus'; h (tallest leaf top), n leaves, young (small leaves), old (big tough leaves + a 0.5 m flowering stalk),
+//   flowers (count on a stalk), wiltK [[t,0..1]] droop + curl + dull colour, skipAz [az, half width] keeps a sector free for a hero leaf,
+//   picks [{az, t0, by, hand, hideAt}] the leaf nearest az rides LINK[by][hand] from t0, plantIn {t0, t1, by, hand}: the whole seedling (with a
+//   soil plug) rides the palm until t1 and is set into the soil at its own spot, burstT [t..] sparks rise from the leaves, root (radish shoulder).
+function arugulaPlant(p = {}) { const g = new THREE.Group(), body = new THREE.Group(); g.add(body); const kind = p.kind || 'aru', R = rng(p.seed || 3), old = !!p.old, young = !!p.young;
+  const n = p.n || (young ? 7 : old ? 14 : kind === 'mus' ? 9 : 13), H = p.h || (young ? .1 : .2), leaves = [];
+  for (let i = 0; i < n; i++) { const f = i / Math.max(1, n - 1); let az = i * 2.4 + R() * .5; if (p.skipAz) { const d = angTo(p.skipAz[0], az); if (Math.abs(d) < p.skipAz[1]) az = p.skipAz[0] + Math.sign(d || 1) * (p.skipAz[1] + R() * .3); }
+    const len = (young ? .055 + .04 * f : old ? .17 + .09 * f : (kind === 'mus' ? .13 : .09) + .08 * f) * (H / (young ? .1 : .2)) * (old ? 1 : 1), el = lerp(1.15, .45, f) + (R() - .5) * .2;
+    leaves.push({ az, el, len, roll: (R() - .5) * .5, r: R() * .04, ph: R() * 6.3, wv: .8 + R() * .5 }); }
+  const lm = new THREE.MeshStandardMaterial({ map: aruTex(kind), alphaTest: .5, side: THREE.DoubleSide, roughness: kind === 'rad' ? .75 : .5 });
+  const leafIM = new THREE.InstancedMesh(aruLeafGeo(kind), lm, n); leafIM.castShadow = leafIM.receiveShadow = true; leafIM.frustumCulled = false; body.add(leafIM);
+  const tint = old ? col('#c8d0b8') : young ? col('#ffffff').multiplyScalar(1.08) : col('#ffffff'), dull = col('#a49a52');
+  // flowering stalk (old rocket / mustard): segments + 4-petal flowers (+ thin pods on mustard)
+  const stalk = [], FL = [], PODS = []; const SH = old ? .5 : kind === 'mus' ? .5 : (p.flowers ? .32 : 0);
+  if (SH) { const base = V3(0, 0, 0); let P0 = base; for (let j = 1; j <= 6; j++) { const P1 = V3(.012 * Math.sin(j * 1.3 + R()), SH * j / 6, .01 * Math.cos(j * 1.7)); stalk.push([P0, P1]); P0 = P1; }
+    const nb = kind === 'mus' ? 3 : 2; for (let b = 0; b < nb; b++) { const a = b * 2.3 + R(), from = stalk[2 + b][1], to = from.clone().add(V3(Math.sin(a) * .06, .1 + R() * .05, Math.cos(a) * .06)); stalk.push([from, to]); FL.push(to); }
+    FL.push(stalk[5][1]); const nf = p.flowers || (kind === 'mus' ? 14 : 8); for (let k = FL.length; k < nf; k++) { const s = stalk[3 + (k % 3)][1], a = k * 2.1; FL.push(s.clone().add(V3(Math.sin(a) * .018, -.01 - R() * .03, Math.cos(a) * .018))); }
+    if (kind === 'mus') for (let k = 0; k < 8; k++) { const s = stalk[2 + (k % 3)][1], a = k * 2.5; PODS.push([s.clone().add(V3(Math.sin(a) * .006, -.03, Math.cos(a) * .006)), s.clone().add(V3(Math.sin(a) * .022, .005, Math.cos(a) * .022))]); } }
+  const segN = stalk.length + PODS.length + n, segIM = new THREE.InstancedMesh(new THREE.CylinderGeometry(1, 1, 1, 5), new THREE.MeshStandardMaterial({ color: col(kind === 'mus' ? '#7a9a45' : '#6f8f3e'), roughness: .65 }), Math.max(1, segN)); segIM.castShadow = true; segIM.frustumCulled = false; body.add(segIM);
+  const flIM = FL.length ? new THREE.InstancedMesh(aruFlowerGeo(), new THREE.MeshStandardMaterial({ map: aruFlowerTex(kind === 'mus'), alphaTest: .4, side: THREE.DoubleSide, roughness: .6, emissive: col(kind === 'mus' ? '#3a2a00' : '#2a2620'), emissiveIntensity: .25 }), FL.length) : null; if (flIM) { flIM.frustumCulled = false; body.add(flIM); }
+  if (kind === 'rad' || p.root) { const pts = []; for (let i = 0; i <= 12; i++) { const y = i / 12; pts.push(new THREE.Vector2(Math.max(.0005, .019 * Math.sin(Math.PI * Math.min(1, y * 1.15)) * (1 - .3 * y)), -.03 + y * .05)); }
+    const rt = new THREE.Mesh(new THREE.LatheGeometry(pts, 16), new THREE.MeshPhysicalMaterial({ color: col('#c0283f'), roughness: .35, clearcoat: .5 })); rt.castShadow = true; body.add(rt); }
+  const crown = new THREE.Mesh(new THREE.SphereGeometry(.012, 8, 6), new THREE.MeshStandardMaterial({ color: col('#6c8a3c'), roughness: .7 })); crown.scale.y = .5; body.add(crown);
+  let plug = null; if (p.plantIn) { plug = new THREE.Mesh(new THREE.CylinderGeometry(.022, .018, .035, 10), new THREE.MeshStandardMaterial({ color: col('#4a3424'), roughness: 1 })); plug.position.y = -.018; body.add(plug); }
+  const sh = contactShadow(.07 * H / .2 + .02, .07 * H / .2 + .02, .35); sh.position.y = .004; g.add(sh);
+  const picks = (p.picks || []).map(pk => ({ ...pk, i: leaves.reduce((b, lf, i) => Math.abs(angTo(pk.az, lf.az)) < Math.abs(angTo(pk.az, leaves[b].az)) ? i : b, 0) }));
+  const SP = (p.burstT || []).length ? aruSparks(36, p.seed) : null; if (SP) g.add(SP.pts);
+  const M = new THREE.Matrix4(), BX = V3(0, 0, 0), BY = V3(0, 0, 0), BZ = V3(0, 0, 0), S = V3(1, 1, 1), Q = new THREE.Quaternion(), Z0 = new THREE.Matrix4().makeScale(0, 0, 0), C = new THREE.Color(), ph0 = (p.seed || 1) * .7;
+  const seg = (i, A, B, r) => { const v = B.clone().sub(A), L = v.length(); Q.setFromUnitVectors(Y_UP, v.divideScalar(L)); segIM.setMatrixAt(i, M.compose(A.clone().add(B).multiplyScalar(.5), Q, S.set(r, L, r))); };
+  let lastW = -1;
+  g.userData.tick = t => { const w = clamp(kv(p.wiltK, t, 0)), sway = .045 * Math.sin(t * 1.3 + ph0);
+    // seedling carried in the palm and set into the soil
+    if (p.plantIn) { const pi = p.plantIn; g.visible = t >= pi.t0; if (!g.visible) return; const Lk = LINK[pi.by || 'farmer'], palm = Lk?.[pi.hand || 'R'];
+      if (palm && t < pi.t1 + .35) { g.updateWorldMatrix(true, false); const loc = g.worldToLocal(palm.clone()).add(V3(0, -.03, 0)), k = sEase((t - pi.t1) / .35); body.position.copy(loc.lerp(V3(0, 0, 0), k)); } else body.position.set(0, 0, 0);
+      plug.visible = t < pi.t1 + .35; sh.visible = t > pi.t1 + .2; }
+    body.rotation.set(.02 * Math.sin(t * 1.1 + ph0), 0, .025 * Math.sin(t * .9 + ph0 * 1.3));
+    leaves.forEach((lf, i) => { const pk = picks.find(q => q.i === i && t >= q.t0); let el = lf.el - w * (.95 + lf.r * 6) + .05 * Math.sin(t * 2.1 * lf.wv + lf.ph) + sway * .3;
+      if (pk) { const Lk = LINK[pk.by || 'farmer'], palm = Lk?.[pk.hand || 'R']; if (!palm || (pk.hideAt != null && t >= pk.hideAt)) { leafIM.setMatrixAt(i, Z0); return; }
+        g.updateWorldMatrix(true, false); body.updateMatrix(); const loc = body.worldToLocal(palm.clone()), k = sEase((t - pk.t0) / .25), base0 = V3(Math.sin(lf.az) * .006, .012, Math.cos(lf.az) * .006);
+        const B = base0.lerp(loc, k); BZ.set(Math.sin(lf.az) * Math.cos(el), Math.sin(el), Math.cos(lf.az) * Math.cos(el)).lerp(V3(.15, 1, .25).normalize(), k).normalize();
+        BX.crossVectors(Y_UP, BZ).normalize(); BY.crossVectors(BZ, BX); M.makeBasis(BX, BY, BZ); M.multiply(new THREE.Matrix4().makeRotationZ(lf.roll)); M.scale(S.set(lf.len, lf.len, lf.len)); M.setPosition(B.x, B.y, B.z); leafIM.setMatrixAt(i, M); return; }
+      BZ.set(Math.sin(lf.az) * Math.cos(el), Math.sin(el), Math.cos(lf.az) * Math.cos(el)); BX.crossVectors(Y_UP, BZ).normalize(); BY.crossVectors(BZ, BX); M.makeBasis(BX, BY, BZ);
+      M.multiply(new THREE.Matrix4().makeRotationZ(lf.roll + w * .9 * (i % 2 ? 1 : -1))); M.scale(S.set(lf.len * (1 - .38 * w), lf.len, lf.len * (1 - .1 * w))); M.setPosition(Math.sin(lf.az) * .006, .012, Math.cos(lf.az) * .006); leafIM.setMatrixAt(i, M); });
+    leafIM.instanceMatrix.needsUpdate = true;
+    if (Math.abs(w - lastW) > .004) { lastW = w; leaves.forEach((lf, i) => { C.copy(tint).multiplyScalar(.92 + lf.r * 2).lerp(dull, w * .65); leafIM.setColorAt(i, C); }); if (leafIM.instanceColor) leafIM.instanceColor.needsUpdate = true; }
+    let si = 0; const bend = V3(.03 * Math.sin(t * 1.2 + ph0), 0, .02 * Math.cos(t * 1.0 + ph0)), BEND = P => P.clone().addScaledVector(bend, (P.y / Math.max(.01, SH)) ** 2);
+    stalk.forEach(([A, B], j) => seg(si++, BEND(A), BEND(B), j < 6 ? .0028 - j * .0002 : .0015)); PODS.forEach(([A, B]) => seg(si++, BEND(A), BEND(B), .0011));
+    for (let i = si; i < segN; i++) segIM.setMatrixAt(i, Z0); segIM.instanceMatrix.needsUpdate = true;
+    if (flIM) { FL.forEach((F, k) => { const P = BEND(F); Q.setFromEuler(new THREE.Euler(.3 * Math.sin(k), k, .3 * Math.cos(k * 1.3))); flIM.setMatrixAt(k, M.compose(P, Q, S.setScalar(1 - .3 * w))); }); flIM.instanceMatrix.needsUpdate = true; }
+    if (SP) { let a = 0; SP.D.forEach((d, i) => { let on = false; for (const t0 of p.burstT) { const u = (t - t0 - d.dt) / 1.3; if (u >= 0 && u < 1) { on = true; a = Math.max(a, 1 - u);
+        SP.pos.set([d.dx * (.03 + .05 * u) * H / .2 + .01 * Math.sin(t * 6 + d.ph), H * (.5 + .9 * u * d.up), d.dz * (.03 + .05 * u) * H / .2], i * 3); } } if (!on) SP.pos.set([0, -9, 0], i * 3); });
+      SP.geo.attributes.position.needsUpdate = true; SP.m.opacity = .95; SP.pts.visible = a > 0; } };
+  return g; }
+// aru_bed: a sown bed of rocket (rows along x every `row` m, plants every `sp` m, jittered), one instanced mesh; excl [[x,z,r]] (local) free
+//   spots; wiltK droops the whole bed; flowers: share of bolted plants with a small white flower spray; wet (darker soil under the bed).
+function aruBed(p = {}) { const g = new THREE.Group(), R = rng(p.seed || 11), W = p.w || 2, Dd = p.d || 1.2, row = p.row || .2, sp = p.sp || .13, PL = [];
+  for (let z = -Dd / 2 + row / 2; z <= Dd / 2; z += row) for (let x = -W / 2 + sp / 2; x <= W / 2; x += sp) { const px = x + (R() - .5) * sp * .5, pz = z + (R() - .5) * row * .25;
+    if ((p.excl || []).some(([ex, ez, er]) => Math.hypot(px - ex, pz - ez) < er)) continue; PL.push({ x: px, z: pz, s: (p.size || 1) * (.75 + R() * .5), a0: R() * 6.3, ph: R() * 6.3, fl: R() < (p.flowers || 0) }); }
+  const LPP = 11, L = []; PL.forEach((pl, pi) => { for (let i = 0; i < LPP; i++) { const f = i / (LPP - 1); L.push({ pi, az: pl.a0 + i * 2.4 + R() * .4, el: lerp(1.15, .4, f) + (R() - .5) * .25, len: (.08 + .085 * f) * pl.s, roll: (R() - .5) * .5, r: R() * .05, ph: R() * 6.3 }); } });
+  const im = new THREE.InstancedMesh(aruLeafGeo('aru', .25, .18, [4, 8]), new THREE.MeshStandardMaterial({ map: aruTex('aru'), alphaTest: .5, side: THREE.DoubleSide, roughness: .5 }), L.length); im.castShadow = im.receiveShadow = true; im.frustumCulled = false; g.add(im);
+  const FLs = []; PL.forEach(pl => { if (!pl.fl) return; for (let k = 0; k < 5; k++) FLs.push({ x: pl.x + (R() - .5) * .04, z: pl.z + (R() - .5) * .04, y: .22 + R() * .08, r: R() * 6 }); });
+  const fim = FLs.length ? new THREE.InstancedMesh(aruFlowerGeo(), new THREE.MeshStandardMaterial({ map: aruFlowerTex(false), alphaTest: .4, side: THREE.DoubleSide, roughness: .6 }), FLs.length) : null;
+  const sim = FLs.length ? new THREE.InstancedMesh(new THREE.CylinderGeometry(1, 1, 1, 4), new THREE.MeshStandardMaterial({ color: col('#6f8f3e'), roughness: .65 }), FLs.length) : null;
+  if (fim) { fim.frustumCulled = sim.frustumCulled = false; g.add(fim, sim); }
+  if (p.soil !== false) { const sl = contactShadow(W / 2 + .1, Dd / 2 + .1, p.wet ? .4 : .22); sl.material.color.set('#24180c'); sl.position.y = .003; g.add(sl); }
+  const M = new THREE.Matrix4(), BX = V3(0, 0, 0), BY = V3(0, 0, 0), BZ = V3(0, 0, 0), S = V3(1, 1, 1), Q = new THREE.Quaternion(), C = new THREE.Color(), dull = col('#a49a52'); let lastW = -1;
+  g.userData.tick = t => { const w = clamp(kv(p.wiltK, t, 0));
+    L.forEach((lf, i) => { const pl = PL[lf.pi], el = lf.el - w * (.9 + lf.r * 5) + .045 * Math.sin(t * 1.7 + pl.ph + lf.ph * .3);
+      BZ.set(Math.sin(lf.az) * Math.cos(el), Math.sin(el), Math.cos(lf.az) * Math.cos(el)); BX.crossVectors(Y_UP, BZ).normalize(); BY.crossVectors(BZ, BX); M.makeBasis(BX, BY, BZ);
+      M.multiply(new THREE.Matrix4().makeRotationZ(lf.roll + w * .8 * (i % 2 ? 1 : -1))); M.scale(S.set(lf.len * (1 - .38 * w), lf.len, lf.len)); M.setPosition(pl.x, .01, pl.z); im.setMatrixAt(i, M); });
+    im.instanceMatrix.needsUpdate = true;
+    if (Math.abs(w - lastW) > .004) { lastW = w; L.forEach((lf, i) => { C.setScalar(.88 + lf.r * 3).lerp(dull, w * .65); im.setColorAt(i, C); }); if (im.instanceColor) im.instanceColor.needsUpdate = true; }
+    if (fim) { FLs.forEach((f, k) => { const bx = .015 * Math.sin(t * 1.3 + f.r), y = f.y * (1 - .25 * w); Q.setFromEuler(new THREE.Euler(.3, f.r, 0)); fim.setMatrixAt(k, M.compose(V3(f.x + bx, y, f.z), Q, S.setScalar(1)));
+      Q.setFromUnitVectors(Y_UP, V3(bx, y, 0).normalize()); sim.setMatrixAt(k, M.compose(V3(f.x + bx / 2, y / 2, f.z), Q, S.set(.0013, y, .0013))); }); fim.instanceMatrix.needsUpdate = sim.instanceMatrix.needsUpdate = true; } };
+  return g; }
+// aru_leaf: one hero rocket leaf (len m) at its base, pointing az with elevation el (curve/fold bend). bites [t...] crescent bites eaten
+//   into the end lobe at those times (crumbs fly), cellsK shows the two kinds of stored compounds as tiny beads inside the leaf,
+//   cutT: a knife cut across at s = cutAt (the tip piece slides off by sep), gatherK pulls the beads near the cut to the cut edge,
+//   sparkK: they meet at the edge, glow and sparkle (the hot taste forming).
+function aruLeaf(p = {}) { const g = new THREE.Group(), lg = new THREE.Group(); g.add(lg); const len = p.len || .15, kind = 'aru', K = ARU[kind], curve = p.curve ?? .25, fold = p.fold ?? .18, cutAt = p.cutAt ?? .5;
+  lg.rotation.order = 'YXZ'; lg.rotation.set(-(p.el || 0), p.az || 0, p.roll || 0); lg.scale.setScalar(len);
+  const W = 256, Hh = Math.round(256 / K.wid), mk = () => { const c = document.createElement('canvas'); c.width = W; c.height = Hh; const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return { c, t }; };
+  const A = mk(), B = mk(), geo = aruLeafGeo(kind, curve, fold, [16, 32]);
+  const mat = t => new THREE.MeshPhysicalMaterial({ map: t, alphaTest: .5, side: THREE.DoubleSide, roughness: .42, sheen: .3, sheenColor: col('#cfe8b0'), clearcoat: .15 });
+  const mA = new THREE.Mesh(geo, mat(A.t)), mB = new THREE.Mesh(geo, mat(B.t)); mA.castShadow = mB.castShadow = true; mA.receiveShadow = mB.receiveShadow = true; lg.add(mA); const tipG = new THREE.Group(); tipG.add(mB); lg.add(tipG);
+  const BITES = [[.21, .8, .08], [.24, .68, .07], [.17, .91, .07]], bites = p.bites || [], cutT = p.cutT ?? 1e9; let st = '';
+  const redraw = (nb, cut) => { const bl = BITES.slice(0, nb); if (!cut) { aruDraw(A.c.getContext('2d'), W, Hh, kind, { seed: 47, bites: bl }); B.c.getContext('2d').clearRect(0, 0, W, Hh); }
+    else { aruDraw(A.c.getContext('2d'), W, Hh, kind, { seed: 47, bites: bl, clip: [cutAt, 1.01], cutEdge: cutAt }); aruDraw(B.c.getContext('2d'), W, Hh, kind, { seed: 47, bites: bl, clip: [-.01, cutAt], cutEdge: cutAt }); }
+    A.t.needsUpdate = B.t.needsUpdate = true; };
+  // crumbs from each bite
+  const CR = new THREE.InstancedMesh(new THREE.BoxGeometry(1, .25, 1), new THREE.MeshStandardMaterial({ color: col('#4a7d2f'), roughness: .6, side: THREE.DoubleSide }), 30); CR.frustumCulled = false; lg.add(CR); const RC = rng(5), CD = Array.from({ length: 30 }, () => ({ v: V3((RC() - .5) * .8, .6 + RC() * .8, (RC() - .5) * .6), s: .01 + RC() * .015, r: RC() * 6 }));
+  // stored compounds: amber + teal beads inside the leaf (sampled inside the silhouette)
+  const pix = (() => { const c = document.createElement('canvas'); c.width = W; c.height = Hh; aruDraw(c.getContext('2d'), W, Hh, kind, { seed: 47 }); return c.getContext('2d').getImageData(0, 0, W, Hh).data; })();
+  const inside = (u, s) => { const x = Math.floor(u * (W - 1)), y = Math.floor((1 - s) * (Hh - 1)); return pix[(y * W + x) * 4 + 3] > 200; };
+  const NB = 120, beads = [], R = rng(p.seed || 9); for (let k = 0; k < 4000 && beads.length < NB; k++) { const u = .08 + R() * .84, s = .2 + R() * .78; if (inside(u, s) && s < .88) beads.push({ u, s, kind: beads.length % 2, ph: R() * 6.3 }); }
+  const bm = [new THREE.MeshStandardMaterial({ color: col('#ffc83a'), emissive: col('#ffb020'), emissiveIntensity: .6, roughness: .3 }), new THREE.MeshStandardMaterial({ color: col('#6fe3c8'), emissive: col('#30c0a0'), emissiveIntensity: .6, roughness: .3 })];
+  const BIM = bm.map(m => { const im = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 8, 6), m, NB); im.frustumCulled = false; lg.add(im); return im; });
+  const EDGE = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 10, 8), new THREE.MeshPhysicalMaterial({ color: col('#fff0a0'), emissive: col('#ffd84a'), emissiveIntensity: 1.1, roughness: .1, clearcoat: 1, transparent: true, opacity: .9 }), 24); EDGE.frustumCulled = false; lg.add(EDGE);
+  const SP = aruSparks(40, 13); g.add(SP.pts);
+  const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), S = V3(1, 1, 1), Z0 = new THREE.Matrix4().makeScale(0, 0, 0), sep = p.sep || .06;
+  const posOf = (u, s, lift = .004) => { const x = (u - .5) * K.wid; return V3(-x, aruSurfY(x, s, curve, fold) + lift, s); };
+  g.userData.tick = t => { const nb = bites.filter(b => t >= b).length, cut = t >= cutT, key = nb + ':' + cut; if (key !== st) { st = key; redraw(nb, cut); }
+    lg.rotation.y = (p.az || 0) + (p.sway ?? .03) * Math.sin(t * 1.2); lg.rotation.x = -(p.el || 0) - (p.sway ?? .03) * .6 * Math.sin(t * 1.6 + 1);
+    const sk = cut ? sEase((t - cutT) / .45) : 0; tipG.position.set(0, 0, sep * sk); tipG.rotation.y = .1 * sk;
+    // crumbs
+    let ci = 0; bites.forEach((bt, bi) => { for (let k = 0; k < 10; k++) { const d = CD[ci], u = t - bt; if (u < 0 || u > .9) { CR.setMatrixAt(ci++, Z0); continue; }
+      const P = V3(-BITES[bi][0], aruSurfY(BITES[bi][0], BITES[bi][1], curve, fold) + .01, BITES[bi][1]).addScaledVector(d.v, u * .35); P.y -= 2.5 * u * u; Q.setFromEuler(new THREE.Euler(d.r + u * 9, d.r, u * 7)); CR.setMatrixAt(ci++, M.compose(P, Q, S.setScalar(d.s * (1 - u * .6)))); } });
+    for (; ci < 30; ci++) CR.setMatrixAt(ci, Z0); CR.instanceMatrix.needsUpdate = true;
+    const ck = clamp(kv(p.cellsK, t, 0)), gk = clamp(kv(p.gatherK, t, 0)), spk = clamp(kv(p.sparkK, t, 0)), cnt = [0, 0];
+    beads.forEach((b, i) => { const im = BIM[b.kind], j = cnt[b.kind]++; if (ck < .01) { im.setMatrixAt(j, Z0); return; } const near = Math.abs(b.s - cutAt) < .22;
+      let s = b.s; if (near && gk > 0) s = lerp(b.s, cutAt + (b.s > cutAt ? .012 : -.012), gk); const P = posOf(b.u, s, .003); if (cut && s > cutAt) { P.z += sep * sk; }
+      const r = .0065 * ck * (near && spk > .3 ? Math.max(0, 1 - (spk - .3) * 2) : 1) * (1 + .15 * Math.sin(t * 4 + b.ph)); im.setMatrixAt(j, r > 1e-4 ? M.compose(P, Q.identity(), S.setScalar(r)) : Z0); });
+    BIM.forEach((im, k) => { for (let j = cnt[k]; j < NB; j++) im.setMatrixAt(j, Z0); im.instanceMatrix.needsUpdate = true; });
+    for (let k = 0; k < 24; k++) { if (spk < .01) { EDGE.setMatrixAt(k, Z0); continue; } const side = k % 2, u = .12 + .76 * (k >> 1) / 11, x = (u - .5) * K.wid; if (!inside(u, cutAt + (side ? .02 : -.02))) { EDGE.setMatrixAt(k, Z0); continue; }
+      const P = V3(-x, aruSurfY(x, cutAt, curve, fold) + .006, cutAt + (side ? .006 + sep * sk : -.006)), r = .011 * clamp(spk * 1.6 - (k % 5) * .08) * (1 + .2 * Math.sin(t * 7 + k)); EDGE.setMatrixAt(k, r > 1e-4 ? M.compose(P, Q.identity(), S.setScalar(r)) : Z0); }
+    EDGE.instanceMatrix.needsUpdate = true;
+    // sparkles rising from the cut edge (world size, in g space)
+    lg.updateMatrix(); let any = false; SP.D.forEach((d, i) => { const u = ((t * .7 + d.dt) % 1); if (spk < .2) { SP.pos.set([0, -9, 0], i * 3); return; } any = true; const x = d.dx * K.wid * .4, L = V3(-x, aruSurfY(x, cutAt, curve, fold), cutAt + sep * sk * .5).applyMatrix4(lg.matrix);
+      SP.pos.set([L.x + d.dz * .006 * u, L.y + .002 + u * .035 * d.up, L.z + .004 * Math.sin(t * 5 + d.ph)], i * 3); }); SP.geo.attributes.position.needsUpdate = true; SP.pts.visible = any; SP.m.opacity = .9 * clamp((spk - .2) * 2); SP.m.size = .0045; };
+  return g; }
+// aru_chilli: a fresh red hot chilli (len 7 cm, curved, glossy) with its green calyx and stalk, lying on the soil.
+function aruChilli(p = {}) { const g = new THREE.Group(), L = p.len || .07, pts = []; for (let i = 0; i <= 24; i++) { const y = i / 24; pts.push(new THREE.Vector2(Math.max(.0004, .0105 * Math.pow(1 - y, .55) * Math.min(1, (y + .05) * 6)), y * L)); }
+  const geo = new THREE.LatheGeometry(pts, 20), P = geo.attributes.position; for (let i = 0; i < P.count; i++) { const y = P.getY(i), u = y / L, bx = .018 * u * u; const wob = 1 + .06 * Math.sin(Math.atan2(P.getZ(i), P.getX(i)) * 3) * u; P.setXYZ(i, P.getX(i) * wob + bx, y, P.getZ(i) * wob); } geo.computeVertexNormals();
+  const pod = new THREE.Mesh(geo, new THREE.MeshPhysicalMaterial({ color: col(p.color || '#c5180f'), roughness: .25, clearcoat: .9, clearcoatRoughness: .15, sheen: .2 })); pod.castShadow = true;
+  const cal = new THREE.Mesh(new THREE.SphereGeometry(.0105, 12, 8, 0, 6.3, 0, 1.4), new THREE.MeshStandardMaterial({ color: col('#4f7a2a'), roughness: .55 })); cal.scale.y = .6; cal.rotation.x = Math.PI; cal.position.y = .004;
+  const stc = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([V3(0, 0, 0), V3(.002, -.01, 0), V3(.008, -.02, 0)]), 8, .0018, 6), new THREE.MeshStandardMaterial({ color: col('#5d7d34'), roughness: .6 }));
+  const h = new THREE.Group(); h.add(pod, cal, stc); h.rotation.z = -Math.PI / 2; h.position.y = .0095; g.add(h); const sh = contactShadow(L * .6, .016, .4); sh.position.set(L * .5, .003, 0); g.add(sh);
+  g.userData.tick = t => { h.rotation.x = .015 * Math.sin(t * 1.7); };
+  return g; }
+// aru_board: an olive-wood cutting board (36 x 24 x 1.8 cm) lying on the soil.
+function aruBoard(p = {}) { const g = new THREE.Group(), w = p.w || .36, d = p.d || .24, h = p.h || .018, r = rng(5);
+  const tex = SPR.aruWood ||= canvasT(256, 256, (c, W, H) => { c.fillStyle = '#b48a5c'; c.fillRect(0, 0, W, H); for (let i = 0; i < 70; i++) { const y = r() * H; c.strokeStyle = `rgba(${r() < .5 ? '110,72,40' : '220,190,140'},${.15 + r() * .25})`; c.lineWidth = 1 + r() * 3; c.beginPath(); c.moveTo(0, y); for (let x = 0; x <= W; x += 16) c.lineTo(x, y + 6 * Math.sin(x * .02 + i)); c.stroke(); } });
+  const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshStandardMaterial({ map: tex, roughness: .55 })); b.position.y = h / 2; b.castShadow = b.receiveShadow = true; g.add(b); const sh = contactShadow(w * .6, d * .6, .45); sh.position.y = .003; g.add(sh); return g; }
+// dry_crust: sun-baked silt with polygon shrinkage cracks (plates 8-20 cm, dark 5-10 mm gaps, lighter curled plate edges), fading at the edges.
+function dryCrustTex(seed) { const k = 'aruCrust' + seed; return SPR[k] ||= (() => { const N = 1024, c = document.createElement('canvas'); c.width = c.height = N; const x = c.getContext('2d'), im = x.createImageData(N, N), D = im.data, r = rng(seed);
+  const pts = Array.from({ length: 150 }, () => [r() * N, r() * N, .85 + r() * .25]);
+  const grid = {}; const G = 96; pts.forEach((q, i) => { const k2 = Math.floor(q[0] / G) + ',' + Math.floor(q[1] / G); (grid[k2] ||= []).push(i); });
+  for (let py = 0; py < N; py++) for (let px = 0; px < N; px++) { let d1 = 1e9, d2 = 1e9, i1 = 0; const gx = Math.floor(px / G), gy = Math.floor(py / G);
+    for (let ox = -2; ox <= 2; ox++) for (let oy = -2; oy <= 2; oy++) for (const i of grid[(gx + ox) + ',' + (gy + oy)] || []) { const dx = pts[i][0] - px, dy = pts[i][1] - py, d = dx * dx + dy * dy; if (d < d1) { d2 = d1; d1 = d; i1 = i; } else if (d < d2) d2 = d; }
+    const e = Math.sqrt(d2) - Math.sqrt(d1), n = (Math.sin(px * .31 + py * .17) + Math.sin(px * .07 - py * .13)) * 4 + (r() - .5) * 18, sh = pts[i1][2];
+    let R0 = 190 * sh + n, G0 = 160 * sh + n * .9, B0 = 120 * sh + n * .7; if (e < 3.2) { const k3 = e / 3.2; R0 = lerp(48, R0 * .8, k3 * k3); G0 = lerp(34, G0 * .8, k3 * k3); B0 = lerp(22, B0 * .8, k3 * k3); } else if (e < 9) { R0 += 14; G0 += 12; B0 += 9; }
+    const ex = Math.min(px, py, N - 1 - px, N - 1 - py) / (N * .12), o = (py * N + px) * 4; D[o] = R0; D[o + 1] = G0; D[o + 2] = B0; D[o + 3] = 255 * clamp(ex + (r() - .5) * .3); }
+  x.putImageData(im, 0, 0); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t; })(); }
+function dryCrust(p = {}) { const W = p.w || 2.4, Dd = p.d || 1.6, tex = dryCrustTex(p.seed || 19);
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(W, Dd), new THREE.MeshStandardMaterial({ map: tex, bumpMap: tex, bumpScale: 2.5, roughness: .97, transparent: true, alphaTest: .05 })); m.rotation.x = -Math.PI / 2; m.position.y = .004; m.receiveShadow = true;
+  const g = new THREE.Group(); g.add(m); return g; }
+// aru_hose: a garden tap (galvanised standpipe, red valve wheel, coiled green hose) at tap [x, z] (world) and the hose running over the soil
+//   to LINK[by][hand]; sprayK 0..1 opens the brass nozzle: an even fan of drops lands round aim [x, y, z] (sweep m side to side), the soil
+//   there darkens (wet patch grows with the water given).
+function aruHose(p = {}) { const g = new THREE.Group(), [tx, tz] = p.tap || [0, 0], hoseM = new THREE.MeshStandardMaterial({ color: col('#2f7d3a'), roughness: .45 }), steel = new THREE.MeshStandardMaterial({ color: col('#9aa0a4'), metalness: .7, roughness: .35 });
+  const tap = new THREE.Group(); tap.position.set(tx, 0, tz); g.add(tap); const pipe = cyl(.016, .016, .62, steel, 10); pipe.position.y = .31; tap.add(pipe); const sp2 = cyl(.012, .012, .08, steel, 8); sp2.rotation.x = Math.PI / 2; sp2.position.set(0, .55, .04); tap.add(sp2);
+  const wh = new THREE.Mesh(new THREE.TorusGeometry(.028, .006, 6, 16), new THREE.MeshStandardMaterial({ color: col('#b52a20'), roughness: .5 })); wh.position.set(0, .64, 0); wh.rotation.x = Math.PI / 2; tap.add(wh);
+  for (let i = 0; i < 3; i++) { const c2 = new THREE.Mesh(new THREE.TorusGeometry(.16 + i * .013, .01, 6, 30), hoseM); c2.rotation.x = Math.PI / 2; c2.position.set(.22, .011 + i * .02, .05); tap.add(c2); } shadowed(tap);
+  const nozM = new THREE.MeshStandardMaterial({ color: col('#c39a3c'), metalness: .8, roughness: .3 }), noz = new THREE.Group(); const n1 = cyl(.012, .009, .11, nozM, 12); n1.rotation.x = Math.PI / 2; n1.position.z = .055; noz.add(n1); g.add(noz);
+  let hose = null, lastP = V3(0, -9, 0); const NDR = 180, drp = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 6, 4), new THREE.MeshStandardMaterial({ color: col('#e8f3f6'), roughness: .05, transparent: true, opacity: .7 }), NDR); drp.frustumCulled = false; g.add(drp);
+  const r = rng(p.seed || 3), dr = Array.from({ length: NDR }, () => ({ ph: r(), jx: (r() - .5) * .3, jz: (r() - .5) * .25, sz: .0025 + r() * .003 })); const Z0 = new THREE.Matrix4().makeScale(0, 0, 0), M = new THREE.Matrix4(), Q = new THREE.Quaternion(), S = V3(1, 1, 1);
+  const wet = contactShadow(.35, .3, .55); wet.material.color.set('#1b120a'); g.add(wet); const aim = V3(...(p.aim || [0, 0, 0]));
+  g.userData.tick = t => { const Lk = LINK[p.by || 'farmer'], palm = Lk?.[p.hand || 'R']; if (!palm) return; g.updateWorldMatrix(true, false); let P = g.worldToLocal(palm.clone()); const yaw = Lk.yaw || 0, f = V3(Math.sin(yaw), 0, Math.cos(yaw));
+    if (p.holdT && p.rest) { const [h0, h1] = p.holdT, RS = V3(p.rest[0], .012, p.rest[1]), k = t < h0 ? 1 - sEase((t - h0 + .3) / .3) : t > h1 ? sEase((t - h1) / .4) : 0; if (t < h0 - .3 || t > h1 + .4) P = RS; else P = P.lerp(RS, k); }
+    const sk = clamp(kv(p.sprayK, t, 0)), A = aim.clone().add(V3(Math.cos(yaw), 0, -Math.sin(yaw)).multiplyScalar((p.sweep ?? .4) * Math.sin(t * 1.6))), dir = A.clone().sub(P).normalize();
+    noz.position.copy(P); noz.quaternion.setFromUnitVectors(V3(0, 0, 1), P.y < .05 ? f.clone() : dir.clone().add(V3(0, .5, 0)).normalize());
+    if (P.distanceTo(lastP) > .004) { lastP.copy(P); if (hose) { g.remove(hose); hose.geometry.dispose(); } const back = P.clone().addScaledVector(f, -.25);
+      const pts = [V3(tx + .22, .03, tz + .05), V3(lerp(tx, back.x, .5), .012, lerp(tz, back.z, .5)), V3(back.x, .012, back.z), V3(P.x - f.x * .12, P.y * .45, P.z - f.z * .12), P.clone().add(V3(0, -.04, 0)), P.clone()];
+      hose = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 40, .009, 6), hoseM); hose.castShadow = true; g.add(hose); }
+    const N0 = P.clone().addScaledVector(dir, .1);
+    dr.forEach((d, i) => { if (sk < .3) { drp.setMatrixAt(i, Z0); return; } const T = .42, age = ((t / T + d.ph) % 1) * T, tg = A.clone().add(V3(d.jx, 0, d.jz)), v0 = tg.sub(N0).divideScalar(T); v0.y += 4.9 * T;
+      const X = N0.clone().addScaledVector(v0, age); X.y -= 4.9 * age * age; drp.setMatrixAt(i, M.compose(X, Q, S.setScalar(d.sz * (.6 + .4 * sk)))); }); drp.instanceMatrix.needsUpdate = true;
+    const wk = clamp(kv(p.wetK, t, 0)); wet.visible = wk > .01; wet.position.set(aim.x, .006, aim.z); wet.scale.set(.3 + wk * 1.4, .3 + wk * 1.4, 1); wet.material.opacity = .5 * wk; };
+  return g; }
+// aru_bunch: a bunch of 16 rocket leaves tied with raffia, riding LINK[by][hand] (tie at the palm) from showK > .5, leaves fanned upward.
+function aruBunch(p = {}) { const g = new THREE.Group(), b = new THREE.Group(); g.add(b); const R = rng(p.seed || 4), n = p.n || 16;
+  const im = new THREE.InstancedMesh(aruLeafGeo('aru', .18, .16), new THREE.MeshStandardMaterial({ map: aruTex('aru'), alphaTest: .5, side: THREE.DoubleSide, roughness: .5 }), n); im.castShadow = true; im.frustumCulled = false; b.add(im);
+  const M = new THREE.Matrix4(), BX = V3(0, 0, 0), BY = V3(0, 0, 0), BZ = V3(0, 0, 0), S = V3(1, 1, 1), L = [];
+  for (let i = 0; i < n; i++) { const a = i * 2.4, sp = .12 + .3 * R(); L.push({ a, sp, len: .13 + R() * .06, roll: (R() - .5) * .6, ph: R() * 6 }); }
+  const tie = new THREE.Mesh(new THREE.TorusGeometry(.012, .004, 6, 14), new THREE.MeshStandardMaterial({ color: col('#cdb47c'), roughness: .9 })); tie.rotation.x = Math.PI / 2; b.add(tie);
+  const stems = new THREE.Mesh(new THREE.CylinderGeometry(.01, .008, .05, 8), new THREE.MeshStandardMaterial({ color: col('#7d9c4a'), roughness: .6 })); stems.position.y = -.015; b.add(stems);
+  g.userData.tick = t => { const on = kv(p.showK, t, 0) > .5; b.visible = on; if (!on) return; const Lk = LINK[p.by || 'farmer'], palm = Lk?.[p.hand || 'R']; if (!palm) return;
+    g.updateWorldMatrix(true, false); b.position.copy(g.worldToLocal(palm.clone())); b.rotation.set(.25 + .04 * Math.sin(t * 2), (Lk.yaw || 0), .08 * Math.sin(t * 1.5));
+    L.forEach((l, i) => { const sp = l.sp + .02 * Math.sin(t * 2.2 + l.ph); BZ.set(Math.sin(l.a) * Math.sin(sp), Math.cos(sp), Math.cos(l.a) * Math.sin(sp)); BX.crossVectors(Y_UP, BZ); if (BX.lengthSq() < 1e-4) BX.set(1, 0, 0); BX.normalize(); BY.crossVectors(BZ, BX);
+      M.makeBasis(BX, BY, BZ); M.multiply(new THREE.Matrix4().makeRotationZ(l.roll)); M.scale(S.setScalar(l.len)); M.setPosition(0, .01, 0); im.setMatrixAt(i, M); }); im.instanceMatrix.needsUpdate = true; };
+  return g; }
+Object.assign(ASSETS, { arugula_plant: arugulaPlant, aru_bed: aruBed, aru_leaf: aruLeaf, aru_chilli: aruChilli, aru_board: aruBoard, dry_crust: dryCrust, aru_hose: aruHose, aru_bunch: aruBunch });
 // ================= Maize pack (2026-11-26, plans/corn_leaf_roll.mjs) =================
 // maize_field: field maize (Zea mays) at real size, built from the plant itself (no library mesh), so the leaves can roll:
 //   a 2-2.6 cm stalk with nodes and brace roots, 12-14 strap leaves in two ranks (0.45-1 m long, 6-10 cm wide, pale midrib, parallel
