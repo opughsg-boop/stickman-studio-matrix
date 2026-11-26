@@ -102,10 +102,34 @@ if env_cfg.get('sfxBed'):
         loop = np.tile(bed, reps)[:int((D + 1) * SR)]
         fade = int(SR * .6); loop[:fade] *= np.linspace(0, 1, fade); loop[-fade:] *= np.linspace(1, 0, fade)
         put(loop, 0, BED_G)
+# extra quiet beds for one plan only: env.sfxBeds = [{cat, idx, gain}] (each gain stays at or under BED_G)
+for c in env_cfg.get('sfxBeds') or []:
+    bed = lib_clip(c['cat'], c.get('idx', 0))
+    if bed is None: continue
+    reps = int(np.ceil((D + 1) * SR / len(bed))) + 1
+    loop = np.tile(bed, reps)[:int((D + 1) * SR)]
+    fade = int(SR * .6); loop[:fade] *= np.linspace(0, 1, fade); loop[-fade:] *= np.linspace(1, 0, fade)
+    put(loop, 0, min(BED_G, c.get('gain', BED_G)))
 for c in env_cfg.get('sfxCalls') or []:
     clip = lib_clip(c['cat'], c.get('idx', 0))
     if clip is None: continue
-    for t in c.get('times', []): put(clip, t, c.get('gain', CALL_G))
+    if c.get('skip'): clip = clip[int(c['skip'] * SR):]                       # start inside a long clip
+    if c.get('dur'):                                                           # trim a long call, with a short fade-out
+        clip = clip[:int(c['dur'] * SR)].copy(); fo = min(len(clip), int(SR * .25)); clip[-fo:] *= np.linspace(1, 0, fo)
+    for t in c.get('times', []): put(clip, t, min(CALL_G, c.get('gain', CALL_G)))
+# hand sickle through clover stems (one plan only: env.sfxCuts = {times, gain}): a dark low swish plus a few fibrous snaps,
+# all low-passed, so it never turns into the rejected hissy whoosh
+def sickle_cut():
+    n = int(SR * .26); t = np.arange(n) / SR
+    sw = lp(lp(noise(n), .06), .1) * np.sin(np.pi * np.clip(t / .16, 0, 1)) ** 2 * 2.2
+    snaps = np.zeros(n)
+    for k in range(5):
+        i = int(SR * (.07 + .022 * k + rng.uniform(0, .008))); m = int(SR * .012)
+        snaps[i:i + m] += lp(noise(m), .35) * np.exp(-np.arange(m) / (SR * .003)) * (1 - .12 * k)
+    y = sw + lp(snaps, .45) * 1.3
+    return y / (np.max(np.abs(y)) + 1e-9)
+cuts_cfg = env_cfg.get('sfxCuts') or {}
+for t in cuts_cfg.get('times', []): put(sickle_cut(), t - .05, min(CALL_G, cuts_cfg.get('gain', CALL_G)))
 
 track = np.tanh(track * 1.2) / 1.2
 tmp = out + '.sfx.wav'
