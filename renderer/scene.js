@@ -5035,3 +5035,214 @@ Object.assign(RIG_POSES, { // berseem cutting in a deep squat (track y -.55): le
   sickleCut: { adL: 1.4, adR: 1.3, fL: .6, fR: .3, eL: .45, eR: .95, sp: 1.12, tw: -.18, hd: -.4, kL: 2.3, kR: 2.3, hL: 1.0, hR: 1.0 },
   sickleToss: { adL: 1.1, adR: 1.4, fL: -.3, fR: .45, eL: .3, eR: .85, sp: 1.0, tw: .32, hd: -.3, ht: .35, kL: 2.3, kR: 2.3, hL: 1.0, hR: 1.0 },
   handsHips: { adL: 1.0, adR: 1.0, fL: -.3, fR: -.3, eL: 1.6, eR: 1.6, sp: .03, hd: .22 } });
+// ================= Tomato staking pack (2026-11-26, plans/tomato_stake.mjs) =================
+// tomato_plant: a field tomato at real size: compound leaves 20-32 cm of 7-9 serrated leaflets (5-7 cm), hairy green stems 6-10 mm,
+//   trusses of 3-4 fruits 5.5-7 cm across with a green star calyx, a few yellow flowers. upK 0 = sprawled flat on the soil (stems lying
+//   along sprawlAz, trusses resting on the soil, fruit touching it) .. 1 = upright beside its stake (stake:[x,z] local); every node moves
+//   on an arc round the crown, so the plant is lifted, never stretched. growK scales the upright height, spreadK the sprawl length.
+//   ripeK base ripeness (0 green .. 1 red), gustK wind gusts along wind:[x,z], ties [{y, k:[[t,0..1]]}] soft twine figure-eight between
+//   stake and main stem, picks [{tr, k, t0, t1}] a fruit rides LINK[by].R from t0 and is gone (in the basket) at t1. hideK [[t,0|1]].
+function tomLeafletTex() { return SPR.tomLeaf ||= (() => { const r = rng(53); return canvasT(64, 128, (c, w, h) => { c.clearRect(0, 0, w, h);
+  const N = 9, pts = []; for (let i = 0; i <= N * 2; i++) { const u = i / (N * 2), wd = Math.sin(Math.PI * Math.pow(u, .78)) * (.46 - .1 * u) * w * (i % 2 ? .86 : 1); pts.push([w / 2 + wd, h - 3 - u * (h - 6)]); }
+  const path = new Path2D(); path.moveTo(w / 2, h - 2); pts.forEach(([x, y]) => path.lineTo(x, y)); for (let i = pts.length - 1; i >= 0; i--) path.lineTo(w - pts[i][0], pts[i][1]); path.closePath();
+  const gr = c.createLinearGradient(0, 0, w, 0); gr.addColorStop(0, '#3d6b28'); gr.addColorStop(.5, '#588a35'); gr.addColorStop(1, '#3d6b28'); c.fillStyle = gr; c.fill(path);
+  c.save(); c.clip(path); for (let i = 0; i < 260; i++) { c.fillStyle = r() < .5 ? `rgba(22,46,12,${.05 + r() * .07})` : `rgba(150,190,95,${.04 + r() * .06})`; c.beginPath(); c.arc(r() * w, r() * h, 1.5 + r() * 3, 0, 6.3); c.fill(); }
+  c.strokeStyle = 'rgba(196,224,150,.6)'; c.lineWidth = 1.7; c.beginPath(); c.moveTo(w / 2, h - 2); c.lineTo(w / 2, 4); c.stroke();
+  c.strokeStyle = 'rgba(176,210,124,.4)'; c.lineWidth = .9; for (let k = 1; k < 8; k++) { const y = h - 6 - k * (h - 16) / 8; c.beginPath(); c.moveTo(w / 2, y); c.quadraticCurveTo(w * .32, y - 6, w * .1, y - 16); c.moveTo(w / 2, y); c.quadraticCurveTo(w * .68, y - 6, w * .9, y - 16); c.stroke(); }
+  c.restore(); }); })(); }
+function tomLeafGeo() { if (SPR.tomLeafG) return SPR.tomLeafG; const parts = [], arch = u => -.09 * u * u;   // unit leaf along +Z, faces +Y, tip dips 9 %
+  const leaflet = (u, a, len, wid) => { const q = new THREE.PlaneGeometry(wid, len, 1, 2); q.translate(0, len / 2, 0); const P = q.attributes.position; for (let i = 0; i < P.count; i++) P.setZ(i, -.25 * (P.getY(i) / len) ** 2 * len * .5); q.rotateX(Math.PI / 2 - .2); q.rotateY(a); q.translate(0, arch(u) + .004, u); return q.toNonIndexed(); };
+  for (const [u, l, w] of [[.2, .18, .13], [.45, .24, .17], [.68, .25, .18]]) for (const s of [-1, 1]) parts.push(leaflet(u, s * (1.2 - .35 * u), l, w));
+  for (const u of [.32, .57]) for (const s of [-1, 1]) parts.push(leaflet(u, s * 1.3, .07, .05));
+  parts.push(leaflet(.84, 0, .27, .19));
+  for (const [a, b] of [[0, .35], [.35, .7], [.7, .86]]) { const len = Math.hypot(b - a, arch(b) - arch(a)); const c = new THREE.CylinderGeometry(.006, .007, len, 4); c.rotateX(Math.PI / 2); c.rotateX(-Math.atan2(arch(b) - arch(a), b - a)); c.translate(0, (arch(a) + arch(b)) / 2, (a + b) / 2); const n = c.toNonIndexed(); n.attributes.uv.array.fill(.5); for (let i = 1; i < n.attributes.uv.array.length; i += 2) n.attributes.uv.array[i] = .06; parts.push(n); }
+  return SPR.tomLeafG = mergeGeometries(parts); }
+function tomFruitGeo() { if (SPR.tomFruitG) return SPR.tomFruitG; const geo = new THREE.SphereGeometry(1, 22, 16), P = geo.attributes.position;
+  for (let i = 0; i < P.count; i++) { let x = P.getX(i), y = P.getY(i), z = P.getZ(i); const a = Math.atan2(z, x), k = 1 + .035 * Math.cos(a * 5) * (1 - Math.abs(y)); x *= k; z *= k; y *= .84; if (y > .7) y -= (y - .7) * .9; P.setXYZ(i, x, y, z); }
+  geo.computeVertexNormals(); return SPR.tomFruitG = geo; }
+function tomCalyxGeo() { if (SPR.tomCalyxG) return SPR.tomCalyxG; const parts = [];
+  for (let k = 0; k < 5; k++) { const q = new THREE.PlaneGeometry(.17, .62, 1, 4); q.translate(0, .31, 0); const P = q.attributes.position; for (let i = 0; i < P.count; i++) { const y = P.getY(i); P.setX(i, P.getX(i) * (1 - y / .7)); } q.rotateX(Math.PI / 2);
+    const Q = q.attributes.position; for (let i = 0; i < Q.count; i++) { const z = Q.getZ(i); Q.setY(i, .38 * z * z - .05 * z); } q.rotateY(k * 1.2566 + .3); q.translate(0, .74, 0); parts.push(q.toNonIndexed()); }
+  const st = new THREE.CylinderGeometry(.06, .08, .32, 6); st.translate(0, .86, 0); parts.push(st.toNonIndexed()); return SPR.tomCalyxG = mergeGeometries(parts); }
+const TOM_GREEN = col('#5c8a26'), TOM_ORANGE = col('#d4601a'), TOM_RED = col('#a9160b');
+function tomRipe(r, out) { r = clamp(r); return r < .55 ? out.copy(TOM_GREEN).lerp(TOM_ORANGE, r / .55) : out.copy(TOM_ORANGE).lerp(TOM_RED, (r - .55) / .45); }
+function arcLerp(S, U, u) { const rs = S.length(), ru = U.length(); if (rs < 1e-4 || ru < 1e-4) return S.clone().lerp(U, u);
+  const a = S.clone().divideScalar(rs), b = U.clone().divideScalar(ru), om = Math.acos(clamp(a.dot(b), -1, 1)), r = lerp(rs, ru, u);
+  if (om < 1e-3) return a.lerp(b, u).normalize().multiplyScalar(r); const so = Math.sin(om); return a.multiplyScalar(Math.sin((1 - u) * om) / so).add(b.multiplyScalar(Math.sin(u * om) / so)).multiplyScalar(r); }
+const TOMREG = {}; window.__tom = () => TOMREG;
+function tomatoPlant(p = {}) { const g = new THREE.Group(), R = rng(p.seed || 71), H = p.h || 1, saz = p.sprawlAz ?? .6;
+  const stake = p.stake ? V3(p.stake[0], 0, p.stake[1]) : V3(-.07, 0, -.07), toStake = stake.clone().normalize(), away = toStake.clone().negate(), awayAz = Math.atan2(away.x, away.z);
+  const hor = a => V3(Math.sin(a), 0, Math.cos(a)), C1 = stake.clone().addScaledVector(away, .036).setY(.24);
+  const stems = [], NM = 13, Lm = H;
+  { const nodes = [], dS = hor(saz), pS = V3(-dS.z, 0, dS.x);
+    for (let i = 0; i < NM; i++) { const s = i / (NM - 1) * Lm, tip = Math.max(0, s - .85 * Lm);
+      const U = s < .24 ? V3(0, 0, 0).lerp(C1, s / .24).setY(s * .98) : C1.clone().setY(.24 + (s - .24) * .97).addScaledVector(away, .005 * Math.sin(s * 9) + tip * .5);
+      const sl = Math.max(0, s - .06), S = s < .06 ? dS.clone().multiplyScalar(s * .4).setY(s * .9) : dS.clone().multiplyScalar(.024 + sl).addScaledVector(pS, .05 * Math.sin(sl * 5 + 1)).setY(.05 + .01 * Math.sin(sl * 11) + tip * .7);
+      nodes.push({ U, S }); }
+    stems.push({ nodes, r0: .0095, r1: .0042, main: true }); }
+  const BR = p.branches || [[3, .5, -.95, 1.15], [5, .46, .85, -.95], [7, .4, -.35, .55], [9, .3, 1.2, -.45], [4, .44, .35, 1.6], [6, .42, -1.1, -.35], [8, .34, .7, .2]];   // [main node, length, upright az off, sprawl az off]
+  for (const [ib, len, ua, sa] of BR) { const nodes = [], base = stems[0].nodes[ib], n = 7, L = len * H; let U = base.U.clone(), S = base.S.clone();
+    for (let j = 0; j < n; j++) { if (j) { const f = j / (n - 1), el = lerp(.72, 1.2, f), du = hor(awayAz + ua).multiplyScalar(Math.cos(el)).setY(Math.sin(el)); U = U.clone().addScaledVector(du, L / (n - 1));
+        const ds = hor(saz + sa * (1 - .25 * f)); S = S.clone().addScaledVector(ds, L / (n - 1)); S.y = .045 + .008 * Math.sin(j * 2.1) + (f > .8 ? (f - .8) * .25 : 0); }
+      nodes.push({ U: U.clone(), S: S.clone() }); }
+    stems.push({ nodes, r0: .0065, r1: .003 }); }
+  // leaves: [stem, f, size, upright az, upright elev, sprawl side]
+  const leaves = []; stems.forEach((st, si) => { const nl = st.main ? 18 : 8; for (let k = 0; k < nl; k++) { const f = .1 + .86 * (k + R() * .4) / nl;
+    let az = st.main ? k * 2.4 + R() * .5 : awayAz + BR[si - 1][2] + (k % 2 ? 1.35 : -1.35) + (R() - .5) * .5; if (hor(az).dot(toStake) > -.05) az = awayAz + (hor(az).dot(V3(-away.z, 0, away.x)) > 0 ? 1 : -1) * (.9 + R() * .55);
+    leaves.push({ si, f, size: (st.main ? .34 : .28) * (1.12 - .45 * f) * (.85 + R() * .3), az, el: -.22 + .5 * f + (R() - .5) * .2, side: k % 2 ? 1 : -1, sel: .14 + R() * .22, ph: R() * 6.3, roll: (R() - .5) * .4 }); } });
+  // trusses: [stem, f, n, ripe offset, outward az offset (upright)]
+  const TR = (p.trusses || [[0, .3, 4, 0, .35], [0, .47, 3, -.08, -.6], [1, .45, 3, .04, .2], [2, .5, 3, -.02, -.3], [0, .64, 3, -.4, .9]]).map(([si, f, n, ro, oa], ti) => ({ si, f, n, ro, oa, fr: Array.from({ length: n }, (_, k) => ({ k, r: .029 + R() * .006, yaw: R() * 6.3, ro: ro - k * .06 + (R() - .5) * .06 })) }));
+  const FL = p.flowers || [[0, .82], [2, .78], [3, .7]];
+  const nSeg = stems.reduce((s, st) => s + st.nodes.length - 1, 0), nF = TR.reduce((s, q) => s + q.n, 0);
+  const mk = (geo, mat, cnt, cast = true) => { const im = new THREE.InstancedMesh(geo, mat, Math.max(1, cnt)); im.frustumCulled = false; im.castShadow = cast; im.receiveShadow = true; g.add(im); return im; };
+  const segG = new THREE.CylinderGeometry(1, 1, 1, 7); const stemM = new THREE.MeshStandardMaterial({ color: col('#5d8a37'), roughness: .66 });
+  const segIM = mk(segG, stemM, nSeg + nF + TR.length), leafIM = mk(tomLeafGeo(), new THREE.MeshStandardMaterial({ map: tomLeafletTex(), alphaTest: .45, side: THREE.DoubleSide, roughness: .58 }), leaves.length);
+  const fruitIM = mk(tomFruitGeo(), new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: .34, clearcoat: .35, clearcoatRoughness: .3 }), nF), calIM = mk(tomCalyxGeo(), new THREE.MeshStandardMaterial({ color: col('#46752a'), roughness: .6, side: THREE.DoubleSide }), nF);
+  const flG = new THREE.ConeGeometry(.012, .012, 5); flG.rotateX(Math.PI); const flIM = mk(flG, new THREE.MeshStandardMaterial({ color: col('#f0cf2a'), roughness: .5, emissive: col('#6b5200'), emissiveIntensity: .15 }), FL.length * 3);
+  leaves.forEach((lf, i) => leafIM.setColorAt(i, col(['#ffffff', '#eef4e4', '#e2ebd6', '#f6faee'][i % 4]).multiplyScalar(.9 + R() * .15)));
+  const tieM = new THREE.MeshStandardMaterial({ color: col('#dcd0b2'), roughness: .95 }), ties = (p.ties || []).map(T => { const m = new THREE.Mesh(new THREE.BufferGeometry(), tieM); m.castShadow = true; g.add(m); return { ...T, m }; });
+  const Z = new THREE.Matrix4().makeScale(0, 0, 0), M = new THREE.Matrix4(), Q = new THREE.Quaternion(), V = V3(0, 0, 0), S = V3(1, 1, 1), BX = V3(0, 0, 0), BY = V3(0, 0, 0), BZ = V3(0, 0, 0), C = new THREE.Color();
+  const W = V3(...(p.wind ? [p.wind[0], 0, p.wind[1]] : [1, 0, .2])).normalize();
+  const seg = (i, A, B, r) => { V.copy(B).sub(A); const L = V.length(); if (L < 1e-5) { segIM.setMatrixAt(i, Z); return; } Q.setFromUnitVectors(Y_UP, V.divideScalar(L)); M.compose(BX.copy(A).add(B).multiplyScalar(.5), Q, S.set(r, L * 1.06, r)); segIM.setMatrixAt(i, M); };
+  const ptAt = (P, f) => { const x = f * (P.length - 1), i = Math.min(P.length - 2, Math.floor(x)), u = x - i; return P[i].clone().lerp(P[i + 1], u); };
+  const tanAt = (P, f) => { const x = f * (P.length - 1), i = Math.min(P.length - 2, Math.floor(x)); return P[i + 1].clone().sub(P[i]).normalize(); };
+  g.userData.state = { stems: [], fr: {} }; if (p.reg) TOMREG[p.reg] = g.userData.state;
+  g.userData.tick = t => { const hid = kv(p.hideK, t, 0) > .5; g.visible = !hid; if (hid) return;
+    const u = clamp(kv(p.upK, t, 0)), gr = kv(p.growK, t, 1), sp = kv(p.spreadK, t, 1), gust = kv(p.gustK, t, 0), rip = kv(p.ripeK, t, .3), ph = (p.seed || 1) * .7;
+    const sway = (P, w) => { const h = clamp(P.y / H), a = Math.pow(h, 1.5) * (.012 * Math.sin(t * 1.6 + ph + P.y * 2) + gust * .07 * (.75 + .25 * Math.sin(t * 4.3 + P.y * 5 + ph))) * (.15 + .85 * u) * w; return P.addScaledVector(W, a); };
+    const pts = stems.map((st, si) => st.nodes.map(nd => { const Sx = nd.S.clone(); Sx.x *= sp; Sx.z *= sp; const Ux = nd.U.clone(); Ux.y *= gr; const P = arcLerp(Sx, Ux, u); P.y = Math.max(P.y, .012); return sway(P, st.main ? .3 : 1); }));
+    g.userData.state.stems = pts; let si = 0;
+    stems.forEach((st, k) => { const P = pts[k]; for (let i = 0; i < P.length - 1; i++) seg(si++, P[i], P[i + 1], lerp(st.r0, st.r1, i / (P.length - 1))); });
+    leaves.forEach((lf, i) => { const P = pts[lf.si], b = ptAt(P, lf.f), tg = tanAt(P, lf.f), sAz = Math.atan2(tg.x, tg.z) + lf.side * 1.45;
+      const azU = sAz + angTo(sAz, lf.az) * u, el = lerp(lf.sel, lf.el, u) + gust * .25 * Math.sin(t * 5.2 + lf.ph) * u, d = V3(Math.sin(azU) * Math.cos(el), Math.sin(el), Math.cos(azU) * Math.cos(el));
+      BZ.copy(d); BX.crossVectors(Y_UP, BZ).normalize(); BY.crossVectors(BZ, BX); M.makeBasis(BX, BY, BZ); const roll = lf.roll + (.05 + gust * .45) * Math.sin(t * (4 + lf.ph) + lf.ph) * (.3 + .7 * u);
+      M.multiply(new THREE.Matrix4().makeRotationZ(roll)); M.scale(S.setScalar(lf.size)); M.setPosition(b.x, Math.max(b.y, .03), b.z); leafIM.setMatrixAt(i, M); });
+    let fi = 0; TR.forEach(tr => { const P = pts[tr.si], T = ptAt(P, tr.f), tg = tanAt(P, tr.f), outS = V3(-tg.z, 0, tg.x).multiplyScalar(tr.si % 2 ? -1 : 1), outU = hor(awayAz + tr.oa), out = outS.lerp(outU, u).normalize();
+      const Qp = T.clone().addScaledVector(out, .05); Qp.y = Math.max(.03, T.y - .015); seg(si++, T, Qp, .0035); const lat = V3(-out.z, 0, out.x);
+      tr.fr.forEach(fr => { const k = fr.k, pk = (p.picks || []).find(q => q.tr === TR.indexOf(tr) && q.k === k);
+        const F = Qp.clone().addScaledVector(out, .015 * k).addScaledVector(lat, k ? (k % 2 ? 1 : -1) * .034 : 0); F.y = Math.max(fr.r * .84 + .001, Qp.y - .05 - .028 * k);
+        let hidden = false; if (pk && t >= pk.t0) { if (t >= pk.t1) hidden = true; else { const L = LINK[pk.by || 'farmer']?.R; if (L) { g.updateWorldMatrix(true, false); const loc = g.worldToLocal(L.clone().add(V3(0, -.035, 0))); F.lerp(loc, sEase((t - pk.t0) / .18)); } } }
+        if (hidden) { segIM.setMatrixAt(si++, Z); fruitIM.setMatrixAt(fi, Z); calIM.setMatrixAt(fi, Z); fi++; return; }
+        const top = F.clone().setY(F.y + fr.r * .84); seg(si++, Qp, top, .0022); Q.setFromAxisAngle(Y_UP, fr.yaw); M.compose(F, Q, S.setScalar(fr.r)); fruitIM.setMatrixAt(fi, M); calIM.setMatrixAt(fi, M);
+        fruitIM.setColorAt(fi, tomRipe(rip + fr.ro, C)); fi++; if (p.reg) { g.updateWorldMatrix(true, false); g.userData.state.fr[TR.indexOf(tr) + '_' + k] = g.localToWorld(F.clone()); } }); });
+    FL.forEach(([s2, f], j) => { const P = pts[s2], b = ptAt(P, f); for (let k = 0; k < 3; k++) { M.makeTranslation(b.x + (k - 1) * .02, Math.max(.03, b.y - .02 - k * .006), b.z + .02 * (k % 2)); flIM.setMatrixAt(j * 3 + k, M); } });
+    for (const im of [segIM, leafIM, fruitIM, calIM, flIM]) im.instanceMatrix.needsUpdate = true; if (fruitIM.instanceColor) fruitIM.instanceColor.needsUpdate = true;
+    // soft twine figure-eight: round the stake, cross, round the stem
+    ties.forEach(T => { const k = clamp(kv(T.k, t, 0)); T.m.visible = k > .02; if (!T.m.visible) return; const P = pts[0]; let B = P[P.length - 1];
+      for (let i = 0; i < P.length - 1; i++) if (P[i + 1].y >= T.y) { const a = P[i], b2 = P[i + 1]; B = a.clone().lerp(b2, clamp((T.y - a.y) / Math.max(1e-4, b2.y - a.y))); break; }
+      const A = stake.clone().setY(T.y), d = B.clone().sub(A).setY(0), Lb = Math.max(.02, d.length()); d.normalize(); const n = V3(-d.z, 0, d.x), Mid = A.clone().lerp(B, .45), ra = .017, rb = .012;
+      const cp = [Mid.clone().setY(T.y + .003), A.clone().addScaledVector(n, ra), A.clone().addScaledVector(d, -ra).setY(T.y - .002), A.clone().addScaledVector(n, -ra), Mid.clone().setY(T.y - .003), B.clone().addScaledVector(n, -rb), B.clone().addScaledVector(d, rb).setY(T.y + .002), B.clone().addScaledVector(n, rb), Mid.clone().setY(T.y + .003)];
+      const curve = new THREE.CatmullRomCurve3(cp, false), all = curve.getPoints(64), use = all.slice(0, Math.max(2, Math.round(all.length * k)));
+      if (k > .98) { const e = use[use.length - 1]; use.push(e.clone().add(V3(.004, -.02, .006)), e.clone().add(V3(.006, -.04, .01))); }
+      T.m.geometry.dispose(); T.m.geometry = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(use), Math.max(4, use.length * 2), .0021, 5, false); }); };
+  return g; }
+// tomato_stake: a bamboo cane (len 1.5 m, r 12 mm, nodes every ~25 cm, pointed foot). carry [t0, t1]: rides LINK[by][hand] upright (palm at
+//   gripC along the cane), glides to its spot (local origin) by t1; push [t1, t2]: stands on the soil with its top under both palms
+//   (bottom = palm mid height - grip, clamped to -depth..0), then stays at -depth. Before t0 hidden unless carry is absent.
+function bambooTex() { return SPR.bamboo ||= (() => { const r = rng(91); return canvasT(64, 256, (c, w, h) => { const gr = c.createLinearGradient(0, 0, w, 0); gr.addColorStop(0, '#a88c58'); gr.addColorStop(.5, '#d1bb84'); gr.addColorStop(1, '#a88c58'); c.fillStyle = gr; c.fillRect(0, 0, w, h);
+  for (let i = 0; i < 70; i++) { c.fillStyle = r() < .5 ? `rgba(110,90,50,${.08 + r() * .12})` : `rgba(150,160,90,${.05 + r() * .08})`; c.fillRect(r() * w, r() * h, 1 + r() * 2, 10 + r() * 60); }
+  for (let i = 0; i < 25; i++) { c.fillStyle = `rgba(80,60,40,${.1 + r() * .15})`; c.beginPath(); c.ellipse(r() * w, r() * h, 1 + r() * 2, 2 + r() * 4, 0, 0, 6.3); c.fill(); } }, [1, 3]); })(); }
+function tomatoStake(p = {}) { const g = new THREE.Group(), inner = new THREE.Group(); g.add(inner); const L = p.len || 1.5, r = p.r || .012, D = p.depth ?? .3;
+  const m = new THREE.MeshStandardMaterial({ map: bambooTex(), roughness: .5 }), ringM = std('#9c8350', { r: .55 });
+  const culm = new THREE.Mesh(new THREE.CylinderGeometry(r * .82, r, L - .06, 12), m); culm.position.y = .06 + (L - .06) / 2; inner.add(culm);
+  const tip = new THREE.Mesh(new THREE.ConeGeometry(r, .06, 12), m); tip.rotation.x = Math.PI; tip.position.y = .03; inner.add(tip);
+  for (let y = .19, i = 0; y < L - .06; y += .23 + hr(i++, 5) * .05) { const rg = new THREE.Mesh(new THREE.TorusGeometry(r * (1 - .18 * y / L) * .98, .0024, 5, 16), ringM); rg.rotation.x = Math.PI / 2; rg.position.y = y; inner.add(rg); }
+  const cap = new THREE.Mesh(new THREE.CircleGeometry(r * .8, 12), std('#8a7246', { r: .8 })); cap.rotation.x = -Math.PI / 2; cap.position.y = L + .001; inner.add(cap); shadowed(inner);
+  const crumbs = new THREE.Group(); g.add(crumbs); { const cm = std('#4a3a2a', { r: .95 }); for (let i = 0; i < 14; i++) { const a = i / 14 * 6.28 + hr(i, 3), d = r + .012 + hr(i, 4) * .03, s = .006 + hr(i, 6) * .008; const cr = new THREE.Mesh(new THREE.DodecahedronGeometry(s, 0), cm); cr.position.set(Math.cos(a) * d, s * .5, Math.sin(a) * d); cr.rotation.set(i, i * 2, 0); cr.castShadow = true; crumbs.add(cr); } }
+  const cs = contactShadow(.05, .05, .45); cs.position.y = .008; g.add(cs);
+  g.userData.tick = t => { const C2 = p.carry, P2 = p.push; let y = P2 ? 0 : -D, vis = true; inner.rotation.set(0, 0, 0); inner.position.set(0, 0, 0);
+    if (C2 && t < C2[0]) vis = false;
+    else if (C2 && t < C2[1]) { const Lk = LINK[p.by || 'farmer'], palm = Lk?.[p.hand || 'R']; if (palm) { g.updateWorldMatrix(true, false); const loc = g.worldToLocal(palm.clone()).add(V3(0, -(p.gripC ?? .75), 0)), k = sEase((t - (C2[1] - .35)) / .35);
+        inner.position.copy(loc.lerp(V3(0, 0, 0), k)); const tl = (1 - k) * .1; inner.rotation.set(Math.cos(Lk.yaw) * tl, 0, -Math.sin(Lk.yaw) * tl); } }
+    else if (P2 && t < P2[1]) { const Lk = LINK[p.by || 'farmer']; if (Lk?.L && Lk?.R && t >= P2[0]) { g.updateWorldMatrix(true, false); const mid = g.worldToLocal(Lk.L.clone().add(Lk.R).multiplyScalar(.5)); y = clamp(mid.y - (p.grip ?? 1.3), -D, 0); } inner.position.y = y; }
+    else if (P2) inner.position.y = -D;
+    inner.visible = vis; const planted = !C2 || t >= C2[1]; cs.visible = vis && planted; crumbs.visible = planted && (!P2 || t > P2[0] + .3); };
+  return g; }
+// tomato_basket: a wicker basket (r 17 cm, 16 cm deep, arched handle) lying at its origin until carry[0], then hangs from LINK[by][hand]
+//   by its handle; fillK [[t, n]] tomatoes inside (each new one drops in with a bounce).
+function wickerTex() { return SPR.wicker ||= canvasT(128, 64, (c, w, h) => { c.fillStyle = '#4a3420'; c.fillRect(0, 0, w, h);
+  for (let row = 0; row < 8; row++) for (let i = 0; i < 9; i++) { const x = (i + (row % 2) * .5) * w / 8, y = row * h / 8 + h / 16; const gr = c.createLinearGradient(x - 8, y - 3, x + 8, y + 3); gr.addColorStop(0, '#9c7a4a'); gr.addColorStop(.5, '#d4b07a'); gr.addColorStop(1, '#8a6a3e'); c.fillStyle = gr; c.beginPath(); c.ellipse(x, y, w / 16 - 1, h / 16 - 1.2, 0, 0, 6.3); c.fill(); }
+  c.fillStyle = 'rgba(60,40,20,.5)'; for (let i = 0; i < 9; i++) c.fillRect(i * w / 8 - 1, 0, 2, h); }, [6, 2]); }
+function tomatoBasket(p = {}) { const g = new THREE.Group(), inner = new THREE.Group(); g.add(inner); const Rb = .17, Hb = .16, HH = .17;
+  const prof = [[0, 0], [.12, 0], [.135, .03], [.155, .09], [Rb, Hb]].map(([x, y]) => new THREE.Vector2(x, y));
+  const body = new THREE.Mesh(new THREE.LatheGeometry(prof, 28), new THREE.MeshStandardMaterial({ map: wickerTex(), roughness: .85, side: THREE.DoubleSide })); inner.add(body);
+  const rim = new THREE.Mesh(new THREE.TorusGeometry(Rb, .011, 6, 28), std('#9a7646', { r: .8 })); rim.rotation.x = Math.PI / 2; rim.position.y = Hb; inner.add(rim);
+  const hd = new THREE.Mesh(new THREE.TorusGeometry(Rb - .01, .009, 6, 20, Math.PI), std('#8a6a3e', { r: .8 })); hd.position.y = Hb; hd.scale.y = HH / (Rb - .01); inner.add(hd);
+  const fr = new THREE.InstancedMesh(tomFruitGeo(), new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: .3, clearcoat: .7, clearcoatRoughness: .25 }), 18), fc = new THREE.InstancedMesh(tomCalyxGeo(), std('#46752a', { r: .6 }), 18);
+  const spots = Array.from({ length: 18 }, (_, i) => { const layer = i < 9 ? 0 : 1, a = i * 2.4, d = layer ? .04 + (i % 3) * .035 : .03 + (i % 3) * .042; return V3(Math.cos(a) * d, .04 + layer * .05 + (i % 2) * .01, Math.sin(a) * d); });
+  const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), S = V3(1, 1, 1), C = new THREE.Color(); for (let i = 0; i < 18; i++) { fr.setColorAt(i, tomRipe(.92 + hr(i, 2) * .1, C)); }
+  for (const im of [fr, fc]) { im.castShadow = true; im.frustumCulled = false; inner.add(im); } shadowed(body); const cs = contactShadow(.2, .2, .4); cs.position.y = .006; g.add(cs);
+  g.userData.tick = t => { const n = Math.min(18, Math.round(stepKey(p.fillK, t, p.n0 ?? 4))); let tLast = -9; for (const [tk, v] of p.fillK || []) if (t >= tk) tLast = tk;
+    for (let i = 0; i < 18; i++) { if (i >= n) { fr.setMatrixAt(i, M.makeScale(0, 0, 0)); fc.setMatrixAt(i, M); continue; } const drop = i === n - 1 ? clamp(1 - (t - tLast) / .25) : 0;
+      Q.setFromAxisAngle(Y_UP, i * 1.7); M.compose(spots[i].clone().setY(spots[i].y + drop * .2), Q, S.setScalar(.03)); fr.setMatrixAt(i, M); fc.setMatrixAt(i, M); }
+    fr.instanceMatrix.needsUpdate = fc.instanceMatrix.needsUpdate = true; if (fr.instanceColor) fr.instanceColor.needsUpdate = true;
+    inner.position.set(0, 0, 0); inner.rotation.set(0, 0, 0); cs.visible = true; const C2 = p.carry; if (!C2 || t < C2[0] || (C2[1] && t >= C2[1])) return;
+    const Lk = LINK[p.by || 'farmer'], palm = Lk?.[p.hand || 'L']; if (!palm) return; g.updateWorldMatrix(true, false); const loc = g.worldToLocal(palm.clone()).add(V3(0, -(Hb + HH - .012), 0)), k = sEase((t - C2[0]) / .35);
+    inner.position.copy(V3(0, 0, 0).lerp(loc, k)); inner.rotation.set(.04 * Math.sin(t * 2.1), lerp(0, (Lk.yaw || 0) + Math.PI / 2 - (g.parent?.rotation.y || 0), k), .05 * Math.sin(t * 1.7 + 1)); cs.visible = k < .5; };
+  return g; }
+// tomato_fruit: one ripe fruit lying on damp soil; rotK grows a dark sunken rot spot (toward spot:[x,y,z]) with grey mould specks, a
+//   dark damp patch under it.
+function tomatoFruit(p = {}) { const g = new THREE.Group(), r = p.r || .032, geo = tomFruitGeo().clone(), P = geo.attributes.position, N = P.count, base = P.array.slice();
+  const cl = new Float32Array(N * 3); geo.setAttribute('color', new THREE.BufferAttribute(cl, 3)); const fm = new THREE.MeshPhysicalMaterial({ color: 0xffffff, vertexColors: true, roughness: .32, clearcoat: .6, clearcoatRoughness: .3 });
+  const fruit = new THREE.Mesh(geo, fm); fruit.scale.setScalar(r); fruit.rotation.z = p.tilt ?? .5; fruit.position.y = r * .78; fruit.castShadow = true; g.add(fruit);
+  const cal = new THREE.Mesh(tomCalyxGeo(), new THREE.MeshStandardMaterial({ color: col(p.calyx || '#5a6e2c'), roughness: .7, side: THREE.DoubleSide })); fruit.add(cal);
+  const dir = V3(...(p.spot || [.3, .5, .8])).normalize(), loc = dir.clone().applyAxisAngle(V3(0, 0, 1), -(p.tilt ?? .5));
+  const mould = new THREE.InstancedMesh(new THREE.SphereGeometry(.06, 5, 4), std('#c9c7bb', { r: 1 }), 24); fruit.add(mould); const MM = new THREE.Matrix4(), mp = [];
+  for (let i = 0; i < 24; i++) { const v = V3(hr(i, 1) - .5, hr(i, 2) - .5, hr(i, 3) - .5).multiplyScalar(.9).add(loc).normalize(); mp.push({ v, a: Math.acos(clamp(v.dot(loc))) }); }
+  const damp = contactShadow(r * 2.4, r * 2.1, .35); damp.material.color.set('#1a120a'); damp.position.y = .007; g.add(damp);
+  const red = tomRipe(p.ripe ?? .95, new THREE.Color()), rot = col('#3b2414'), rim = col('#7a4a22'), C = new THREE.Color(); let last = -1;
+  g.userData.tick = t => { const s = clamp(kv(p.rotK, t, 0)); if (Math.abs(s - last) < .002) return; last = s; const ang = s * 1.0;
+    for (let i = 0; i < N; i++) { const v = V3(base[i * 3], base[i * 3 + 1] / .84, base[i * 3 + 2]).normalize(), a = Math.acos(clamp(v.dot(loc))), w = ang > 0 ? clamp(1 - (a - ang * .6) / (ang * .4 + .01)) : 0, rimw = ang > 0 ? clamp(1 - Math.abs(a - ang) / .15) : 0;
+      C.copy(red).lerp(rim, rimw * .6).lerp(rot, w * .95); cl.set([C.r, C.g, C.b], i * 3); const k = 1 - .08 * w; P.setXYZ(i, base[i * 3] * k, base[i * 3 + 1] * k, base[i * 3 + 2] * k); }
+    P.needsUpdate = true; geo.attributes.color.needsUpdate = true; geo.computeVertexNormals(); fm.roughness = .32 + .2 * s;
+    mp.forEach((q, i) => { const on = s > .55 && q.a < ang * .7; MM.compose(q.v.clone().multiplyScalar(.95), new THREE.Quaternion(), V3(1, 1, 1).multiplyScalar(on ? .5 + hr(i, 9) * .8 : 0)); mould.setMatrixAt(i, MM); }); mould.instanceMatrix.needsUpdate = true; };
+  return g; }
+// tomato_bug: kind 'beetle' (a 13 mm dark stink-bug-like beetle crawling, legs walking) or 'fly' (a 7 mm house fly buzzing, wings beating).
+//   path [[t, x, y, z]] local; on: [x, y, z, r] a fruit sphere it walks over (pushed out to its surface); hidden before path[0].
+function tomatoBug(p = {}) { const g = new THREE.Group(), bug = new THREE.Group(); g.add(bug); const fly = p.kind === 'fly', s = p.size || (fly ? .007 : .013);
+  const shell = new THREE.Mesh(new THREE.SphereGeometry(.5, 14, 10), new THREE.MeshPhysicalMaterial({ color: col(fly ? '#2a2a2a' : '#3a3020'), roughness: .35, clearcoat: .8 })); shell.scale.set(.62, .34, 1); shell.position.y = .2; bug.add(shell);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(.2, 10, 8), std(fly ? '#5a1a12' : '#1f1a12', { r: .5 })); head.position.set(0, .2, .55); bug.add(head);
+  const legs = []; const lm = std('#15110c', { r: .6 }); for (let i = 0; i < 6; i++) { const lg = new THREE.Mesh(new THREE.CylinderGeometry(.025, .02, .55, 4), lm); const piv = new THREE.Group(); lg.position.y = -.27; piv.add(lg); piv.position.set((i % 2 ? .25 : -.25), .15, -.25 + Math.floor(i / 2) * .25); piv.rotation.z = (i % 2 ? 1 : -1) * 1.0; bug.add(piv); legs.push(piv); }
+  for (const sx of [-1, 1]) { const an = new THREE.Mesh(new THREE.CylinderGeometry(.012, .012, .45, 3), lm); an.position.set(sx * .1, .32, .82); an.rotation.set(1.1, 0, sx * .4); bug.add(an); }
+  const wings = []; if (fly) { const wm = new THREE.MeshStandardMaterial({ color: col('#dfe6ea'), transparent: true, opacity: .45, roughness: .2, side: THREE.DoubleSide, depthWrite: false }); for (const sx of [-1, 1]) { const w = new THREE.Mesh(new THREE.PlaneGeometry(.45, .8), wm); w.geometry.translate(sx * .22, 0, -.3); const pv = new THREE.Group(); pv.position.set(0, .38, .1); pv.add(w); w.rotation.x = -Math.PI / 2; bug.add(pv); wings.push({ pv, sx }); } }
+  bug.scale.setScalar(s); bug.traverse(m => { if (m.isMesh) m.castShadow = true; });
+  const K = p.path || [[0, 0, 0, 0]], on = p.on ? V3(p.on[0], p.on[1], p.on[2]) : null, onR = p.on ? p.on[3] : 0;
+  const posAt = t => { if (t <= K[0][0]) return V3(K[0][1], K[0][2], K[0][3]); for (let i = 0; i < K.length - 1; i++) if (t < K[i + 1][0]) { const u = (t - K[i][0]) / (K[i + 1][0] - K[i][0]), e = fly ? u : sEase(u); return V3(lerp(K[i][1], K[i + 1][1], e), lerp(K[i][2], K[i + 1][2], e), lerp(K[i][3], K[i + 1][3], e)); } const l = K[K.length - 1]; return V3(l[1], l[2], l[3]); };
+  const surf = (P, t) => { let n = Y_UP.clone(); if (fly) { const air = t < K[K.length - 1][0] - .15; if (air) P.add(V3(.012 * Math.sin(t * 13), .01 * Math.sin(t * 17 + 1), .012 * Math.cos(t * 11))); }
+    if (on) { const d = P.clone().sub(on), L = d.length(); if (L < onR + .02 && !(fly && t < K[K.length - 1][0] - .15)) { n = d.divideScalar(Math.max(1e-4, L)); P.copy(on).addScaledVector(n, onR + .002); } } if (!fly && P.y < .001) P.y = .001; return { P, n }; };
+  g.userData.tick = t => { bug.visible = t >= K[0][0] && (p.hideAt == null || t < p.hideAt); if (!bug.visible) return; const a = surf(posAt(t), t), b = surf(posAt(t + .06), t + .06), v = b.P.clone().sub(a.P);
+    bug.position.copy(a.P); const fw = v.length() > 1e-5 ? v.normalize() : V3(0, 0, 1), up = a.n, x = new THREE.Vector3().crossVectors(up, fw).normalize(); if (x.lengthSq() < .5) x.set(1, 0, 0); const z = new THREE.Vector3().crossVectors(x, up);
+    bug.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(x, up, z)); const mv = v.length() > 0 || fly;
+    legs.forEach((l, i) => { l.rotation.x = mv && !fly ? .45 * Math.sin(t * 26 + (i % 2) * Math.PI + Math.floor(i / 2) * 2) : 0; });
+    wings.forEach(w => { const air = t < K[K.length - 1][0] - .15; w.pv.rotation.z = air ? w.sx * .9 * Math.sin(t * 190) : w.sx * .15; w.pv.rotation.y = air ? 0 : -w.sx * .35; }); };
+  return g; }
+// breeze: light seed fluff drifting along wind [x, z] while gustK > 0 (a wordless picture of a breeze), spread over box [w, h, d].
+function breezeFluff(p = {}) { const g = new THREE.Group(), n = p.n || 60, R = rng(p.seed || 5), box = p.box || [2, 1.2, 1.2], W = V3(p.wind?.[0] ?? 1, 0, p.wind?.[1] ?? .2).normalize();
+  const geo = new THREE.BufferGeometry(), pos = new Float32Array(n * 3); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  const pts = new THREE.Points(geo, new THREE.PointsMaterial({ size: p.size || .016, map: dotTex(), color: col('#fbfaf2'), transparent: true, opacity: .9, depthWrite: false, alphaTest: .05 })); pts.frustumCulled = false; g.add(pts);
+  const P = Array.from({ length: n }, () => ({ o: R(), y: R(), z: R() - .5, ph: R() * 6.3, sp: .7 + R() * .6 }));
+  g.userData.tick = t => { const gk = kv(p.gustK, t, 0); pts.visible = gk > .02; pts.material.opacity = .9 * clamp(gk * 1.5);
+    P.forEach((q, i) => { const u = ((t * .45 * q.sp + q.o) % 1), x = (u - .5) * box[0]; const v = W.clone().multiplyScalar(x).add(V3(-W.z, 0, W.x).multiplyScalar(q.z * box[2]));
+      pos[i * 3] = v.x + .03 * Math.sin(t * 3 + q.ph); pos[i * 3 + 1] = q.y * box[1] + .08 * Math.sin(t * 2.2 + q.ph + u * 6); pos[i * 3 + 2] = v.z + .03 * Math.cos(t * 2.7 + q.ph); }); geo.attributes.position.needsUpdate = true; };
+  return g; }
+// sun_glow: a soft warm sun disc with long faint rays (a wordless picture of sunshine) facing the camera; showK fades it in/out.
+function sunGlowTex() { return SPR.sunG ||= canvasT(256, 256, (c, w, h) => { const cx = w / 2, cy = h / 2; c.clearRect(0, 0, w, h); c.save(); c.translate(cx, cy);
+  for (let i = 0; i < 16; i++) { c.rotate(Math.PI / 8); const gr = c.createLinearGradient(0, 0, w / 2, 0); gr.addColorStop(0, 'rgba(255,240,200,.55)'); gr.addColorStop(1, 'rgba(255,240,200,0)'); c.fillStyle = gr; c.beginPath(); c.moveTo(0, -3); c.lineTo(w / 2, -(i % 2 ? 1 : 3)); c.lineTo(w / 2, i % 2 ? 1 : 3); c.lineTo(0, 3); c.fill(); }
+  c.restore(); const gr = c.createRadialGradient(cx, cy, 0, cx, cy, w * .22); gr.addColorStop(0, 'rgba(255,250,232,1)'); gr.addColorStop(.35, 'rgba(255,236,180,.85)'); gr.addColorStop(1, 'rgba(255,220,150,0)'); c.fillStyle = gr; c.fillRect(0, 0, w, h); }); }
+function sunGlow(p = {}) { const g = new THREE.Group(), sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: sunGlowTex(), transparent: true, depthWrite: false, toneMapped: false, fog: false, opacity: .8 })); const S = p.size || 1; sp.scale.set(S, S, 1); g.add(sp);
+  g.userData.tick = t => { const k = kv(p.showK, t, 1); sp.visible = k > .01; sp.material.opacity = .65 * k; sp.material.rotation = t * .05; const pu = 1 + .04 * Math.sin(t * 1.3); sp.scale.set(S * pu, S * pu, 1); };
+  return g; }
+Object.assign(ASSETS, { tomato_plant: tomatoPlant, tomato_stake: tomatoStake, tomato_basket: tomatoBasket, tomato_fruit: tomatoFruit, tomato_bug: tomatoBug, breeze: breezeFluff, sun_glow: sunGlow });
+Object.assign(RIG_POSES, { // tomato staking (Farmer 1.75 m, facing +z at the origin; palm mid points from the auto-tune probe in plans/tomato_stake.mjs)
+  stakeCarry: { adR: 1.37, fR: .08, eR: .36 },                                                                                     // R (-.24, .96, .17), cane hangs upright
+  stakePushHi: { adL: 1.86, adR: 1.85, fL: .64, fR: .74, eL: .84, eR: 1.17, sp: .08, hd: -.2 },                                    // palms stacked on the cane at x 0, z .34: mid 1.32 m
+  stakePushMid: { adL: 1.85, adR: 1.85, fL: .53, fR: .48, eL: .39, eR: .94, sp: .2, hd: -.3, shake: .25 },                          // mid 1.16 m
+  stakePushLo: { adL: 1.79, adR: 1.84, fL: .43, fR: .45, eL: .1, eR: .39, sp: .34, hd: -.38 },                                     // mid 1.02 m (cane 30 cm down)
+  squatReach: { adL: 1.63, adR: 1.63, fL: .46, fR: .46, eL: .02, eR: .02, sp: 1.71, hd: -.4, kL: 2.3, kR: 2.3, hL: 1.0, hR: 1.0 },  // squat: palms (0, .15, .40) on the lying stem
+  tieLow: { adL: 1.78, adR: 1.76, fL: .27, fR: .16, eL: .49, eR: .61, sp: .38, hd: -.35, kL: 2.3, kR: 2.3, hL: 1.0, hR: 1.0, shake: .5 }, // squat: palms (0, .47, .33)
+  tieHigh: { adL: 1.76, adR: 1.74, fL: .25, fR: .17, eL: .38, eR: .46, sp: .45, hd: -.3, shake: .5 },                               // palms (0, .98, .32)
+  basketHold: { adL: 1.41, fL: .09, eL: .39, fR: .08, eR: .2 },                                                                     // L (.22, .95, .18) holds the basket handle
+  pickReach: { adL: 1.38, fL: 0, eL: .39, adR: 1.61, fR: .62, eR: .15, sp: .4, hd: -.25 },                                          // R (-.11, 1.03, .40)
+  pickPull: { adL: 1.38, fL: 0, eL: .39, adR: 1.58, fR: .13, eR: .57, sp: .1, hd: -.15 },                                           // R (-.14, 1.0, .25)
+  pickDrop: { adL: 1.44, fL: .1, eL: .75, adR: 1.97, fR: -.11, eR: -.2, sp: .64, tw: .35, hd: -.35 },                              // R (.13, .9, .27) over the basket
+  ctaHold: { adL: 1.42, fL: .1, eL: .39, adR: .95, fR: .85, eR: .35, ht: .3, sp: -.02 } });

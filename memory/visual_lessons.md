@@ -276,3 +276,10 @@ Rule: when a preview or final video shows a mistake, add one entry here (what wa
 - **Mistake:** root nodules drawn at 2-4 cm read as pink balls; real clover nodules are 2-5 mm. **Fix:** `nodS: .28` on `roots`.
 - **Mistake:** cameras at elev .1-.2 in front of the island edge filled the lower half of the frame with the soil face. **Fix:** elev .3-.48 for field shots; keep the low face camera only for root beats.
 - Source: runs/clover_regrow/sheet_preview.jpg (first pass). Fixes applied after the one preview, not yet re-checked.
+
+## Tomato stake (preview 2026-11-26, plans/tomato_stake.mjs)
+- **Mistake:** procedural tomato foliage read as sparse spiky stars (13 leaves on the main stem, leaflets 9-14 % of the leaf length wide); fruit in orange (#e3862c) with a strong clearcoat read as pale peach. **Fix:** 18 + 8 leaves per stem, 7 branches, leaflets 13-19 % wide, darker saturated ripeness ramp (#5c8a26 -> #d4601a -> #a9160b), clearcoat .35. Real tomato: dense compound leaves, leaflets 3-8 cm long and 2-4 cm wide.
+- **Mistake:** the fallen rotting fruit sat inside the sprawl (0.1 m from the stems), so the line-3 close-ups showed only plant fruit. **Fix:** put it 0.3 m clear of every stem (checked with the stem-distance probe) on the camera side.
+- **Mistake:** five side palms showed as bare leaning trunks across the sky in low shots. **Fix:** four palms only, 6-8 m back and 5-8 m to the sides.
+- Works: auto-tuned rig poses (coordinate search on palm targets) put both palms on the cane within 0.03 m, on the stem at 0.1 m, on the fruit at 0.05-0.07 m.
+- Source: runs/tomato_stake/sheet_preview.jpg (first pass). Fixes applied after the one preview, not re-checked by eye.
