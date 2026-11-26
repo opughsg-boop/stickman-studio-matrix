@@ -103,7 +103,7 @@ const birds = obj('birds', 'sparrows', [0, 0, 0], { birds: [hero, ...flock] });
 // ---------- the soil section on the island face and the tunnel worm ----------
 const ZS = 8.002, TUN0 = [[.62, 0], [.61, -.035], [.57, -.08], [.6, -.14], [.67, -.19], [.66, -.26], [.6, -.32], [.62, -.4]];
 const tlen = TUN0.slice(1).reduce((a, p, i) => a + Math.hypot(p[0] - TUN0[i][0], p[1] - TUN0[i][1]), 0);
-const PRE = [[.36, .007, 7.986], [.5, .007, 7.986], [.6, .006, 7.99], [.62, -.004, ZS + .004]];
+const PRE = [[.36, .007, 7.986], [.5, .007, 7.986], [.6, .006, 7.99], [.62, -.004, ZS + .007]];
 const preLen = PRE.slice(1).reduce((a, p, i) => a + Math.hypot(p[0] - PRE[i][0], p[1] - PRE[i][1], p[2] - PRE[i][2]), 0);
 const DIG = [T.l4 + .1, T.light5 + .9];
 const section = obj('section', 'soil_section', [0, 0, 0], { x0: -.5, x1: 1.1, depth: .5, z: ZS, seed: 61,
@@ -113,7 +113,7 @@ const section = obj('section', 'soil_section', [0, 0, 0], { x0: -.5, x1: 1.1, de
     { pts: [[.92, 0], [.9, -.06], [.97, -.12], [.92, -.2], [.84, -.26], [.86, -.33]], k: [[T.dig6 - .1, 0], [T.dig6 + 1.3, 1]] }],
   crumbK: [[T.also5, 0], [T.light5 + .9, 1]], lightK: [[T.light5, 0], [T.light5 + 1.0, 1]],
   pourT: 0, streamK: [[T.make6 - .15, 0], [T.make6 + .1, 1], [T.deep6 + .4, 1], [T.deep6 + .7, 0]], pourK: [[T.make6 + .15, 0], [T.deep6 + .6, 1]] });
-const tworm = obj('tworm', 'earthworm', [0, 0, 0], { len: .15, r: .003, seed: 7, path: [...PRE, ...TUN0.slice(1).map(([x, y]) => [x, y, ZS + .004])],
+const tworm = obj('tworm', 'earthworm', [0, 0, 0], { len: .15, r: .003, seed: 7, path: [...PRE, ...TUN0.slice(1).map(([x, y]) => [x, y, ZS + .007])],
   progK: [[T.l4, preLen - .005], [DIG[0], preLen], [DIG[1], preLen + tlen * .985]], showK: [[0, 0], [T.l4 - .05, 0], [T.l4, 1]] });
 
 // ---------- rain ----------
@@ -163,8 +163,8 @@ const beats = [
   { t: T.l3, kind: 'info',
     camera: { target: [-.7, .5, 6.3], dist: 4.6, elev: .26, az: .38, zoom: 'out' } },
   //   ... over his shoulder: he knows the soil has worms (check)
-  { t: T.know4 - .1, kind: 'info', add: [stk('ok4', 'check', [-1.75, 1.35, 6.75], .16, { delay: T.ground4 - T.know4 + .1 })],
-    camera: { target: [-1.2, .45, 6.6], dist: 2.4, elev: .24, az: -1.85, zoom: 'in' } },
+  { t: T.know4 - .1, kind: 'info', add: [stk('ok4', 'check', [-1.6, 1.0, 6.9], .16, { delay: T.ground4 - T.know4 + .1 })],
+    camera: { target: [-.7, .4, 6.6], dist: 4.2, elev: .22, az: -1.6, zoom: 'in' } },
   // 5 back to the section: a sparrow pecks above while a worm crawls into its burrow ...
   { t: T.l4, kind: 'info', remove: ['ok4'],
     camera: { target: [.58, -.08, 8.0], dist: .85, elev: .1, az: .1, zoom: 'in' } },
@@ -192,7 +192,7 @@ const plan = {
   version: 2, planner: 'directed', duration: D, language: 'ar', prompt: 'ليه الطيور بتتجمع في الغيط بعد المطر',
   captions: S.flatMap((seg, si) => buildCaptions({ segments: [seg] }, 2).map(c => ({ ...c, end: Math.min(c.end + .25, si + 1 < S.length ? S[si + 1].start : D) }))),
   fades: [], fov: 40, near: .02,
-  env: { island: { w: 22, d: 16, depth: 3.2 }, flatTop: true, soil: 'brown_mud_leaves_01', soilRepeat: 8, soilTint: [.92, .88, .82], horizon: 'nile', cover: 'medium',
+  env: { island: { w: 22, d: 16, depth: 3.2 }, flatTop: true, soil: 'brown_mud_leaves_01', soilRepeat: 8, soilTint: [.92, .88, .82], horizon: 'nile', cover: false,
     haze: .45, sunElev: 40, sunAz: 25, turbidity: 2.8, water: '#7f9a8f', waves: 0, foam: false, birds: 0, motes: .3, clouds: 18,
     // sound library (this plan only, at or under the global bed .03 / calls .05)
     sfxBeds: [{ cat: 'rain', idx: 3, gain: .03, end: 7.0, fade: 1.5 }, { cat: 'bird', idx: 0, gain: .02, start: T.l2 + .5, fade: 1.5 }],

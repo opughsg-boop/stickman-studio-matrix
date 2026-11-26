@@ -87,11 +87,13 @@ The user speaks Egyptian Arabic and is not technical. Reply in short, simple Egy
 - Send `runs/<name>/final.mp4`. If it is above the chat limit (about 40 MB), make a copy at CRF 28 with `-maxrate 6M -bufsize 12M -c:a aac -b:a 160k` into the scratchpad and send that copy. Say in Arabic that it is a compressed copy.
 - Reply in 3-4 lines: the score, what improved, what still fails (the flagged beats), and the next step.
 
-## 8. Title, description and hashtags (on request)
-- **Title:** the hook question plus one emoji (for example "ليه البرسيم بيطلع تاني بعد ما يتقص؟ 🌿"). Trend-friendly if asked, but say that live trends cannot be checked from here.
-- **Description:** 2 lines, then "تابعني لفيديوهات أكتر 👆".
-- **Hashtags:** 5 short ones (one or two words), relevant to Egypt and the Arab world and to the topic (for example #زراعة #فلاحة #الطماطم #مصر).
-- **Facebook post:** hook, two explanation lines, a question for the comments.
+## 8. Title, emoji and hashtags (MANDATORY with every final video, from 2026-11-26)
+Every time a final video is delivered, the message must also include these four things, with no need to ask:
+- **Title:** the hook question plus one or two emojis that match the topic (for example "ليه البرسيم بيطلع تاني بعد ما يتقص؟ 🌿").
+- **Emoji line:** one short line of 2-3 emojis that match the topic.
+- **Hashtags:** exactly 5, each one word or two at most, Egyptian and relevant to the topic (for example #زراعة #فلاحة #مصر #الطماطم #الفلاح). No spaces inside a hashtag; join the two words with an underscore.
+- **Description:** 2 lines, then "تابعني لفيديوهات أكتر 👆" (only when the user asks for a post; the title and hashtags are always included).
+- Trends cannot be checked from here: say so once if the user asks for a live trend.
 
 ## 9. Git (commit and push)
 1. Commit the plan, renderer, pipeline, memory and skill changes. **Never commit `runs/`** (git-ignored) or large binaries.
