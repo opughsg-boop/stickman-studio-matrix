@@ -23,9 +23,9 @@
  {
   "code": "caption_flash",
   "rule": "Hold each caption until the next word starts.",
-  "count": 3,
-  "last_seen": "2026-11-16",
-  "example": "caption \"like\" shown only 0.04s"
+  "count": 4,
+  "last_seen": "2026-11-26",
+  "example": "caption \"ثمانية\" shown only 0.00s"
  },
  {
   "code": "beat_too_short",
@@ -100,9 +100,9 @@
  {
   "code": "dead_beat",
   "rule": "Each beat must add an object, change a character mode, add an effect or change the camera.",
-  "count": 112,
-  "last_seen": "2026-11-24",
-  "example": "beat 11 adds nothing new visually"
+  "count": 122,
+  "last_seen": "2026-11-26",
+  "example": "beat 12 adds nothing new visually"
  },
  {
   "code": "flat_primitive_water",
