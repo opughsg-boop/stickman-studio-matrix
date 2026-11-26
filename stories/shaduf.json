@@ -1,0 +1,11 @@
+{ "title": "ليه الشادوف بيرفع ميّه تقيلة؟",
+  "hero": { "model": "modular_men/Farmer", "height": 1.75 },
+  "lines": [
+    { "shot": "sky", "question": true },
+    { "shot": "close", "glow": "#3aa8ff" },
+    { "shot": "twist", "glow": "#ff3b30", "flash": true },
+    { "shot": "science" },
+    { "shot": "walk" },
+    { "shot": "found" },
+    { "shot": "cta" }
+  ] }

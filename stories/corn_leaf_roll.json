@@ -1,0 +1,11 @@
+{ "title": "ورق الذرة بيتلف في الحر",
+  "hero": { "model": "crops_pack/Corn_Crop", "height": 2.2 },
+  "lines": [
+    { "shot": "sky", "question": true },
+    { "shot": "close", "glow": "#3aa8ff" },
+    { "shot": "twist", "glow": "#ff3b30", "flash": true },
+    { "shot": "science" },
+    { "shot": "walk" },
+    { "shot": "found" },
+    { "shot": "cta" }
+  ] }
