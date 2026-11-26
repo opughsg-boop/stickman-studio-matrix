@@ -9,9 +9,9 @@
  {
   "code": "too_dark",
   "rule": "Keep night scenes readable: dim the light but keep the subject clearly visible.",
-  "count": 23,
+  "count": 24,
   "last_seen": "2026-11-26",
-  "example": "beat 5 too dark (luma 50)"
+  "example": "beat 67 too dark (luma 57)"
  },
  {
   "code": "beat_too_long",
@@ -30,9 +30,9 @@
  {
   "code": "beat_too_short",
   "rule": "Merge very short sentences; a beat should last at least ~1.5 s.",
-  "count": 29,
+  "count": 41,
   "last_seen": "2026-11-26",
-  "example": "beat 9 lasts 0.8s"
+  "example": "beat 68 lasts 0.8s"
  },
  {
   "code": "too_bright",
@@ -100,9 +100,9 @@
  {
   "code": "dead_beat",
   "rule": "Each beat must add an object, change a character mode, add an effect or change the camera.",
-  "count": 147,
+  "count": 159,
   "last_seen": "2026-11-26",
-  "example": "beat 11 adds nothing new visually"
+  "example": "beat 66 adds nothing new visually"
  },
  {
   "code": "flat_primitive_water",
