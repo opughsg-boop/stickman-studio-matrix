@@ -80,3 +80,4 @@
 {"run": "glass_rain", "time": "2026-11-24 20:29", "score": 6, "issues": 26, "codes": ["beat_too_long", "dead_beat", "no_context", "too_dark"]}
 {"run": "fly_taste", "time": "2026-11-24 23:25", "score": 29, "issues": 22, "codes": ["beat_too_long", "dead_beat", "no_context"]}
 {"run": "bee_dance", "time": "2026-11-26 00:21", "score": 48, "issues": 11, "codes": ["caption_flash", "dead_beat"]}
+{"run": "clover_regrow", "time": "2026-11-26 01:40", "score": 86, "issues": 4, "codes": ["beat_too_short", "dead_beat"]}
