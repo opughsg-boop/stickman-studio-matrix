@@ -3222,7 +3222,7 @@ function skySun(p = {}) { const g = new THREE.Group(), Z = p.z ?? -40, y0 = p.y0
     disc.visible = vis > .01; disc.scale.setScalar(Math.max(.001, vis)); LINK.sun = vis > .01 ? P.clone() : null; halo.material.opacity = .6 * vis; halo2.material.opacity = .9 * vis; disc.lookAt(0, P.y, 0);
     for (const k of ['s', 'w']) { const ext = kv(p[k === 's' ? 'sumK' : 'winK'], t, 0), op = kv(p[k === 's' ? 'sumOp' : 'winOp'], t, 1); trails[k].forEach((m, i) => { m.material.opacity = i / 44 <= ext + 1e-3 ? .85 * op : 0; }); } };
   return g; }
-// ---- hen walker: track [[t, x, z, act, yaw]]; act idle | peck | rest | preen (walk is automatic between different spots)
+// ---- hen walker: track [[t, x, z, act, yaw]]; act idle | peck | sip | rest | preen (walk is automatic between different spots)
 function henWalker(p = {}) { const g = new THREE.Group(), mover = new THREE.Group(); g.add(mover);
   const S = (p.height || .4) / 1.43, c = chicken({ seed: p.seed || 3, scale: S, ...(p.look || {}) }); mover.add(c);
   const U = c.userData, beakL = U.beakL, bl0 = beakL.rotation.x, wings = U.wings || [], red = U.red, redC = red.color.clone(), head = U.head, legs = U.legs, body = U.body, neck = U.neck, h0 = head.position.clone(), b0 = body.scale.clone();
@@ -3251,6 +3251,9 @@ function henWalker(p = {}) { const g = new THREE.Group(), mover = new THREE.Grou
     if (act === 'peck') { const per = 1.2, ph = (t + sd * .37) / per, k = Math.floor(ph), f = fr01(ph), sk = f < .13 ? sEase(f / .13) : f < .24 ? 1 : f < .52 ? 1 - sEase((f - .24) / .28) : 0;
       o.pitch = .42 * sk + .06; o.hy = -.6 * sk; o.hz = .22 * sk; o.hrx = .95 * sk + (f < .24 ? Math.sin(t * 40) * .05 * sk : 0); o.hry = f > .55 ? (hr(k, 5) - .5) * 1.1 : 0;
       if (k % 3 === 0 && f > .56) { const s2 = fr01((f - .56) / .44 * 2); o.scr = Math.sin(s2 * Math.PI); } }                                     // foot scratch every third peck
+    if (act === 'sip') { const per = 2.4, f = fr01((t + sd * .29) / per), dn = f < .12 ? sEase(f / .12) : f < .32 ? 1 : f < .44 ? 1 - sEase((f - .32) / .12) : 0,   // most birds: scoop, then tip the head back so it runs down
+        up = f < .32 ? 0 : f < .46 ? sEase((f - .32) / .14) : f < .8 ? 1 : 1 - sEase((f - .8) / .2);
+      o.pitch = .42 * dn + .06 - .08 * up; o.hy = -.5 * dn + .14 * up; o.hz = .22 * dn - .06 * up; o.hrx = .95 * dn - .95 * up + (up > .9 ? Math.sin(t * 26) * .04 : 0); o.beak = .25 * up * (f < .6 ? 1 : 0); }
     if (act === 'rest' || act === 'preen') { o.drop = 1; o.fluff = 1; o.leg = .25; o.hy = -.1; o.hz = -.1; o.hrx = .12 + Math.sin(t * .8) * .03;
       if (act === 'preen') { const per = 2.6, k = Math.floor(t / per), f = fr01(t / per), into = f < .12 ? sEase(f / .12) : f < .72 ? 1 : 1 - sEase((f - .72) / .28), sd2 = k % 2 ? 1 : -1;
         o.hx = .26 * into * sd2; o.hy = -.3 * into; o.hz = -.4 * into; o.hry = 2.6 * into * sd2; o.hrx = .12 + .45 * into + Math.sin(t * 21) * .14 * into; o.fluff = 1 + .5 * into; } }
@@ -4319,26 +4322,120 @@ function pigeonWalker(p = {}) { const g = new THREE.Group(), mover = new THREE.G
   const state = t => { if (!seg.length || t <= K[0].t) return { x: K[0].x, z: K[0].z, y: K[0].y, yaw: seg[0]?.y0 ?? yaw, act: K[0].act, prev: K[0].act, t0: -9, dist: 0, sp: 0 };
     const i = seg.findIndex(q => t < q.b.t); if (i < 0) { const q = seg[seg.length - 1]; return { x: q.b.x, z: q.b.z, y: q.b.y, yaw: q.y1, act: q.b.act, prev: actOf(q), t0: q.b.t, dist: cum, sp: 0 }; }
     const q = seg[i], D = Math.max(.01, q.b.t - q.a.t), u = (t - q.a.t) / D, e = q.mv ? trapE(u, .2) : 0;
+    if (q.mv && Math.abs(q.b.y - q.a.y) > .03) {   // hop up / down (onto a rim): crouch, a flapping arc, landing squash (pigeon_drink 2026-11-26)
+      const eh = sEase((u - .3) / .4), cr = u < .3 ? sEase(u / .3) : u > .7 ? 1 - sEase((u - .7) / .3) : .15;
+      return { x: lerp(q.a.x, q.b.x, eh), z: lerp(q.a.z, q.b.z, eh), y: lerp(q.a.y, q.b.y, eh) + Math.sin(Math.PI * eh) * .07, yaw: lerp(q.y0, q.y1, clamp(u / .3)), act: 'idle', prev: i ? actOf(seg[i - 1]) : actOf(q), t0: q.a.t, dist: q.cum, sp: 0, fly: u > .28 && u < .74 ? 1 : 0, crouch: cr }; }
     return { x: lerp(q.a.x, q.b.x, e), z: lerp(q.a.z, q.b.z, e), y: lerp(q.a.y, q.b.y, e), yaw: lerp(q.y0, q.y1, easeIO(u * D / Math.min(D, .4))), act: actOf(q), prev: i ? actOf(seg[i - 1]) : actOf(q), t0: q.a.t, dist: q.cum + q.len * e, sp: q.mv ? q.len / D * trapV(u, .2) : 0 }; };
   const pose = (act, t) => { const o = { pitch: 0, hy: 0, hz: 0, hrx: 0, hry: 0, puff: 0, tail: 0, bow: 0 };
     if (act === 'idle' || act === 'walk') { const per = .9, k = Math.floor((t + sd) / per), f = fr01((t + sd) / per); o.hry = lerp((hr(k, sd) - .5) * 1.4, (hr(k + 1, sd) - .5) * 1.4, clamp((f - .85) / .08)) * (act === 'walk' ? .2 : 1); o.hrx = (hr(k, sd + 3) - .5) * .3; }
     if (act === 'peck') { const per = 1.1, f = fr01((t + sd * .41) / per), sk = f < .14 ? sEase(f / .14) : f < .26 ? 1 : f < .5 ? 1 - sEase((f - .26) / .24) : 0; o.pitch = .5 * sk; o.hy = -.07 * sk; o.hz = .02 * sk; o.hrx = .8 * sk; }
     if (act === 'coo') { const f = fr01((t + sd) / 1.6), b = Math.sin(f * Math.PI * 2); o.puff = .9 + .2 * b; o.bow = Math.max(0, b) * .35; o.hrx = .25 * Math.max(0, b); o.tail = .3 * Math.max(0, -b); o.hry = Math.sin(t * .8) * .5; }
+    // drink: body tipped forward, head down, beak held IN the water (no head lift: pigeons suck); the beak tip is solved onto the water level below
+    if (act === 'drink') { o.pitch = .62; o.hy = -.05; o.hz = .03; o.hrx = .95 + .03 * Math.sin(t * 15.7); o.tail = -.15; }
     return o; };
   const vT = V3(0, 0, 0), vD = V3(0, 0, 0), Y1 = V3(0, 1, 0);
+  const solveNeck = () => { vT.copy(nOff).applyQuaternion(head.quaternion).add(head.position); vD.subVectors(vT, nBase); const Ln = clamp(vD.length(), .03, .16);
+    neck.position.addVectors(nBase, vT).multiplyScalar(.5); neck.quaternion.setFromUnitVectors(Y1, vD.normalize()); return Ln; }, bw = V3(0, 0, 0);
   g.userData.tick = t => { const st = state(t), kb = easeIO((t - st.t0) / .3), A = pose(st.prev, t), B = pose(st.act, t), P = {}; for (const k in B) P[k] = lerp(A[k], B[k], kb);
+    const dw = (st.act === 'drink' ? kb : 0) + (st.prev === 'drink' ? 1 - kb : 0);
     const mvK = clamp(st.sp / .12), u = fr01(st.dist / STR), ph = st.dist / STR * Math.PI, stab = (u < .65 ? -u / .65 : -1 + (u - .65) / .35) + .5;   // head holds still, then thrusts
     head.position.set(h0.x, h0.y + P.hy - P.bow * .03, h0.z + P.hz + stab * STR / S * mvK * .9); head.rotation.set(P.hrx, P.hry, 0, 'YXZ');
-    vT.copy(nOff).applyQuaternion(head.quaternion).add(head.position); vD.subVectors(vT, nBase); const Ln = clamp(vD.length(), .03, .16);
-    neck.position.addVectors(nBase, vT).multiplyScalar(.5); neck.quaternion.setFromUnitVectors(Y1, vD.normalize()); neck.scale.set(1 + .35 * P.puff, Ln, 1 + .35 * P.puff);
-    c.rotation.x = P.pitch + P.bow + .04 * mvK; U.body.scale.copy(b0).multiplyScalar(1 + .012 * Math.sin(t * 3.1 + sd));
+    c.rotation.x = P.pitch + P.bow + .04 * mvK + .12 * (st.crouch || 0); U.body.scale.copy(b0).multiplyScalar(1 + .012 * Math.sin(t * 3.1 + sd) + .015 * dw * Math.max(0, Math.sin(t * 15.7)));
     U.tail.rotation.x = -P.tail + .06 * Math.sin(t * .7 + sd); U.legs[0].rotation.x = Math.sin(ph) * .5 * mvK; U.legs[1].rotation.x = -Math.sin(ph) * .5 * mvK;
-    const fl = fr01((t + sd * 1.7) / 4.1); U.wings.forEach(w => { w.m.rotation.z = w.s * (fl < .06 ? Math.sin(fl / .06 * Math.PI) * .25 : 0); });       // a wing shuffle now and then
-    mover.position.set(st.x, st.y + Math.abs(Math.sin(ph)) * .004 * mvK, st.z); mover.rotation.y = st.yaw; mover.rotation.z = Math.sin(ph) * .06 * mvK;  // waddle
+    U.legs.forEach(l => { l.scale.y = 1 - .3 * (st.crouch || 0); if (st.fly) l.rotation.x = .7; });
+    const fl = fr01((t + sd * 1.7) / 4.1); U.wings.forEach(w => { w.m.rotation.z = w.s * (st.fly ? .35 + .85 * (.5 + .5 * Math.sin(t * 46)) : fl < .06 ? Math.sin(fl / .06 * Math.PI) * .25 : 0); });       // flaps on a hop, a wing shuffle now and then
+    mover.position.set(st.x, st.y + Math.abs(Math.sin(ph)) * .004 * mvK - .012 * (st.crouch || 0), st.z); mover.rotation.y = st.yaw; mover.rotation.z = Math.sin(ph) * .06 * mvK;  // waddle
+    if (dw > .001 && p.waterYK) { const wy = kv(p.waterYK, t, 0) - .005;                     // beak tip onto the water: two solve passes along the tipped head axis
+      for (let it = 0; it < 3; it++) { g.updateMatrixWorld(true); U.beakTip.getWorldPosition(bw); const cp = Math.max(.35, Math.cos(c.rotation.x)); head.position.y += (wy - bw.y) * dw / (S * cp); } }
+    const Ln = solveNeck(), gulp = dw * Math.max(0, Math.sin(t * 15.7 - .8));                // throat pumps ~2.5 times a second while sucking
+    neck.scale.set(1 + .35 * P.puff + .05 * gulp, Ln, 1 + .35 * P.puff + .08 * gulp);
     sh.position.set(st.x, st.y + .014, st.z); sh.rotation.z = -st.yaw;
-    if (p.link) { c.updateMatrixWorld(true); LINK[p.link] = { pos: V3(st.x, st.y, st.z), head: head.getWorldPosition(V3(0, 0, 0)), beak: U.beakTip.getWorldPosition(V3(0, 0, 0)), yaw: st.yaw }; } };
+    if (p.link) { g.updateMatrixWorld(true); LINK[p.link] = { pos: V3(st.x, st.y, st.z), head: head.getWorldPosition(V3(0, 0, 0)), beak: U.beakTip.getWorldPosition(V3(0, 0, 0)), yaw: st.yaw, drink: dw,
+      feet: U.legs.map(l => l.localToWorld(V3(0, -.061, .004))) }; } };
   return g; }
 Object.assign(ASSETS, { pigeon_cage: pigeonCage, water_puddle: waterPuddle, pigeon: pigeonWalker });
+// ================= Pigeon drink pack (2026-11-26, plans/pigeon_drink.mjs) =================
+// pigeon_basin: a shallow galvanised drinking tray as used on Egyptian roofs for pigeons (len x w, .075 m deep, rolled rim the birds perch on).
+//   Spangled zinc with water stains and a limescale ring; the water level follows levelK [[t, y local]] (a damp tide band shows where it was);
+//   sucks [{ link, onK }]: while a linked bird drinks, rings CONVERGE on its beak (water pulled in), a thin bright water column runs up into the
+//   beak (streaks scroll upward), and the surface dimples at the beak. Plain rings from a sipping bird: sips [{ link, onK }] (rings spread out).
+//   Exposes LINK[p.link] = { rim: top y of the rim (world), water: water y (world), x0, x1, z0, z1 } for the plan's contact probe.
+function zincTex(seed) { return SPR['zinc' + seed] ||= canvasT(512, 256, (c, w, h) => { const r = rng(seed); c.fillStyle = '#a9aeb0'; c.fillRect(0, 0, w, h);
+  for (let i = 0; i < 260; i++) { const x = r() * w, y = r() * h, s = 8 + r() * 26, v = 150 + r() * 50 | 0; c.fillStyle = `rgba(${v},${v + 3},${v + 6},.55)`; c.beginPath();       // zinc spangle crystals
+    for (let k = 0; k < 6; k++) { const a = k / 6 * 6.283 + r() * .5, rr = s * (.6 + r() * .5); c.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); } c.closePath(); c.fill(); }
+  for (let i = 0; i < 40; i++) { c.fillStyle = `rgba(${r() > .5 ? '120,110,90' : '230,232,226'},${.05 + r() * .1})`; c.fillRect(r() * w, r() * h, 10 + r() * 60, 2 + r() * 8); } }, [1, 1]); }
+function pigeonBasin(p = {}) { const g = new THREE.Group(), L = p.len || .56, Wd = p.w || .34, H = p.h || .075, th = .0012, rr = .0065, r = rng(p.seed || 77);
+  const zm = new THREE.MeshStandardMaterial({ map: zincTex(p.seed || 77), color: col('#ffffff'), metalness: .55, roughness: .42, side: THREE.DoubleSide, envMapIntensity: 1.1 });
+  const wall = (w, x, z, ry) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, H), zm); m.position.set(x, H / 2, z); m.rotation.y = ry; g.add(m); };
+  wall(L, 0, Wd / 2, 0); wall(L, 0, -Wd / 2, 0); wall(Wd, L / 2, 0, Math.PI / 2); wall(Wd, -L / 2, 0, Math.PI / 2);
+  const bot = box(L, .004, Wd, zm); bot.position.y = .002; g.add(bot);
+  // the rolled rim: four tubes and corner balls
+  [[L, 0, Wd / 2, 0], [L, 0, -Wd / 2, 0], [Wd, L / 2, 0, Math.PI / 2], [Wd, -L / 2, 0, Math.PI / 2]].forEach(([w, x, z, ry]) => { const t = cyl(rr, rr, w, zm, 10); t.rotation.z = Math.PI / 2; const q = new THREE.Group(); q.add(t); q.position.set(x, H, z); q.rotation.y = ry; g.add(q); });
+  [[-1, -1], [-1, 1], [1, -1], [1, 1]].forEach(([a, b]) => { const s2 = new THREE.Mesh(new THREE.SphereGeometry(rr, 10, 8), zm); s2.position.set(a * L / 2, H, b * Wd / 2); g.add(s2); });
+  // limescale ring and a damp tide band on the inner walls (where the water stood this morning)
+  const scaleM = new THREE.MeshStandardMaterial({ color: col('#e9e6dc'), roughness: .95, transparent: true, opacity: .55, depthWrite: false });
+  const lv0 = kv(p.levelK, 0, H * .7); [[L, 0, Wd / 2 - .001, Math.PI], [L, 0, -Wd / 2 + .001, 0], [Wd, L / 2 - .001, 0, -Math.PI / 2], [Wd, -L / 2 + .001, 0, Math.PI / 2]].forEach(([w, x, z, ry]) => {
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(w, .006), scaleM); m.position.set(x, lv0 + .004, z); m.rotation.y = ry; g.add(m); });
+  const wetM = new THREE.MeshStandardMaterial({ color: col('#7b7f7e'), roughness: .25, metalness: .4, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide }), wets = [];
+  [[L, 0, Wd / 2 - .0015, Math.PI], [L, 0, -Wd / 2 + .0015, 0], [Wd, L / 2 - .0015, 0, -Math.PI / 2], [Wd, -L / 2 + .0015, 0, Math.PI / 2]].forEach(([w, x, z, ry]) => {
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(w, 1), wetM); m.position.set(x, 0, z); m.rotation.y = ry; g.add(m); wets.push(m); });
+  // water: a clear sheet (the zinc bottom shows through) with soft sky glints; a few floating feather barbs and a fallen seed husk
+  const wm = new THREE.MeshPhysicalMaterial({ color: col('#9cc3c6'), roughness: .04, metalness: .05, transparent: true, opacity: .62, clearcoat: 1, clearcoatRoughness: .05, envMapIntensity: 1.4, depthWrite: false });
+  const water = new THREE.Mesh(new THREE.PlaneGeometry(L - .004, Wd - .004, 48, 30), wm); water.rotation.x = -Math.PI / 2; g.add(water); water.renderOrder = 2;
+  const wpos = water.geometry.attributes.position, w0 = Float32Array.from(wpos.array);
+  const shade = new THREE.Mesh(new THREE.PlaneGeometry(L - .004, Wd - .004), new THREE.MeshBasicMaterial({ color: '#2d4a4c', transparent: true, opacity: .16, depthWrite: false })); shade.rotation.x = -Math.PI / 2; g.add(shade);
+  const flo = []; for (let i = 0; i < 3; i++) { const f = new THREE.Mesh(new THREE.PlaneGeometry(.022, .006), new THREE.MeshStandardMaterial({ color: col(i ? '#d9d6cf' : '#b39c74'), roughness: .9, side: THREE.DoubleSide })); f.rotation.x = -Math.PI / 2; g.add(f); flo.push([f, (r() - .5) * L * .7, (r() - .5) * Wd * .6, r() * 6]); }
+  const ringM = new THREE.MeshBasicMaterial({ map: rippleRingTex(), color: col('#f4fbfb'), transparent: true, opacity: 0, depthWrite: false }), rings = [];
+  for (let i = 0; i < 12; i++) { const m = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), ringM.clone()); m.rotation.x = -Math.PI / 2; m.renderOrder = 3; g.add(m); rings.push(m); }
+  // the pulled-in water column (one per sucking bird)
+  const colTex = canvasT(32, 128, (c, w, h) => { c.fillStyle = 'rgba(210,240,245,.55)'; c.fillRect(0, 0, w, h); for (let i = 0; i < 9; i++) { c.fillStyle = 'rgba(255,255,255,.95)'; c.fillRect(w * .25, (i / 9) * h, w * .5, h * .045); } }, [1, 1]);
+  colTex.wrapT = THREE.RepeatWrapping;
+  const cols = (p.sucks || []).map(() => { const m = new THREE.Mesh(new THREE.CylinderGeometry(.0035, .0055, 1, 12, 1, true), new THREE.MeshBasicMaterial({ map: colTex, transparent: true, opacity: 0, depthWrite: false, toneMapped: false }));
+    m.renderOrder = 4; g.add(m); return m; });
+  const sh = contactShadow(L * .62, Wd * .7, .4); sh.rotation.x = -Math.PI / 2; sh.position.y = .004; g.add(sh);
+  const Y1 = V3(0, 1, 0), tmp = V3(0, 0, 0), dir = V3(0, 0, 0);
+  const gpW = V3(0, 0, 0);
+  g.userData.tick = t => { const lv = kv(p.levelK, t, H * .7); g.updateWorldMatrix(true, false); const gp = g.getWorldPosition(gpW); water.position.y = lv;   // beaks are in world space; the engine may wrap this group shade.position.y = lv - .002;
+    wets.forEach(m => { const top = lv0 + .003, hh = Math.max(.0005, top - lv); m.scale.y = hh; m.position.y = lv + hh / 2; m.material.opacity = clamp((top - lv) / .004) * .5; });
+    // gentle surface swell + the dimple at each sucking beak
+    const dimples = (p.sucks || []).map(sk => { const Lk = LINK[sk.link], on = kv(sk.onK, t, 0) * (Lk ? clamp(Lk.drink ?? 1) : 0); return Lk && on > .01 ? [Lk.beak.x - gp.x, -(Lk.beak.z - gp.z), on] : null; }).filter(Boolean);
+    for (let i = 0; i < wpos.count; i++) { const x = w0[i * 3], y = w0[i * 3 + 1]; let z = .0006 * Math.sin(x * 40 + t * 2.1) * Math.sin(y * 33 - t * 1.7);
+      dimples.forEach(([dx, dy, on]) => { const d2 = (x - dx) ** 2 + (y - dy) ** 2; z -= .0035 * on * Math.exp(-d2 / .0004); }); wpos.setZ(i, z); }
+    wpos.needsUpdate = true; water.geometry.computeVertexNormals();
+    flo.forEach(([f, x, z, ph], i) => { f.position.set(x + Math.sin(t * .2 + ph) * .01, lv + .001, z + Math.cos(t * .17 + ph) * .008); f.rotation.z = ph + t * .05; });
+    let ri = 0; const ring = (x, z, sc, op) => { if (ri >= rings.length) return; const m = rings[ri++]; m.visible = true; m.position.set(x, lv + .0015, z); m.scale.setScalar(sc); m.material.opacity = op; };
+    rings.forEach(m => m.visible = false);
+    (p.sucks || []).forEach((sk, k) => { const Lk = LINK[sk.link], on = kv(sk.onK, t, 0) * (Lk ? clamp(Lk.drink ?? 1) : 0), cm = cols[k];
+      if (!Lk || on < .01) { cm.material.opacity = 0; return; } const bx = Lk.beak.x - gp.x, bz = Lk.beak.z - gp.z;
+      for (let j = 0; j < 4; j++) { const u = fr01(t * .9 + j / 4); ring(bx, bz, .11 * (1 - u) + .012, .5 * on * Math.sin(Math.PI * u)); }   // rings shrink INTO the beak
+      tmp.set(bx, lv, bz); const hd = Lk.head ? V3(Lk.head.x - gp.x, Lk.head.y - gp.y, Lk.head.z - gp.z) : V3(bx, Lk.beak.y - gp.y + .04, bz);
+      dir.subVectors(hd, tmp); const len = Math.max(.005, dir.length()); cm.position.addVectors(tmp, hd).multiplyScalar(.5); cm.quaternion.setFromUnitVectors(Y1, dir.normalize());
+      cm.scale.set(1, len, 1); cm.material.opacity = .75 * on; colTex.offset.y = -t * 1.6; });
+    (p.sips || []).forEach(sk => { const Lk = LINK[sk.link], on = kv(sk.onK, t, 0); if (!Lk || on < .01) return; const bx = Lk.beak.x - gp.x, bz = Lk.beak.z - gp.z;
+      if (Math.abs(bx) > L / 2 - .01 || Math.abs(bz) > Wd / 2 - .01) return; if (Lk.beak.y - gp.y > lv + .03) { sk.last = sk.last ?? -9; return; } sk.last = t; });
+    (p.sips || []).forEach(sk => { const Lk = LINK[sk.link]; if (!Lk || sk.last == null) return; const age = t - sk.last; if (age < 0 || age > 1.6) return;
+      for (let j = 0; j < 2; j++) { const a2 = age - j * .35; if (a2 > 0) ring(Lk.beak.x - gp.x, Lk.beak.z - gp.z, .015 + a2 * .1, .45 * (1 - a2 / 1.6)); } });
+    if (p.link) LINK[p.link] = { rim: gp.y + H + rr, water: gp.y + lv, x0: gp.x - L / 2, x1: gp.x + L / 2, z0: gp.z - Wd / 2, z1: gp.z + Wd / 2 }; };
+  return shadowed(g), water.castShadow = false, shade.castShadow = false, g; }
+
+// straw_glass: a clear tumbler (8 x 11 cm) of water with a striped paper straw; the water climbs the straw (suckK 0..1) and the level in the
+//   glass drops a little as it does (the "drinking with a straw" comparison).
+function strawGlass(p = {}) { const g = new THREE.Group(), R = .036, H = .11;
+  const gl = new THREE.MeshPhysicalMaterial({ color: col('#eef6f6'), roughness: .03, transparent: true, opacity: .22, clearcoat: 1, envMapIntensity: 1.6, side: THREE.DoubleSide, depthWrite: false });
+  const cup = new THREE.Mesh(new THREE.CylinderGeometry(R, R * .86, H, 40, 1, true), gl); cup.position.y = H / 2; cup.renderOrder = 5; g.add(cup);
+  const base = cyl(R * .86, R * .86, .008, gl, 40); base.position.y = .004; g.add(base);
+  const rim = new THREE.Mesh(new THREE.TorusGeometry(R, .0012, 6, 40), new THREE.MeshPhysicalMaterial({ color: col('#ffffff'), roughness: .05, transparent: true, opacity: .55 })); rim.rotation.x = Math.PI / 2; rim.position.y = H; g.add(rim);
+  const wM = new THREE.MeshPhysicalMaterial({ color: col('#a9d3d8'), roughness: .05, transparent: true, opacity: .5, depthWrite: false });
+  const wat = new THREE.Mesh(new THREE.CylinderGeometry(R * .97, R * .84, 1, 40), wM); wat.renderOrder = 4; g.add(wat);
+  const stripes = canvasT(32, 256, (c, w, h) => { for (let i = 0; i < 16; i++) { c.fillStyle = i % 2 ? '#ffffff' : '#d8312f'; c.save(); c.translate(0, i * h / 16); c.transform(1, .35, 0, 1, 0, 0); c.fillRect(-w, 0, w * 3, h / 16); c.restore(); } }, [1, 1]);
+  const straw = new THREE.Group(); straw.position.set(R * .35, .006, 0); straw.rotation.z = -.2; g.add(straw);
+  const SL = .19, st = new THREE.Mesh(new THREE.CylinderGeometry(.0034, .0034, SL, 16, 1, true), new THREE.MeshStandardMaterial({ map: stripes, roughness: .6, side: THREE.DoubleSide, transparent: true, opacity: .8 })); st.position.y = SL / 2; straw.add(st);
+  const inS = new THREE.Mesh(new THREE.CylinderGeometry(.0026, .0026, 1, 12), new THREE.MeshBasicMaterial({ color: col('#bfe6ec'), toneMapped: false })); straw.add(inS);
+  g.userData.tick = t => { const k = kv(p.suckK, t, 0), lvl = H * (.72 - .1 * kv(p.drainK, t, 0)); wat.scale.y = lvl - .008; wat.position.y = .008 + (lvl - .008) / 2;
+    const top = Math.max(lvl + .002, lerp(lvl, SL * .98, k)); inS.scale.y = top - .006; inS.position.y = .006 + (top - .006) / 2; inS.visible = true; };
+  return shadowed(g), g; }
+Object.assign(ASSETS, { pigeon_basin: pigeonBasin, straw_glass: strawGlass });
+
 
 // ---- brick_coop (hen_coop video 2026-11-20): a 3 x 2 m red-brick hen house built in stages, all stateless functions of t.
 //   Builder's string lines and pegs mark the footprint (stringK), a 3-course brick plinth with rubble fill rises (baseK, courses) and a
