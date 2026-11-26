@@ -89,3 +89,4 @@
 {"run": "corn_leaf_v3", "time": "2026-11-26 18:14", "score": 78, "issues": 5, "codes": ["beat_too_short", "dead_beat"]}
 {"run": "arugula_hot", "time": "2026-11-26 18:36", "score": 75, "issues": 5, "codes": ["dead_beat"]}
 {"run": "horse_care", "time": "2026-11-26 20:24", "score": 11, "issues": 25, "codes": ["beat_too_short", "dead_beat", "too_dark"]}
+{"run": "donkey_load", "time": "2026-11-26 23:03", "score": 78, "issues": 8, "codes": ["beat_too_short", "dead_beat"]}
