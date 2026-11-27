@@ -105,6 +105,10 @@ export async function render(planFile, audio, outDir, o = {}) {
       const page = await openPage(browser, url, plan, opt.w, opt.h); const files = [];
       for (const [i, b] of (plan.beats || plan.shots).entries()) { const f = path.join(outDir, `preview_${String(i).padStart(2, '0')}.jpg`);
         fs.writeFileSync(f, Buffer.from(await page.evaluate(t => window.renderAt(t), (b.start + b.end) / 2), 'base64')); files.push(f); }
+      const ccfg = plan.checks?.clearance ?? (process.env.CLEARANCE ? {} : null); // private frames: renderer/clearance.js -> clearance.json
+      if (ccfg) { const cr = await page.evaluate(async c => (await import('/renderer/clearance.js')).checkClearance(c), ccfg);
+        fs.writeFileSync(path.join(outDir, 'clearance.json'), JSON.stringify(cr, null, 1));
+        for (const b of cr.beats) console.log(`[clearance] beat ${b.beat} ${b.status}: ` + [...b.overlaps, ...b.contacts, ...b.missing].map(p => `${p.kind} ${p.a}.${p.part}/${p.b}${p.depth != null ? ' ' + p.depth + 'm' : ''}`).join(', ')); }
       execFileSync('ffmpeg', ['-v', 'error', '-y', '-pattern_type', 'glob', '-i', path.join(outDir, 'preview_*.jpg'), '-vf', `scale=180:-1,tile=${Math.min(6, files.length)}x${Math.ceil(files.length / 6)}`, '-frames:v', '1', path.join(outDir, 'sheet_preview.jpg')]);
       return { preview: path.join(outDir, 'sheet_preview.jpg'), files };
     }

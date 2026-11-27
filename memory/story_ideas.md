@@ -50,3 +50,15 @@ Done already: cow salt lick, hens in winter, sheep circling, date palm pollinati
 38. Unwashed eggs: the bloom protects against germs. Hook: "ليه البيض اللي متغسلش بيتحفظ أطول؟" Visual: egg held up, bloom shown, washing sink as contrast.
 39. Chick pips out of the shell with its beak. Hook: "إزاي الكتكوت بيطلع من البيضة من جوه بنقرة؟" Visual: egg cracking open, chick's beak inside. Check the egg tooth fact.
 40. Grape thinning: cutting bunches early for bigger fruit. Hook: "ليه الفلاح بيقص نص عناقيد العنب قبل ما تنضج؟" Visual: scissors on a vine, bunches dropping.
+
+## Batch 5 (suggested 2026-11-27; none repeats the done list or batches 1-4)
+41. Camel pacing: both legs on one side move together. Hook: "ليه الجمل بيمشي بالطريقة دي، رجلين على جنب واحد مع بعض؟" Visual: camel walking, side view. Check the gait fact.
+42. Butter churning: shaking cream joins fat globules. Hook: "ليه الخضّة بتخلي اللبن زبدة في خلال دقايق؟" Visual: churn, butter forming.
+43. Roots turn down: gravity pulls root tips to the ground. Hook: "ليه الجذر بيروح لتحت حتى لو البذرة اتقلبت؟" Visual: sprouting seed in a glass, root turns down.
+44. Mango pruning opens the canopy to light. Hook: "ليه الفلاح بيقص فروع المانجا بعد الحصاد؟" Visual: dense canopy opening up.
+45. Lemon curdles milk into cheese. Hook: "إزاي نقطة ليمون بتخلي اللبن يتحول لجبنة؟" Visual: lemon squeezed into a jug, curds form.
+46. Dates dried on mats in the sun. Hook: "ليه التمر بيتنشر على الحصيرة في الشمس؟" Visual: mats of dates drying, shadows moving.
+47. Old eggs float: the air cell grows. Hook: "ليه البيضة القديمة بتطفو لما تحطها في الميه؟" Visual: two eggs in water, one floats.
+48. Geese fly in a V: each bird uses the upwash of the one ahead. Hook: "ليه الأوز بيطير في شكل حرف V؟" Visual: flock in a V over the field.
+49. Yogurt: warm milk plus cultures thickens. Hook: "ليه اللبن بيتحول لزبادي لما نحط عليه شوية منه؟" Visual: jar of milk, spoon of starter, thick yogurt.
+50. Seedling leans to the window: stems grow toward light. Hook: "ليه الشتلة بتميل ناحية الشباك لوحدها؟" Visual: seedling on a sill, leaning.

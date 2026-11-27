@@ -7,6 +7,7 @@ import { clone as skClone } from 'three/addons/utils/SkeletonUtils.js';
 import { Sky } from 'three/addons/objects/Sky.js';
 import { mergeVertices, mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { bankH, CANAL, vnoise, rampK, wallowE } from './buffalo_ground.js';
+import { UAL, UAL_MODEL, loadUALMap, ualClip, ualHas, ualGroundLock, ualRestFeet } from './ual.js';
 import { makePost, buildHorizon, buildCover, upgradeWater, buildMotes, buildBirds, handheld, sharpenTextures, realismTick, resetRealism } from './realism.js';
 
 const R = { W: 540, H: 960 };
@@ -681,6 +682,7 @@ async function buildRealism(env) {
   postFx = makePost(renderer, R.W, R.H, style);
 }
 window.__scene = () => scene; window.__plan = () => plan; window.__cam = () => camera; window.__link = () => LINK; // debug hook for review tools (bbox checks)
+window.__objects = () => objects; window.__pose = t => updateObjects(t); // clearance check (renderer/clearance.js): pose without rendering
 window.__ready = true;
 
 // ================= v2: VFX, overlays, lift, bee-keeping asset pack =================
@@ -1038,8 +1040,12 @@ Object.assign(ASSETS, { ant_farm: antFarm, clock24, film_cam: filmCam, sleeper }
 const GLB = {};
 async function preloadGLB(p) {
   const names = new Set(); for (const b of p.beats || []) for (const a of b.add || []) { if (a.type === 'glb') names.add(a.params.model); if (a.type === 'waggle_bee') names.add('insects/bee_single'); if (a.params?.rider) names.add(a.params.rider); if (a.type === 'raker') names.add(a.params?.man || 'modular_men/Worker'); if (a.type === 'roof_person') names.add(a.params?.model || 'modular_men/Casual'); if (a.type === 'buffalo') names.add(a.params?.model || 'animals_pack/Bull'); if (a.type === 'fellah') names.add('modular_men/Farmer'); if (a.type === 'carpenter') names.add(a.params?.model || 'modular_men/Worker'); if (a.type === 'rig_person') names.add(a.params?.model || 'modular_men/Casual'); if (a.params?.hanger) names.add(a.params.hanger.model || 'modular_women/Casual'); }
+  // UAL clips on modular people (params.ual): also load the clip library and its bone map (renderer/ual.js)
+  const wantsUAL = (p.beats || []).some(b => (b.add || []).some(a => a.type === 'glb' && a.params?.ual) || Object.values(b.modes || {}).some(m => m && m.ual));
+  if (wantsUAL) { names.add(UAL_MODEL); await loadUALMap(); }
   const l = new GLTFLoader();
   await Promise.all([...names].map(async n => { GLB[n] = await l.loadAsync(n.startsWith('ph/') ? `/assets/${n}/${n.slice(3)}.gltf` : n.startsWith('models/') ? `/assets/${n}.glb` : `/assets/lib/${n}.glb`); }));
+  if (wantsUAL) UAL.gltf = GLB[UAL_MODEL];
   // 3D-sky (realistic) plans: smooth the low-poly animal meshes so facets do not show as flat triangles.
   // Vertices with the same position are welded and normals averaged; the silhouette stays the same.
   if (p.env?.sky === 'sky3d' && p.env?.smoothAnimals !== false) for (const n of names) if (n.startsWith('animals_pack/') && GLB[n]) GLB[n].scene.traverse(m => {
@@ -1382,13 +1388,29 @@ ASSETS.glb = (p = {}) => {
     o.traverse(m => { if (!m.isMesh) return; for (const mt of [].concat(m.material)) { mt.clippingPlanes = [pl]; mt.side = THREE.DoubleSide; mt.needsUpdate = true; } }); }
   const xr0 = p.xrayFrom ?? p.opacity; const xrMats = [];
   if (xr0 != null && xr0 < 1 || p.xrayFrom != null) o.traverse(m => { if (!m.isMesh) return; m.material = [].concat(m.material).map(mt => { const c = mt.clone(); c.transparent = true; c.opacity = xr0; xrMats.push(c); c.depthWrite = false; c.needsUpdate = true; return c; }); if (Array.isArray(m.material) && m.material.length === 1) m.material = m.material[0]; m.castShadow = false; });
-  if (!g.animations.length) { // un-animated people come in T-pose: drop the arms to a natural A-pose
+  if (!g.animations.length && !p.ual) { // un-animated people come in T-pose: drop the arms to a natural A-pose
     o.traverse(b => { if (!b.isBone) return; const n = b.name;
       if (/^UpperArm\.?L$/i.test(n)) b.rotateX(-(p.arms ?? 1.25)); if (/^UpperArm\.?R$/i.test(n)) b.rotateX(-(p.arms ?? 1.25));
       if (/^LowerArm\.?[LR]$/i.test(n)) b.rotateZ(n.endsWith('L') ? -.15 : .15); });
     if (p.wave) { const arm = o.getObjectByName('UpperArmR') || o.getObjectByName('UpperArm.R'); w.userData.wave = arm; } }
   const mixer = new THREE.AnimationMixer(o), acts = {};
   for (const c of g.animations) acts[c.name.replace(/^.*\|/, '')] = mixer.clipAction(c);
+  // params.ual: 'PickUp_Table' (or a list): Universal Animation Library clips retargeted onto this person (renderer/ual.js).
+  // Each clip starts at the beat start (modeAge); one-shot clips hold their last frame, *_Loop clips loop; switching cross-fades .35 s.
+  // modes: { farmer: { ual: 'Crouch_Idle_Loop' } } changes the clip per beat.
+  if (p.ual) { const U = {}, get = n => n && (U[n] ??= (() => { const c = ualHas(n) && ualClip(p.model, g, n); return c ? mixer.clipAction(c) : null; })());
+    [].concat(p.ual).forEach(get); const first = [].concat(p.ual)[0];
+    const anyC = Object.values(U).find(Boolean), feetRest = anyC ? ualRestFeet(o, anyC.getClip().userData.feet) : {};
+    const at = (a, age) => { const c = a.getClip(), d = c.duration; return c.userData.loop ? ((age % d) + d) % d : Math.min(d - 1e-3, Math.max(0, age)); };
+    w.userData.tick = (t) => { const mo = w.userData.mode || {}, pm = w.userData.prevMode || {}, age = (w.userData.modeAge ?? t) * (mo.speed ?? p.speed ?? 1) + (p.offset || 0);
+      const cur = get(mo.ual || mo.clip || first), prev = get(pm.ual || pm.clip || first); if (!cur) return;
+      mixer.stopAllAction(); const fade = w.userData.prevMode && prev && prev !== cur ? Math.min(1, age / .35) : 1, e = fade * fade * (3 - 2 * fade);
+      cur.play(); cur.time = at(cur, age); cur.setEffectiveWeight(e);
+      if (e < 1) { prev.play(); prev.time = at(prev, prev.getClip().userData.loop ? age : 1e9); prev.setEffectiveWeight(1 - e); }
+      mixer.update(0);
+      if (e < 1) ualGroundLock(o, feetRest, [[cur.getClip(), cur.time, e], [prev.getClip(), prev.time, 1 - e]]);
+      if (mo.face != null) o.parent.rotation.y = mo.face; };
+    return w; }
   let cur = null; const play = n => { if (!n || cur === n || !acts[n]) return; Object.values(acts).forEach(a => a.stop()); acts[n].play(); cur = n; };
   play(p.clip || (acts.Idle ? 'Idle' : Object.keys(acts)[0]));
   const P = p.path;
