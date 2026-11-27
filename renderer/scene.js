@@ -682,6 +682,7 @@ async function buildRealism(env) {
   postFx = makePost(renderer, R.W, R.H, style);
 }
 window.__scene = () => scene; window.__plan = () => plan; window.__cam = () => camera; window.__link = () => LINK; // debug hook for review tools (bbox checks)
+window.__objects = () => objects; window.__pose = t => updateObjects(t); // clearance check (renderer/clearance.js): pose without rendering
 window.__ready = true;
 
 // ================= v2: VFX, overlays, lift, bee-keeping asset pack =================
