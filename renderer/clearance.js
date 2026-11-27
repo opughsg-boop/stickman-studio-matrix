@@ -35,6 +35,11 @@ function frames(holder) {
         let best = 0, bw = -1; for (let k = 0; k < 4; k++) { const w = sw.getComponent(i, k); if (w > bw) { bw = w; best = si.getComponent(i, k); } }
         const side = handSide[best]; (side ? hand[side] : body).expandByPoint(V);
       }
+    } else if (m.isInstancedMesh) { // grains, crumbs, rain: each live instance's box (instances parked at zero scale are hidden, not solid)
+      if (!m.geometry.boundingBox) m.geometry.computeBoundingBox();
+      const IM = new THREE.Matrix4(), bb = new THREE.Box3();
+      for (let i = 0; i < m.count; i++) { m.getMatrixAt(i, IM); if (Math.abs(IM.determinant()) < 1e-12) continue;
+        bb.copy(m.geometry.boundingBox).applyMatrix4(IM.premultiply(m.matrixWorld)); body.union(bb); }
     } else {
       const step = Math.max(1, Math.floor(n / 20000)); // precise enough, bounded cost on heavy scans
       for (let i = 0; i < n; i += step) { V.fromBufferAttribute(pos, i).applyMatrix4(m.matrixWorld); body.expandByPoint(V); }
@@ -73,7 +78,13 @@ export function checkClearance(cfg = {}) {
           if (part === 'body' && A === F[j]) continue; // body/body pair counted once
           const hit = inter(A[1][part], B[1].body, margin); if (!hit) continue;
           let kind = 'overlap';
-          if (part.startsWith('hand')) {
+          // pairs (pigeon_coop 2026-11-27): { a, b, kind: 'inside' } = a may sit INSIDE b (a bird in its coop or box: allowed only while a's
+          // whole body frame lies within b's frame, 2 cm tolerance); { a, b, kind: 'held' } = a prop carried by that person (broom, jug).
+          const pr = (cfg.pairs || []).find(r => ((r.a === A[0] && r.b === B[0]) || (r.a === B[0] && r.b === A[0])) && (!r.beats || r.beats.includes(bi)));
+          if (pr?.kind === 'held') kind = 'held';
+          else if (pr?.kind === 'inside') { const inn = pr.a === A[0] ? A[1].body : B[1].body, out = pr.a === A[0] ? B[1].body : A[1].body, tol = .02;
+            if (inn.min.x >= out.min.x - tol && inn.min.y >= out.min.y - tol && inn.min.z >= out.min.z - tol && inn.max.x <= out.max.x + tol && inn.max.y <= out.max.y + tol && inn.max.z <= out.max.z + tol) kind = 'inside'; }
+          if (kind === 'overlap' && part.startsWith('hand')) {
             const rule = allow.find(r => r.a === A[0] && r.b === B[0] && (r.part || 'hand') === 'hand' && (!r.beats || r.beats.includes(bi)));
             const hb = A[1][part], bb = B[1].body;
             const onTop = (rule?.face || 'top') === 'top' && hb.min.y >= bb.max.y - faceTol;  // the hand's lowest point is on the top (at most faceTol below it): resting there, not pushed into a side
@@ -90,7 +101,7 @@ export function checkClearance(cfg = {}) {
       .map(r => ({ a: r.a, part: r.part || 'hand', b: r.b, kind: 'contact-missing' }));
     const items = [...pairs.values()], overlaps = items.filter(p => p.kind === 'overlap');
     beats.push({ beat: bi, start: r3(b.start), end: r3(b.end), times: times.map(r3), status: overlaps.length ? 'fail' : 'ok',
-      overlaps, contacts: items.filter(p => p.kind === 'contact'), missing, frames: frameLog });
+      overlaps, contacts: items.filter(p => p.kind === 'contact'), allowed: items.filter(p => p.kind === 'inside' || p.kind === 'held').map(p => `${p.kind} ${p.a}/${p.b}`), missing, frames: frameLog });
   });
   return { margin, objects: list.map(o => o.id), status: beats.every(b => b.status === 'ok') ? 'ok' : 'fail', beats };
 }
