@@ -7471,3 +7471,355 @@ function hayRack(p = {}) { const g = new THREE.Group(), W = p.w || 1.0, D = p.d 
 //   feet); coordinate-searched with the palm probe from tieLow (keeps the head within .33 m of the feet so it rests on the flank). shake = squeezes.
 Object.assign(RIG_POSES, { milkSquat: { adL: 1.66, adR: 1.6, fL: .55, fR: .36, eL: .37, eR: .61, sp: .5, hd: -.35, kL: 2.3, kR: 2.3, hL: 1.0, hR: 1.0, shake: .5 } });
 Object.assign(ASSETS, { dairy_udder: dairyUdder, milk_pail: milkPail, dairy_tool: dairyTool, dairy_barn: dairyBarn, straw_bed: strawBed, hay_rack: hayRack });
+
+// ================= Silk pack (2026-11-27, plans/silk_worm.mjs) =================
+// Real sizes: silkworm larva 3-5 mm dark at hatching, 6.5 cm cream-white when grown; mulberry leaf 8-14 cm (heart base, serrated,
+//   palmate veins); rearing tray 0.6 x 0.42 x 0.06 m lined with paper; mulberry bush-tree 2.2 m; cocoon 3.2 x 1.8 cm (oval with a
+//   slight waist); aluminium pot 0.5 m across on three mud bricks over a small wood fire; wooden reel with a 11 cm spool.
+// silk_tray: wooden tray (len along local z) with a paper lining, a bed of mulberry leaves and grown worms that chew and crawl on slow
+//   loops inside their own 0.1 m cell (never into a neighbour). params: worms n, L / sizeK [[t, L]], darkK [[t, 0..1]] (hatchlings dark),
+//   spreadK [[t,0..1]] (hatchlings start on the egg card and spread to their cells), eggs (egg card), hatchK, leaves, freshK, eatK,
+//   hero {x, z, yaw, leaf:[x, z, yaw], eatK, chewK, liftK, turnK}, dry [[x, z, yaw, size]], dryShowK, chewK (all worms), calm (worm index
+//   published as LINK['tray:'+link].calm), at [[t, spec]] carry keys: spec [x, z] local rest or 'LR' (between both palms of LINK[by],
+//   tray centre .25 m ahead of the palm mid, rails under the palms).
+// silk_table: plank table (w x d, top h) with legs and a low shelf.
+// mulberry_tree: 2.2 m pruned mulberry (grey-brown bark, forked crown of heart-shaped leaves, a low branch reaching pickAt [x,y,z] local);
+//   picks [{t0, t1}] a leaf at pickAt rides LINK[by].R from t0 and is gone (in the basket) at t1; fallen dry leaves under it.
+// silk_basket: wicker basket hung by its handle from LINK[by][hand] (at keys as milk_pail: [x, z] ground or 'R'/'L'), kind 'leaves' or
+//   'cocoons', fillK [[t, n]], tipK [[t, rad]] tilts it about the handle (pour). Publishes LINK['basket:'+link].mouth.
+// silk_frame: upright bamboo mountage (w x h, cells nx x ny) standing on its origin; worms climb up from below to their cells (climb
+//   [t0, t1]) and spin (spin [t0, t1]): a silk haze thickens round the curling worm into a solid cocoon with floss to the cell walls.
+//   heroCell + threadK draws one long thread looping out of the hero cocoon. Publishes LINK['frame:'+link] = { hero, tip, cell0.. }.
+// silk_pot: three mud bricks, a small wood fire (flames, embers, glow, smoke), a sooty aluminium pot (handles at local +-x, a rag on +x)
+//   with simmering water (wobble, bubbles, steam) and floating cocoons cocoonsK [[t, n]] (new ones fall from LINK['basket:'+basket].mouth);
+//   threadK shows threads from four cocoons through an eyelet on a stick to LINK['spool:'+spool].top; reelK spins those cocoons.
+//   Publishes LINK['pot:'+link] = { whole (a whole cocoon floating), handle (+x handle), eye, water }.
+// silk_reel: two posts, an axle and a crank with a wooden spool winding glossy silk (windK [[t, 0..1]], turnK [[t, turns]]).
+//   stand:false = a loose spool (held via at keys 'R'/'L' or lying on a small stool when stool:true). Publishes LINK['spool:'+link].
+// silk_cocoon: one cocoon (hole: true = pierced by the moth, stained, frayed, broken thread bits) on a flat stone (stone:true).
+// silk_curtain: a heavy cotton curtain on a bamboo rod between two poles (w x h), pleated; gustK billows it inward (local -z).
+const SILK = {}; window.__silk = () => SILK;
+function mulOutline(w, h) { const pts = [], s = h * .94 / 36, N = 150;
+  for (let i = 0; i <= N; i++) { const t = i / N * 2 * Math.PI; let x = 16 * Math.sin(t) ** 3, y = -(13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t));
+    if (y > 0) y *= 1.32; const tooth = 1 + .045 * ((i % 4) / 3) * (Math.abs(y + 5) > 1.2 ? 1 : 0); pts.push([w / 2 + x * s * tooth * .92, h - 3 - (y + 12.5) * s * (y > -4 ? tooth : 1)]); }
+  return { pts, base: [w / 2, h - 3 - 7.5 * s], tip: [w / 2, h - 3 - (22.4 + 12.5) * s] }; }
+function mulLeafTex(kind = 'fresh', stage = 0) { const key = 'mulLeaf_' + kind + stage; return SPR[key] ||= canvasT(128, 128, (c, w, h) => { const r = rng(kind === 'dry' ? 977 : 971), O = mulOutline(w, h);
+  c.clearRect(0, 0, w, h); const path = new Path2D(); O.pts.forEach(([x, y], i) => i ? path.lineTo(x, y) : path.moveTo(x, y)); path.closePath();
+  const dry = kind === 'dry', gr = c.createLinearGradient(0, 0, w, h); if (dry) { gr.addColorStop(0, '#b08a52'); gr.addColorStop(.5, '#9a7444'); gr.addColorStop(1, '#7d5a32'); } else { gr.addColorStop(0, '#5d9a34'); gr.addColorStop(.55, '#4b8a2a'); gr.addColorStop(1, '#3d7524'); }
+  c.fillStyle = gr; c.fill(path); c.save(); c.clip(path);
+  for (let i = 0; i < 420; i++) { c.fillStyle = dry ? `rgba(${r() < .5 ? '70,44,20' : '205,170,110'},${.06 + r() * .12})` : `rgba(${r() < .5 ? '28,60,14' : '150,200,90'},${.03 + r() * .06})`; c.beginPath(); c.arc(r() * w, r() * h, 1 + r() * 3.5, 0, 6.3); c.fill(); }
+  if (dry) { c.strokeStyle = 'rgba(80,50,22,.7)'; c.lineWidth = 7; c.stroke(path); for (let i = 0; i < 9; i++) { c.fillStyle = `rgba(90,55,25,${.3 + r() * .3})`; c.beginPath(); c.ellipse(r() * w, r() * h, 2 + r() * 6, 2 + r() * 4, r() * 3, 0, 6.3); c.fill(); } }
+  const [bx, by] = O.base, [tx, ty] = O.tip, vein = dry ? 'rgba(214,184,128,.75)' : 'rgba(196,228,150,.7)';
+  c.strokeStyle = vein; c.lineWidth = 2.2; c.beginPath(); c.moveTo(bx, by); c.lineTo(tx, ty); c.stroke(); c.lineWidth = 1.4;
+  for (const s of [-1, 1]) { c.beginPath(); c.moveTo(bx, by); c.quadraticCurveTo(bx + s * 22, by - 18, bx + s * 46, by - 40); c.stroke(); c.beginPath(); c.moveTo(bx, by); c.quadraticCurveTo(bx + s * 24, by + 2, bx + s * 44, by + 14); c.stroke(); }
+  c.lineWidth = .9; for (let k = 1; k < 6; k++) { const y = by - k * (by - ty) / 6.2; for (const s of [-1, 1]) { c.beginPath(); c.moveTo(bx, y); c.quadraticCurveTo(bx + s * 16, y - 8, bx + s * (40 - k * 5), y - 20); c.stroke(); } }
+  c.strokeStyle = dry ? 'rgba(120,85,45,.35)' : 'rgba(170,215,120,.25)'; c.lineWidth = .5; for (let i = 0; i < 160; i++) { const x = r() * w, y = r() * h; c.beginPath(); c.moveTo(x, y); c.lineTo(x + (r() - .5) * 7, y + (r() - .5) * 7); c.stroke(); }
+  if (!dry) { const hl = c.createRadialGradient(w * .38, h * .4, 2, w * .38, h * .4, w * .45); hl.addColorStop(0, 'rgba(255,255,230,.16)'); hl.addColorStop(1, 'rgba(255,255,230,0)'); c.fillStyle = hl; c.fillRect(0, 0, w, h); }
+  c.restore();
+  if (stage > 0) { c.globalCompositeOperation = 'destination-out'; const xc = w * (.98 - stage * .105);   // bites from the right edge, scalloped like a real silkworm feeding front
+    for (let j = 0; j < 9; j++) { const y = ty + 8 + j * (by - ty) / 8.5; c.beginPath(); c.arc(xc + 6 * Math.sin(j * 2.1), y, w * (.1 + .012 * (j % 3)), 0, 6.3); c.fill(); }
+    if (stage >= 4) { c.fillRect(xc, 0, w, h); } c.globalCompositeOperation = 'source-over'; } }); }
+function mulLeafGeo(cup = .18, droop = .12) { const k = 'mulLeafG' + cup + '_' + droop; if (SPR[k]) return SPR[k];
+  const g = new THREE.PlaneGeometry(1, 1, 8, 8); g.translate(0, .275, 0); const P = g.attributes.position;
+  for (let i = 0; i < P.count; i++) { const x = P.getX(i), y = P.getY(i); P.setXYZ(i, x, cup * x * x * 2.2 - droop * Math.max(0, y) ** 2 + .015 * Math.sin(x * 19 + y * 13), y); }
+  g.computeVertexNormals(); return SPR[k] = g; }
+function mulLeafMat(kind = 'fresh', stage = 0) { const k = 'mulLeafM' + kind + stage; return SPR[k] ||= new THREE.MeshStandardMaterial({ map: mulLeafTex(kind, stage), alphaTest: .45, side: THREE.DoubleSide, roughness: kind === 'dry' ? .85 : .42, emissive: col(kind === 'dry' ? '#2a1a0a' : '#13280a'), emissiveIntensity: .25 }); }
+// ---- silkworm skin: transverse folds (rings along the body axis = sphere v) and fine mottling
+function silkWormTex() { return SPR.silkWorm ||= canvasT(64, 128, (c, w, h) => { const r = rng(983); c.fillStyle = '#f1ece1'; c.fillRect(0, 0, w, h);
+  for (let y = 0; y < h; y += 14) { const g2 = c.createLinearGradient(0, y, 0, y + 14); g2.addColorStop(0, 'rgba(150,140,125,.0)'); g2.addColorStop(.75, 'rgba(150,140,125,.25)'); g2.addColorStop(1, 'rgba(120,110,95,.45)'); c.fillStyle = g2; c.fillRect(0, y, w, 14); }
+  for (let i = 0; i < 500; i++) { c.fillStyle = `rgba(${r() < .5 ? '200,192,178' : '255,255,250'},${.1 + r() * .2})`; c.fillRect(r() * w, r() * h, 1, 1 + r() * 2); }
+  c.fillStyle = 'rgba(120,110,100,.35)'; for (let i = 0; i < 6; i++) { c.beginPath(); c.arc(w * .5 + (r() - .5) * 8, 8 + i * 20, 1.2, 0, 6.3); c.fill(); } }); }
+function wormSystem(parent, N) { const NS = 12, PI2 = Math.PI * 2;
+  const seg = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 12, 10), new THREE.MeshStandardMaterial({ color: 0xffffff, map: silkWormTex(), roughness: .48, emissive: col('#3b3730'), emissiveIntensity: .14 }), N * NS);
+  const head = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 10, 8), new THREE.MeshStandardMaterial({ color: col('#8e8274'), roughness: .4 }), N);
+  const legs = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 6, 5), new THREE.MeshStandardMaterial({ color: col('#8d8377'), roughness: .6 }), N * 16);
+  const horn = new THREE.InstancedMesh(new THREE.ConeGeometry(1, 1, 6), new THREE.MeshStandardMaterial({ color: col('#d6ccbc'), roughness: .6 }), N);
+  for (const m of [seg, head, legs, horn]) { m.frustumCulled = false; m.castShadow = true; m.receiveShadow = true; parent.add(m); }
+  const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), Z = new THREE.Matrix4().makeScale(0, 0, 0), C = new THREE.Color(), CH = new THREE.Color();
+  const pts = Array.from({ length: NS }, () => V3(0, 0, 0)), tan = Array.from({ length: NS }, () => V3(0, 0, 1)), rad = new Array(NS).fill(0), side = V3(0, 0, 0);
+  const hide = i => { for (let j = 0; j < NS; j++) seg.setMatrixAt(i * NS + j, Z); head.setMatrixAt(i, Z); horn.setMatrixAt(i, Z); for (let j = 0; j < 16; j++) legs.setMatrixAt(i * 16 + j, Z); };
+  for (let i = 0; i < N; i++) hide(i);
+  // path(a) -> { p, f } : point and unit tangent (toward the head) at arc length a behind the head (parent-local)
+  const pose = (i, path, o) => { if (!o.vis) { hide(i); return null; } const L = o.L, up = o.up || Y_UP, t = o.t, segL = L / NS;
+    for (let j = 0; j < NS; j++) { const s = (j + .5) / NS, wv = Math.sin(PI2 * (s * 1.3 - (o.ph || 0)));
+      const comp = -(o.crawl || 0) * .045 * L * wv, q = path(Math.max(0, (1 - s) * L + comp)); side.crossVectors(q.f, up).normalize();
+      let h = (o.crawl || 0) * .1 * L * Math.max(0, wv) ** 3, lat = (o.turn || 0) * L * .25 * (s - .3) ** 2 * (s > .3 ? 1 : 0); const fw = clamp((s - .62) / .38);
+      h += (o.lift || 0) * L * .42 * fw ** 1.6;
+      if (o.chew) { const cph = PI2 * 2.1 * t + i * 1.7; lat += o.chew * L * .11 * Math.sin(cph) * fw * fw; h += o.chew * L * .05 * (Math.cos(cph * 2) - .4) * fw * fw; }
+      if (o.spin) { const sp = PI2 * 1.6 * t + i; lat += o.spin * L * .2 * Math.sin(sp) * fw * fw; h += o.spin * L * (.16 * fw + .1 * Math.sin(2 * sp) * fw * fw); }
+      const br = 1 + .025 * Math.sin(t * 2.3 + i * 1.3 + s * 3);
+      rad[j] = L * (.05 + .035 * Math.sin(Math.PI * Math.min(1, s * 1.08 + .04)) + .012 * Math.exp(-(((s - .8) / .07) ** 2))) * (s < .08 ? .75 + s * 3 : 1) * br;
+      pts[j].copy(q.p).addScaledVector(up, h + rad[j] * .88).addScaledVector(side, lat); }
+    for (let j = 0; j < NS; j++) { const a = pts[Math.max(0, j - 1)], b = pts[Math.min(NS - 1, j + 1)]; tan[j].subVectors(b, a); if (tan[j].lengthSq() < 1e-12) tan[j].copy(path(0).f); tan[j].normalize(); }
+    C.copy(o.color || col('#f1ece1')); CH.set(o.dark > .5 ? '#2e2823' : '#8e8274');
+    for (let j = 0; j < NS; j++) { Q.setFromUnitVectors(Y_UP, tan[j]); M.compose(pts[j], Q, V3(rad[j], segL * .78, rad[j] * .93)); seg.setMatrixAt(i * NS + j, M); seg.setColorAt(i * NS + j, C); }
+    const hp = pts[NS - 1].clone().addScaledVector(tan[NS - 1], segL * .62), hr2 = L * .048; Q.setFromUnitVectors(Y_UP, tan[NS - 1]); M.compose(hp, Q, V3(hr2, hr2 * 1.05, hr2 * .95)); head.setMatrixAt(i, M); head.setColorAt(i, CH);
+    { const j = 1; side.crossVectors(tan[j], up).normalize(); const hpH = pts[j].clone().addScaledVector(up, rad[j] * .95).addScaledVector(tan[j], -segL * .2); Q.setFromUnitVectors(Y_UP, up.clone().multiplyScalar(.5).addScaledVector(tan[j], -1).normalize()); M.compose(hpH, Q, V3(rad[j] * .16, rad[j] * .7, rad[j] * .16)); horn.setMatrixAt(i, M); }
+    let li = 0; for (const j of [0, 2, 3, 4, 5, 9, 10, 11]) { side.crossVectors(tan[j], up).normalize(); const pr = j < 9 ? .3 : .19;
+      for (const sd of [-1, 1]) { M.compose(pts[j].clone().addScaledVector(up, -rad[j] * .72).addScaledVector(side, sd * rad[j] * .55), Q.identity(), V3(1, 1, 1).multiplyScalar(rad[j] * pr)); legs.setMatrixAt(i * 16 + li++, M); } }
+    return { head: hp, mouth: hp.clone().addScaledVector(tan[NS - 1], hr2), mid: pts[6].clone() }; };
+  const done = () => { for (const m of [seg, head, legs, horn]) { m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; } };
+  return { pose, done, hide }; }
+const straightPath = (headP, f) => a => ({ p: headP.clone().addScaledVector(f, -a), f });
+// ---- shared carry placement (spec [x, z, y?, yaw?] local | 'R' | 'L' | 'LR'), blended .35 s
+function silkPlace(g, p, t, o = {}) { const K = p.at || [[0, [0, 0]]]; let i = 0; while (i + 1 < K.length && t >= K[i + 1][0]) i++;
+  const one = spec => { if (typeof spec === 'string') { const Lk = LINK[p.by || 'farmer']; const P = spec === 'LR' ? (Lk && Lk.L && Lk.R ? Lk.L.clone().lerp(Lk.R, .5) : null) : Lk && Lk[spec]; if (!P) return { pos: V3(0, -50, 0), yaw: 0, held: true };
+      const yaw = (Lk.yaw || 0) - (g.parent?.rotation.y || 0) + (o.yawOff || 0), pos = g.worldToLocal(P.clone()); pos.y -= o.hang || 0; if (o.fwd) { pos.x += Math.sin(yaw) * o.fwd; pos.z += Math.cos(yaw) * o.fwd; } return { pos, yaw, held: true }; }
+    return { pos: V3(spec[0], spec[2] || 0, spec[1]), yaw: spec[3] || 0, held: false }; };
+  g.updateWorldMatrix(true, false); const cur = one(K[i][1]); if (i === 0) return cur; const k = sEase((t - K[i][0]) / .35); if (k >= 1) return cur;
+  const prev = one(K[i - 1][1]); return { pos: prev.pos.lerp(cur.pos, k), yaw: lerp(prev.yaw, angTo(prev.yaw, cur.yaw), k), held: cur.held }; }
+function paperTex() { return SPR.silkPaper ||= canvasT(256, 256, (c, w, h) => { const r = rng(991); c.fillStyle = '#cfc6b2'; c.fillRect(0, 0, w, h);
+  for (let i = 0; i < 900; i++) { c.strokeStyle = `rgba(${r() < .5 ? '200,190,170' : '255,255,250'},${.2 + r() * .3})`; c.lineWidth = .6; const x = r() * w, y = r() * h, a = r() * 6.3; c.beginPath(); c.moveTo(x, y); c.lineTo(x + Math.cos(a) * 5, y + Math.sin(a) * 5); c.stroke(); }
+  for (let i = 0; i < 70; i++) { c.fillStyle = `rgba(110,140,60,${.05 + r() * .1})`; c.beginPath(); c.arc(r() * w, r() * h, 1 + r() * 4, 0, 6.3); c.fill(); }
+  for (let i = 0; i < 160; i++) { c.fillStyle = `rgba(60,70,40,${.25 + r() * .3})`; c.beginPath(); c.arc(r() * w, r() * h, .8 + r() * 1.1, 0, 6.3); c.fill(); } }); }   // frass specks
+function eggCardTex(hatched) { return SPR['eggCard' + (hatched ? 1 : 0)] ||= canvasT(256, 192, (c, w, h) => { const r = rng(997); c.fillStyle = '#e9e2d2'; c.fillRect(0, 0, w, h);
+  for (let i = 0; i < 2600; i++) { const x = 6 + r() * (w - 12), y = 6 + r() * (h - 12); c.fillStyle = hatched ? `rgba(250,248,240,${.75 + r() * .2})` : `rgba(${88 + r() * 30 | 0},${84 + r() * 25 | 0},${80 + r() * 20 | 0},.95)`; c.beginPath(); c.ellipse(x, y, 1.5, 1.2, r() * 3, 0, 6.3); c.fill(); } }); }
+function silkTray(p = {}) { const g = new THREE.Group(), inner = new THREE.Group(); g.add(inner); const W = p.w || .42, LZ = p.len || .6, H = .06, r = rng(p.seed || 1001), T = '#9a7a52';
+  for (const s of [-1, 1]) { inner.add(woodBox([.022, H, LZ], 2, T, [s * (W / 2 - .011), H / 2, 0])); inner.add(woodBox([W - .044, H, .022], 0, T, [0, H / 2, s * (LZ / 2 - .011)])); }
+  inner.add(woodBox([W - .03, .008, LZ - .03], 2, '#b49870', [0, .004, 0]));
+  const paper = new THREE.Mesh(new THREE.PlaneGeometry(W - .046, LZ - .046), new THREE.MeshStandardMaterial({ map: paperTex(), roughness: .95 })); paper.rotation.x = -Math.PI / 2; paper.position.y = .0095; paper.receiveShadow = true; inner.add(paper);
+  let card = null, cardH = null; if (p.eggs) { const cw = .2, cd = .14; card = new THREE.Mesh(new THREE.PlaneGeometry(cw, cd), new THREE.MeshStandardMaterial({ map: eggCardTex(false), roughness: .9 })); card.rotation.x = -Math.PI / 2; card.position.y = .0105; inner.add(card);
+    cardH = new THREE.Mesh(card.geometry, new THREE.MeshStandardMaterial({ map: eggCardTex(true), roughness: .9, transparent: true, opacity: 0, depthWrite: false })); cardH.rotation.x = -Math.PI / 2; cardH.position.y = .011; inner.add(cardH); }
+  // leaf bed
+  const NL = p.leaves ?? 30, lf = new THREE.InstancedMesh(mulLeafGeo(.14, .08), mulLeafMat('fresh'), Math.max(1, NL)), LD = [], M = new THREE.Matrix4(), Q = new THREE.Quaternion(), CC = new THREE.Color();
+  for (let i = 0; i < NL; i++) { LD.push({ x: (r() - .5) * (W - .1), z: (r() - .5) * (LZ - .1), a: r() * 6.3, s: .07 + r() * .035, y: .012 + (i % 5) * .0011, tilt: (r() - .5) * .15, o: r() }); lf.setColorAt(i, CC.setHSL(.27 + r() * .04, .4, .42 + r() * .1).multiplyScalar(1.3)); }
+  lf.castShadow = true; lf.receiveShadow = true; lf.frustumCulled = false; inner.add(lf);
+  const heroLeaf = p.hero?.leaf ? new THREE.Mesh(mulLeafGeo(.16, .1), mulLeafMat('fresh', 0)) : null; if (heroLeaf) { heroLeaf.castShadow = heroLeaf.receiveShadow = true; heroLeaf.position.set(p.hero.leaf[0], .019, p.hero.leaf[1]); heroLeaf.rotation.y = p.hero.leaf[2] || 0; heroLeaf.scale.setScalar(p.hero.leaf[3] || .13); inner.add(heroLeaf); }
+  const dry = (p.dry || []).map(([x, z, a, s]) => { const m = new THREE.Mesh(mulLeafGeo(.34, .22), mulLeafMat('dry')); m.position.set(x, .02, z); m.rotation.set(.12, a || 0, .2); m.scale.setScalar(s || .12); m.castShadow = true; inner.add(m); return m; });
+  // worms: one per cell on a slow loop (radius .03) inside it
+  const n = p.worms ?? 24, nx = Math.max(1, Math.round(W / .105)), nz = Math.ceil(n / nx), WS = wormSystem(inner, n + (p.hero ? 1 : 0)), WD = [];
+  for (let i = 0; i < n; i++) { const cx = -W / 2 + .023 + (i % nx + .5) * (W - .046) / nx, cz = -LZ / 2 + .023 + (Math.floor(i / nx) + .5) * (LZ - .046) / nz;
+    WD.push({ c: V3(cx, 0, cz), ph0: r() * 6.3, dir: r() < .5 ? 1 : -1, cr: r(), sx: (r() - .5) * .14, sz: (r() - .5) * .1, chew: r() < .7 }); }
+  if (p.hero) WD.forEach(w => { if (Math.hypot(w.c.x - p.hero.x, w.c.z - p.hero.z) < .1 || (p.hero.leaf && Math.hypot(w.c.x - p.hero.leaf[0], w.c.z - p.hero.leaf[1]) < .085) || dry.some(d => Math.hypot(w.c.x - d.position.x, w.c.z - d.position.z) < .08)) w.off = true; });
+  const RHO = .03, wormY = .019, cs = contactShadow(W * .62, LZ * .62, .45); cs.position.y = .006; g.add(cs);
+  g.userData.tick = t => { const pl = silkPlace(g, p, t, { hang: H - .003, fwd: .25 }); inner.position.copy(pl.pos); inner.rotation.y = pl.yaw; cs.visible = !pl.held; cs.position.set(pl.pos.x, .006 + (pl.pos.y > .05 ? pl.pos.y - .002 : 0), pl.pos.z); cs.rotation.y = pl.yaw;
+    const fresh = clamp(kv(p.freshK, t, 1)), eat = clamp(kv(p.eatK, t, 0)), L0 = kv(p.sizeK, t, p.L || .065), dark = clamp(kv(p.darkK, t, 0)), spread = clamp(kv(p.spreadK, t, 1)), hatch = clamp(kv(p.hatchK, t, 1));
+    if (card) { cardH.material.opacity = hatch; }
+    // leaves: fresh ones drop in (stagger by o), eaten ones shrink away
+    const tF = (p.freshK || []).find(k => k[1] > 0)?.[0] ?? -9;
+    for (let i = 0; i < NL; i++) { const q = LD[i], on = q.o < fresh, keep = q.o < 1 - eat * .8, ss = on ? q.s * (keep ? 1 : 0) * (1 - clamp((eat - (1 - q.o) / .8 + .15) / .15) * 0) : 0;
+      const drop = on ? clamp(1 - (t - tF - q.o * .8) / .3) : 0; Q.setFromEuler(new THREE.Euler(q.tilt, q.a, 0)); M.compose(V3(q.x, q.y + drop * .12, q.z), Q, V3(ss, ss, ss)); lf.setMatrixAt(i, M); }
+    lf.instanceMatrix.needsUpdate = true;
+    if (heroLeaf) { const st = Math.min(5, Math.floor(clamp(kv(p.hero.eatK, t, 0)) * 5.99)); heroLeaf.material = mulLeafMat('fresh', st); }
+    dry.forEach(d => { d.visible = kv(p.dryShowK, t, 1) > .5; });
+    const chewAll = kv(p.chewK, t, 1), col0 = col('#f1ece1').lerp(col('#3a332c'), dark), tt = t;
+    let calmHead = null;
+    for (let i = 0; i < n; i++) { const w = WD[i]; if (w.off || L0 < .002) { WS.hide(i); continue; }
+      const L = L0 * (.9 + w.cr * .2), crawlOn = fr01(tt * .055 + w.cr) < .3 && chewAll > .5 ? 1 : 0, u = (Math.floor(tt * .055 + w.cr) * .3 + Math.min(.3, fr01(tt * .055 + w.cr))) / .055 * .005;
+      const cen = V3(lerp(w.sx * (p.eggs ? 1 : 0), w.c.x, spread), wormY, lerp(w.sz * (p.eggs ? 1 : 0), w.c.z, spread)), rho = RHO * Math.max(.3, spread), ph = w.ph0 + w.dir * u / RHO;
+      const path = a => { const an = ph - w.dir * a / rho; return { p: V3(cen.x + rho * Math.cos(an), wormY, cen.z + rho * Math.sin(an)), f: V3(-Math.sin(an) * w.dir, 0, Math.cos(an) * w.dir) }; };
+      const sp = spread < 1 && p.eggs ? clamp(kv(p.spreadK, t + .5, 1) - spread) * 8 : 0;
+      const res = WS.pose(i, path, { vis: hatch > (i % 7) / 7 * .9 + .05 || !p.eggs, L, t: tt, ph: tt * (crawlOn || sp ? 1.6 : 0) + w.ph0, crawl: Math.max(crawlOn, clamp(sp)), chew: w.chew && !crawlOn ? chewAll : 0, color: col0, dark });
+      if (i === (p.calm ?? 0) && res) calmHead = res.head; }
+    let heroRes = null;
+    if (p.hero) { const hz = p.hero, yaw = hz.yaw || 0, f = V3(Math.sin(yaw), 0, Math.cos(yaw)), adv = clamp(kv(hz.eatK, t, 0)) * .012, turn = kv(hz.turnK, t, 0);
+      const headP = V3(hz.x + f.x * adv, wormY, hz.z + f.z * adv);
+      const path = a => { const bend = turn * clamp((.4 * (hz.L || .068) - a) / (.4 * (hz.L || .068))) ** 2 * .6, an = yaw + bend; return { p: headP.clone().addScaledVector(f, -a), f: V3(Math.sin(an), 0, Math.cos(an)) }; };
+      heroRes = WS.pose(n, path, { vis: true, L: hz.L || .068, t: tt, ph: 0, crawl: 0, chew: kv(hz.chewK, t, 1), lift: kv(hz.liftK, t, 0), color: col('#f3eee4') }); }
+    WS.done();
+    if (p.link) { inner.updateWorldMatrix(true, false); const w = v => inner.localToWorld(v.clone());
+      LINK['tray:' + p.link] = { c: w(V3(0, .02, 0)), hero: heroRes ? w(heroRes.head) : null, mouth: heroRes ? w(heroRes.mouth) : null, leaf: heroLeaf ? w(heroLeaf.position) : null,
+        dry: dry[0] ? w(dry[0].position) : null, calm: calmHead ? w(calmHead) : null, card: card ? w(card.position) : null, railL: w(V3(-W / 2 + .011, H, -LZ / 2 + .05)), railR: w(V3(W / 2 - .011, H, -LZ / 2 + .05)), held: pl.held }; } };
+  return g; }
+function silkTable(p = {}) { const g = new THREE.Group(), W = p.w || 1.4, D = p.d || .6, H = p.h || .9, T = p.tint || '#8a6a46', n = Math.max(3, Math.round(D / .15));
+  for (let i = 0; i < n; i++) g.add(woodBox([W, .03, D / n - .006], 0, T, [0, H - .015, -D / 2 + (i + .5) * D / n]));
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) g.add(woodBox([.05, H - .03, .05], 1, T, [sx * (W / 2 - .05), (H - .03) / 2, sz * (D / 2 - .05)]));
+  for (const sz of [-1, 1]) g.add(woodBox([W - .1, .06, .025], 0, T, [0, H - .07, sz * (D / 2 - .04)]));
+  if (p.shelf !== false) { for (let i = 0; i < 3; i++) g.add(woodBox([W - .14, .02, (D - .14) / 3 - .01], 0, T, [0, .18, -D / 2 + .07 + (i + .5) * (D - .14) / 3])); }
+  shadowed(g); return g; }
+// ---- mulberry tree
+function mulberryTree(p = {}) { const g = new THREE.Group(), r = rng(p.seed || 1013), H = p.h || 2.2, barkM = new THREE.MeshStandardMaterial({ map: barkTex(), color: col('#b8aa98'), roughness: .9 });
+  const limb = (a, b, r0, r1, par) => { const d = b.clone().sub(a), m = new THREE.Mesh(new THREE.CylinderGeometry(r1, r0, d.length(), 7), barkM); m.position.copy(a).lerp(b, .5); m.quaternion.setFromUnitVectors(Y_UP, d.normalize()); m.castShadow = true; m.receiveShadow = true; par.add(m); };
+  const TH = H * .36, top = V3(0, TH, 0); limb(V3(0, 0, 0), top, .06, .042, g);
+  const root = new THREE.Mesh(new THREE.SphereGeometry(.09, 8, 5, 0, 6.3, 0, 1.4), barkM); root.scale.y = .4; g.add(root);
+  const leafSpots = [], groups = [], NB = 5;
+  for (let k = 0; k < NB; k++) { const grp = new THREE.Group(); grp.position.copy(top); g.add(grp); groups.push({ grp, ph: r() * 6.3 });
+    const az = k / NB * 6.28 + r() * .5, el = .75 + r() * .35, len = H * (.26 + r() * .06), d = V3(Math.cos(az) * Math.cos(el), Math.sin(el), Math.sin(az) * Math.cos(el)), e = d.clone().multiplyScalar(len); limb(V3(0, 0, 0), e, .036, .022, grp);
+    for (let s = 0; s < 3; s++) { const az2 = az + (r() - .5) * 1.6, el2 = .55 + r() * .7; let l2 = H * (.17 + r() * .07); const d2 = V3(Math.cos(az2) * Math.cos(el2), Math.sin(el2), Math.sin(az2) * Math.cos(el2)), a2 = e.clone().multiplyScalar(.55 + s * .2), CLR = p.clear, inC = v => CLR && Math.hypot(v.x + top.x - CLR[0], v.z + top.z - CLR[1]) < CLR[2];
+      for (let q = 0; q < 4 && inC(a2.clone().addScaledVector(d2, l2 + .12)); q++) l2 *= .6; const b2 = a2.clone().addScaledVector(d2, l2);
+      limb(a2, b2, .018, .007, grp); for (let i = 0; i < 26; i++) { const u = .25 + r() * .8, P = a2.clone().lerp(b2, u).add(V3((r() - .5) * .22, (r() - .5) * .16, (r() - .5) * .22)); if (inC(P)) continue; leafSpots.push({ k, P, out: P.clone().normalize() }); } } }
+  // the low pick branch toward pickAt (local)
+  const PK = p.pickAt ? V3(...p.pickAt) : null; let pickG = null;
+  if (PK) { pickG = new THREE.Group(); g.add(pickG); const a = V3(0, PK.y - .3, 0), mid = V3(PK.x * .55, PK.y - .1, PK.z * .55), end = PK.clone().add(V3(-Math.sign(PK.x || 1) * -.02, .05, 0)); limb(a, mid, .028, .018, pickG); limb(mid, end, .018, .007, pickG);
+    for (let i = 0; i < 14; i++) { const u = .2 + r() * .9, P = mid.clone().lerp(end, Math.min(1, u)).add(V3((r() - .5) * .12, .02 + r() * .1, (r() - .5) * .14)); if (P.distanceTo(PK) < .07) continue; leafSpots.push({ k: -1, P, out: V3(PK.x, .3, PK.z).normalize() }); } }
+  const lg = mulLeafGeo(.16, .14), byK = {}; leafSpots.forEach(s => (byK[s.k] ||= []).push(s));
+  const MM = new THREE.Matrix4(), QQ = new THREE.Quaternion(), CC = new THREE.Color();
+  for (const k in byK) { const L = byK[k], im = new THREE.InstancedMesh(lg, mulLeafMat('fresh'), L.length), par = +k < 0 ? pickG : groups[+k].grp;
+    L.forEach((s, i) => { const yaw = Math.atan2(s.out.x, s.out.z) + (r() - .5) * 1.4; QQ.setFromEuler(new THREE.Euler(.35 + r() * .5, yaw, (r() - .5) * .5, 'YXZ')); const sc = .085 + r() * .055;
+      const P = +k < 0 ? s.P : s.P.clone(); MM.compose(P, QQ, V3(sc, sc, sc)); im.setMatrixAt(i, MM); im.setColorAt(i, CC.setHSL(.26 + r() * .05, .45, .36 + r() * .12).multiplyScalar(1.35)); });
+    im.castShadow = true; im.receiveShadow = true; par.add(im); }
+  // fallen dry leaves on the ground
+  const NDL = p.fallen ?? 9, dl = new THREE.InstancedMesh(mulLeafGeo(.32, .2), mulLeafMat('dry'), NDL); for (let i = 0; i < NDL; i++) { const a = r() * 6.3, d = .25 + r() * .6; QQ.setFromEuler(new THREE.Euler(.1, r() * 6.3, .15)); MM.compose(V3(Math.cos(a) * d, .012, Math.sin(a) * d), QQ, V3(1, 1, 1).multiplyScalar(.09 + r() * .04)); dl.setMatrixAt(i, MM); }
+  dl.receiveShadow = true; g.add(dl); const cs = contactShadow(.9, .85, .32); cs.position.y = .006; g.add(cs);
+  const picks = (p.picks || []).map(() => { const m = new THREE.Mesh(lg, mulLeafMat('fresh')); m.scale.setScalar(.11); m.castShadow = true; g.add(m); return m; });
+  g.userData.tick = t => { groups.forEach(q => { q.grp.rotation.set(.018 * Math.sin(t * .9 + q.ph), 0, .022 * Math.sin(t * .7 + q.ph * 1.3)); }); if (pickG) pickG.rotation.z = .01 * Math.sin(t * 1.1);
+    (p.picks || []).forEach((pk, i) => { const m = picks[i]; if (t >= pk.t1) { m.visible = false; return; } m.visible = true;
+      if (t < pk.t0) { m.position.copy(PK); m.rotation.set(.4, Math.atan2(PK.x, PK.z), 0); return; }
+      const palm = LINK[p.by || 'farmer']?.R; if (!palm) return; g.updateWorldMatrix(true, false); const loc = g.worldToLocal(palm.clone()).add(V3(0, .02, 0)), k = sEase((t - pk.t0) / .25);
+      m.position.copy(PK).lerp(loc, k); m.rotation.set(.4 + k * .9, Math.atan2(PK.x, PK.z) + k * .8, k * .3); });
+    if (p.link) { g.updateWorldMatrix(true, false); LINK['tree:' + p.link] = { pick: PK ? g.localToWorld(PK.clone()) : null }; } };
+  return g; }
+// ---- cocoon geometry + fibrous skin
+function cocoonTex(stain) { const k = 'cocoonT' + (stain ? 1 : 0); return SPR[k] ||= canvasT(128, 128, (c, w, h) => { const r = rng(stain ? 1021 : 1019); c.fillStyle = stain ? '#e9dcbc' : '#f6f2e8'; c.fillRect(0, 0, w, h);
+  c.lineCap = 'round'; for (let i = 0; i < 1300; i++) { const x = r() * w, y = r() * h, R = 2 + r() * 6, a = r() * 6.3; c.strokeStyle = `rgba(${r() < .5 ? '255,255,252' : stain ? '190,165,120' : '210,202,184'},${.25 + r() * .45})`; c.lineWidth = .5 + r() * .7; c.beginPath(); c.arc(x, y, R, a, a + 1.5 + r() * 2); c.stroke(); }
+  if (stain) { const g2 = c.createRadialGradient(w * .5, h * .1, 2, w * .5, h * .1, w * .5); g2.addColorStop(0, 'rgba(120,80,40,.55)'); g2.addColorStop(1, 'rgba(120,80,40,0)'); c.fillStyle = g2; c.fillRect(0, 0, w, h); } }); }
+function cocoonGeo(open) { const k = 'cocoonG' + (open ? 1 : 0); if (SPR[k]) return SPR[k]; const geo = new THREE.SphereGeometry(.5, 22, 16), P = geo.attributes.position;
+  for (let i = 0; i < P.count; i++) { let x = P.getX(i), y = P.getY(i), z = P.getZ(i); const u = y / .5, waist = 1 - .1 * Math.exp(-((u / .3) ** 2)), bumpy = 1 + .02 * Math.sin(x * 70) * Math.sin(z * 64 + y * 50);
+    x *= .56 * waist * bumpy; z *= .56 * waist * bumpy; if (open && y > .4) { const s = .4 / y; y = .4 + (y - .4) * .1; x *= 1 + (1 - s) * .2; z *= 1 + (1 - s) * .2; } P.setXYZ(i, x, y, z); }
+  geo.computeVertexNormals(); return SPR[k] = geo; }   // unit length along +y (1.0 long, .56 wide)
+function cocoonMat(stain) { const k = 'cocoonM' + (stain ? 1 : 0); return SPR[k] ||= new THREE.MeshStandardMaterial({ map: cocoonTex(stain), bumpMap: cocoonTex(stain), bumpScale: .6, roughness: .82, emissive: col('#4a463c'), emissiveIntensity: .12 }); }
+function hazeTex() { return SPR.silkHaze ||= canvasT(128, 128, (c, w, h) => { const r = rng(1031); c.clearRect(0, 0, w, h); c.lineCap = 'round';
+  for (let i = 0; i < 700; i++) { const x = r() * w, y = r() * h, R = 5 + r() * 18, a = r() * 6.3; c.strokeStyle = `rgba(255,255,252,${.25 + r() * .55})`; c.lineWidth = .5 + r() * .6; c.beginPath(); c.arc(x, y, R, a, a + 1 + r() * 2.5); c.stroke(); } }); }
+function silkFrame(p = {}) { const g = new THREE.Group(), W = p.w || .72, H = p.h || .5, NX = p.nx || 8, NY = p.ny || 5, r = rng(p.seed || 1033), CW = W / NX, CH = H / NY;
+  const bam = new THREE.MeshStandardMaterial({ map: bambooTex(), roughness: .6, color: col('#e8dcc0') }), strip = std('#c8ae78', { r: .75 });
+  const pole = (a, b, rr, m = bam) => { const d = b.clone().sub(a), c2 = new THREE.Mesh(new THREE.CylinderGeometry(rr, rr, d.length(), 10), m); c2.position.copy(a).lerp(b, .5); c2.quaternion.setFromUnitVectors(Y_UP, d.normalize()); c2.castShadow = c2.receiveShadow = true; g.add(c2); };
+  const B = .03; pole(V3(-W / 2 - .02, B, 0), V3(W / 2 + .02, B, 0), .013); pole(V3(-W / 2 - .02, B + H, 0), V3(W / 2 + .02, B + H, 0), .013);
+  for (const s of [-1, 1]) { pole(V3(s * W / 2, 0, 0), V3(s * W / 2, B + H + .03, 0), .014); pole(V3(s * W / 2, .003, -.12), V3(s * W / 2, .003, .12), .012); }
+  for (let i = 1; i < NX; i++) { const m = box(.004, H, .035, strip); m.position.set(-W / 2 + i * CW, B + H / 2, 0); m.castShadow = m.receiveShadow = true; g.add(m); }
+  for (let j = 1; j < NY; j++) { const m = box(W, .004, .035, strip); m.position.set(0, B + j * CH, 0); m.castShadow = m.receiveShadow = true; g.add(m); }
+  const cells = []; for (let j = 0; j < NY; j++) for (let i = 0; i < NX; i++) cells.push(V3(-W / 2 + (i + .5) * CW, B + (j + .5) * CH, 0));
+  const pick = p.cells || cells.map((_, i) => i).filter(() => r() < .45); const hero = p.heroCell ?? pick[0];
+  if (!pick.includes(hero)) pick.push(hero);
+  const WS = wormSystem(g, pick.length), CL = .032;
+  const items = pick.map((ci, k) => { const c = cells[ci], coc = new THREE.Mesh(cocoonGeo(), cocoonMat().clone()); coc.material.transparent = true; coc.scale.set(CL, CL, CL); coc.rotation.set(0, 0, Math.PI / 2 + (r() - .5) * .8); coc.position.copy(c); coc.castShadow = true; g.add(coc);
+    const haze = new THREE.Mesh(new THREE.SphereGeometry(.5, 14, 10), new THREE.MeshStandardMaterial({ map: hazeTex(), transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide, roughness: .7, emissive: col('#8a8780'), emissiveIntensity: .3 })); haze.position.copy(c); haze.rotation.copy(coc.rotation); g.add(haze);
+    const fl = []; for (let q = 0; q < 8; q++) { const a = q / 8 * 6.28 + r() * .4, e = V3(c.x + Math.cos(a) * CW * .5, c.y + Math.sin(a) * CH * .5, (r() - .5) * .03); fl.push(c.x, c.y, c.z, e.x, e.y, e.z); }
+    const floss = new THREE.LineSegments(new THREE.BufferGeometry().setAttribute('position', new THREE.Float32BufferAttribute(fl, 3)), new THREE.LineBasicMaterial({ color: col('#fffdf5'), transparent: true, opacity: 0, toneMapped: false })); g.add(floss);
+    return { ci, c, coc, haze, floss, j0: r() * .5, startY: -.06 - r() * .1, yaw: (r() - .5) * .5 }; });
+  // the hero cocoon's long thread: loops off the cocoon, then rises in an S out of the frame toward the camera
+  const hc = cells[hero], tp = []; for (let i = 0; i <= 260; i++) { const u = i / 260; if (u < .25) { const a = u / .25 * 6.28 * 2; tp.push(V3(hc.x + Math.cos(a) * .012, hc.y + .02 + u * .05, .012 + Math.sin(a) * .012)); }
+    else { const v = (u - .25) / .75; tp.push(V3(hc.x + .05 * Math.sin(v * 5.5) + v * .12, hc.y + .035 + v * .55, .02 + v * .22 + .03 * Math.cos(v * 7))); } }
+  const tube = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(tp), 520, .00045, 5), new THREE.MeshStandardMaterial({ color: col('#fffaf0'), emissive: col('#d9d2c2'), emissiveIntensity: .55, roughness: .3 })); g.add(tube);
+  const tubeN = tube.geometry.index.count;
+  g.userData.tick = t => { const cl0 = p.climb || [0, 1], sp0 = p.spin || [2, 4];
+    items.forEach((it, k) => { const cu = clamp((t - cl0[0] - it.j0) / (cl0[1] - cl0[0])), su = clamp((t - sp0[0] - it.j0) / (sp0[1] - sp0[0])), e = sEase(cu);
+      const headY = lerp(Math.max(it.c.y + it.startY, .04), it.c.y + .012, e), f = V3(Math.sin(it.yaw) * .3, 1, 0).normalize();
+      const climbing = cu > 0 && cu < 1, curl = su;
+      const path = curl > 0 ? (a => { const R = .03 / Math.max(.15, curl), an = a / R; const P = V3(it.c.x + Math.sin(it.yaw) * .01 - (R - R * Math.cos(an)) * .9, it.c.y + .012 - R * Math.sin(an), .022 + (1 - Math.cos(an)) * R * .4 * curl); return { p: P, f: V3(Math.sin(an) * .9, Math.cos(an), 0).normalize() }; })
+        : straightPath(V3(it.c.x, headY, .022), f);
+      WS.pose(k, path, { vis: su < .82 && t > cl0[0] - 3, L: .062 * (1 - .25 * curl), up: V3(0, 0, 1), t, ph: climbing ? (headY - it.c.y) / .0062 * .25 : 0, crawl: climbing ? 1 : 0, spin: su > 0 && su < 1 ? 1 : 0, chew: 0, color: col('#f1ece1').lerp(col('#e8d9a8'), su * .6) });
+      const hz = clamp(su * 1.6), co = clamp((su - .45) / .4); it.haze.material.opacity = hz * (1 - co * .7) * .85; it.haze.visible = hz > .01; const hs = CL * (1.55 - .4 * co); it.haze.scale.set(hs * .62, hs, hs * .62);
+      it.coc.material.opacity = co; it.coc.visible = co > .01; it.coc.material.depthWrite = co > .9; it.floss.material.opacity = clamp(su * 2) * .7; it.floss.visible = su > 0; });
+    WS.done(); const tk = clamp(kv(p.threadK, t, 0)); tube.visible = tk > .002; tube.geometry.setDrawRange(0, Math.floor(tubeN * tk / 3) * 3);
+    if (p.link) { g.updateWorldMatrix(true, false); const L2 = { hero: g.localToWorld(hc.clone()), tip: g.localToWorld(tp[Math.max(0, Math.floor(tk * 260))].clone()) }; items.forEach((it, k) => { L2['cell' + k] = g.localToWorld(it.c.clone()); }); LINK['frame:' + p.link] = L2; } };
+  return g; }
+// ---- pot on a small wood fire
+function potTex() { return SPR.silkPot ||= canvasT(64, 256, (c, w, h) => { const r = rng(1039); const gr = c.createLinearGradient(0, h, 0, 0); gr.addColorStop(0, '#1d1a17'); gr.addColorStop(.3, '#4a4642'); gr.addColorStop(.55, '#a9aaa6'); gr.addColorStop(1, '#cfd1cd'); c.fillStyle = gr; c.fillRect(0, 0, w, h);
+  for (let i = 0; i < 300; i++) { c.fillStyle = `rgba(${r() < .5 ? '30,28,25' : '230,232,228'},${.05 + r() * .1})`; c.fillRect(r() * w, r() * h, 1 + r() * 3, 1 + r() * 8); } }); }
+function silkBrickTex() { return SPR.silkMudBrick ||= canvasT(64, 32, (c, w, h) => { const r = rng(1049); c.fillStyle = '#8f6a48'; c.fillRect(0, 0, w, h); for (let i = 0; i < 200; i++) { c.fillStyle = `rgba(${r() < .5 ? '60,40,25' : '180,140,100'},${.1 + r() * .25})`; c.fillRect(r() * w, r() * h, 1 + r() * 2, 1 + r() * 2); } }); }
+function silkPot(p = {}) { const g = new THREE.Group(), r = rng(p.seed || 1051), SH = .14, PH = .32, R0 = .22, R1 = .25, WY = SH + PH - .07;
+  const bm = new THREE.MeshStandardMaterial({ map: silkBrickTex(), roughness: .95 }); for (let k = 0; k < 3; k++) { const a = -Math.PI / 2 + (k - 1) * 2.1 + Math.PI, b = box(.22, SH, .11, bm); b.position.set(Math.cos(a) * .17, SH / 2, Math.sin(a) * .17); b.rotation.y = -a + Math.PI / 2; b.castShadow = b.receiveShadow = true; g.add(b); }
+  const ash = new THREE.Mesh(new THREE.CircleGeometry(.24, 20), new THREE.MeshStandardMaterial({ color: col('#4a4440'), roughness: 1, transparent: true, opacity: .85, depthWrite: false })); ash.rotation.x = -Math.PI / 2; ash.position.y = .007; g.add(ash);
+  const stM = std('#4b3424', { r: .9 }), charM = std('#1b1612', { r: 1 }); for (let k = 0; k < 4; k++) { const a = k * 1.5 + .3, s = cyl(.016, .02, .42, stM, 6); s.rotation.z = Math.PI / 2; s.rotation.y = a; s.position.set(Math.cos(a) * .12, .03 + k * .012, -Math.sin(a) * .12 + .12); s.castShadow = true; g.add(s); const ch = cyl(.019, .019, .08, charM, 6); ch.position.y = .17; s.add(ch); }
+  const flames = []; for (let i = 0; i < 9; i++) { const m = new THREE.Sprite(new THREE.SpriteMaterial({ map: flameTex(), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false })); m.position.set((r() - .5) * .2, .05, (r() - .5) * .14 + .04); g.add(m); flames.push({ m, ph: r() * 6, h: .1 + r() * .09, w: .05 + r() * .04 }); }
+  const embers = new THREE.InstancedMesh(new THREE.SphereGeometry(.012, 6, 4), new THREE.MeshBasicMaterial({ color: col('#ff8a2a'), toneMapped: false }), 14); { const M = new THREE.Matrix4(); for (let i = 0; i < 14; i++) { M.makeTranslation((r() - .5) * .22, .012, (r() - .5) * .18 + .03); embers.setMatrixAt(i, M); } } g.add(embers);
+  const glow = new THREE.PointLight('#ff8a3a', .6, 1.4, 1.6); glow.position.set(0, .1, .05); g.add(glow);
+  const pm = new THREE.MeshStandardMaterial({ map: potTex(), metalness: .55, roughness: .42, side: THREE.DoubleSide }), prof = [[0, 0], [R0 - .02, 0], [R0, .02], [R1 - .005, PH - .02], [R1, PH]].map(([x, y]) => new THREE.Vector2(x, y));
+  const pot = new THREE.Mesh(new THREE.LatheGeometry(prof, 40), pm); pot.position.y = SH; pot.castShadow = pot.receiveShadow = true; g.add(pot);
+  const rimM = std('#c2c4c0', { r: .35, m: .6 }), rim = new THREE.Mesh(new THREE.TorusGeometry(R1, .008, 6, 40), rimM); rim.rotation.x = Math.PI / 2; rim.position.y = SH + PH; g.add(rim);
+  const HY = SH + PH - .07; for (const s of [-1, 1]) { const h = new THREE.Mesh(new THREE.TorusGeometry(.03, .007, 6, 14, Math.PI * 1.2), rimM); h.position.set(s * (R1 + .005), HY, 0); h.rotation.set(0, s > 0 ? 0 : Math.PI, -Math.PI * .6); g.add(h); }
+  const rag = box(.05, .045, .06, std('#c9b48a', { r: .95 })); rag.position.set(R1 + .03, HY, 0); rag.rotation.z = .2; rag.castShadow = true; g.add(rag);
+  const wgeo = new THREE.RingGeometry(.001, R1 - .012, 40, 6), WP = wgeo.attributes.position, W0 = WP.array.slice();
+  const water = new THREE.Mesh(wgeo, new THREE.MeshStandardMaterial({ color: col('#c8bb9c'), roughness: .12, metalness: .25, emissive: col('#4a4434'), emissiveIntensity: .2 })); water.rotation.x = -Math.PI / 2; water.position.y = WY; g.add(water);
+  const NB = 26, bub = new THREE.InstancedMesh(new THREE.SphereGeometry(.006, 8, 5), new THREE.MeshStandardMaterial({ color: col('#efe8d8'), roughness: .1, transparent: true, opacity: .8 }), NB); bub.frustumCulled = false; g.add(bub);
+  const BD = Array.from({ length: NB }, () => ({ x: (r() - .5) * .36, z: (r() - .5) * .36, ph: r(), sp: .8 + r() * .8 })).filter(b => Math.hypot(b.x, b.z) < .2);
+  const steam = []; for (let i = 0; i < 12; i++) { const m = new THREE.Sprite(new THREE.SpriteMaterial({ map: puffTex(), color: col('#ffffff'), transparent: true, depthWrite: false, opacity: 0, fog: false })); g.add(m); steam.push({ m, x: (r() - .5) * .3, z: (r() - .5) * .3, ph: r(), sp: .35 + r() * .2 }); }
+  const smokeS = []; for (let i = 0; i < 6; i++) { const m = new THREE.Sprite(new THREE.SpriteMaterial({ map: puffTex(), color: col('#8a8480'), transparent: true, depthWrite: false, opacity: 0, fog: false })); g.add(m); smokeS.push({ m, a: r() * 6.3, ph: r(), sp: .3 + r() * .2 }); }
+  // floating cocoons (non-overlapping spots)
+  const NC = 30, cps = []; for (let k = 0; k < 600 && cps.length < NC; k++) { const a = r() * 6.3, d = Math.sqrt(r()) * .19, x = Math.cos(a) * d, z = Math.sin(a) * d; if (cps.every(q => Math.hypot(q.x - x, q.z - z) > .04)) cps.push({ x, z, yaw: r() * 6.3, ph: r() * 6.3 }); }
+  cps.sort((a, b) => (Math.hypot(a.x, a.z + .04)) - (Math.hypot(b.x, b.z + .04)));   // the reel cocoons (0-3) are the ones nearest the middle-back
+  const cocM = cocoonMat().clone(); cocM.color = col('#efe6cf'); const coc = new THREE.InstancedMesh(cocoonGeo(), cocM, cps.length); coc.frustumCulled = false; coc.castShadow = true; g.add(coc);
+  const ring = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: rippleRingTex(), transparent: true, opacity: 0, depthWrite: false })); ring.rotation.x = -Math.PI / 2; g.add(ring);
+  // eyelet on a stick clipped to the back rim + threads (thin cylinders)
+  const EY = V3(0, SH + PH + .3, -.04), stick = std('#7a5b3a', { r: .8 }); { const a = V3(0, SH + PH - .02, -R1 - .01), b = V3(0, EY.y + .02, -R1 - .01); const s1 = cyl(.006, .006, b.y - a.y, stick, 6); s1.position.copy(a).lerp(b, .5); g.add(s1); const s2 = cyl(.005, .005, R1 + .01 - .04, stick, 6); s2.rotation.x = Math.PI / 2; s2.position.set(0, EY.y + .02, (-R1 - .01 + EY.z) / 2); g.add(s2);
+    const eye = new THREE.Mesh(new THREE.TorusGeometry(.008, .0018, 5, 12), std('#9a9a96', { r: .3, m: .8 })); eye.position.copy(EY); g.add(eye); }
+  const thM = new THREE.MeshStandardMaterial({ color: col('#fff8e6'), emissive: col('#e6dcc4'), emissiveIntensity: .6, roughness: .25 }), threads = Array.from({ length: 5 }, () => { const m = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 1, 5), thM); m.visible = false; g.add(m); return m; });
+  const seg = (m, a, b, rr) => { const d = b.clone().sub(a), L = d.length(); m.position.copy(a).lerp(b, .5); m.quaternion.setFromUnitVectors(Y_UP, d.divideScalar(L || 1)); m.scale.set(rr, L, rr); m.visible = true; };
+  const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), E = new THREE.Euler(), Z = new THREE.Matrix4().makeScale(0, 0, 0);
+  g.userData.tick = t => { flames.forEach(f => { const fl = 1 + .25 * Math.sin(t * 12 + f.ph) + .1 * Math.sin(t * 27 + f.ph * 3), h = f.h * fl; f.m.scale.set(f.w, h, 1); f.m.position.y = .03 + h * .42; f.m.material.opacity = .85; });
+    glow.intensity = .55 + .12 * Math.sin(t * 9) + .06 * Math.sin(t * 23);
+    for (let i = 0; i < WP.count; i++) { const x = W0[i * 3], y = W0[i * 3 + 1], d = Math.hypot(x, y); WP.setZ(i, .0025 * Math.sin(d * 60 - t * 5) * (1 - d / R1) + .0012 * Math.sin(x * 47 + t * 3.3) * Math.cos(y * 39 - t * 2.7)); } WP.needsUpdate = true; wgeo.computeVertexNormals();
+    BD.forEach((b, i) => { const u = fr01(t * b.sp + b.ph), s = u < .7 ? u / .7 : 1 - (u - .7) / .3 * .9; M.compose(V3(b.x, WY + .001, b.z), Q.identity(), V3(s, s * .6, s)); bub.setMatrixAt(i, M); }); bub.instanceMatrix.needsUpdate = true;
+    steam.forEach(s => { const u = fr01(t * s.sp + s.ph); s.m.position.set(s.x + .05 * Math.sin(t + s.ph * 9), WY + .03 + u * .5, s.z + u * .05); s.m.scale.setScalar(.08 + u * .22); s.m.material.opacity = .32 * Math.sin(Math.PI * u) * (p.steam ?? 1); });
+    smokeS.forEach(s => { const u = fr01(t * s.sp + s.ph); s.m.position.set(Math.cos(s.a) * (R1 + .04), SH + u * .6, Math.sin(s.a) * (R1 + .04)); s.m.scale.setScalar(.06 + u * .18); s.m.material.opacity = .18 * Math.sin(Math.PI * u); });
+    const nC = Math.min(cps.length, Math.round(stepKey(p.cocoonsK, t, 0))); let tLast = -9, nPrev = 0; for (const [tk, v] of p.cocoonsK || []) { if (t >= tk) { if (v > nPrev) tLast = tk; nPrev = v; } }
+    const reel = kv(p.reelK, t, 0), thk = clamp(kv(p.threadK, t, 0)), bk = LINK['basket:' + (p.basket || 'basket')], mouth = bk?.mouth ? g.worldToLocal(bk.mouth.clone()) : null; g.updateWorldMatrix(true, false);
+    let any = false; for (let i = 0; i < cps.length; i++) { const c = cps[i]; if (i >= nC) { coc.setMatrixAt(i, Z); continue; }
+      const age = t - tLast - (i % 6) * .07, falling = mouth && i >= nC - 8 && age < .45 && age > -.4; const bob = .003 * Math.sin(t * 2.4 + c.ph), spin = i < 4 ? reel * t * 2.5 : t * .1;
+      let P = V3(c.x + .006 * Math.sin(t * .4 + c.ph), WY + .006 + bob, c.z + .006 * Math.cos(t * .37 + c.ph));
+      if (falling) { if (age < 0) { P = mouth.clone(); } else { const u = age / .45; P = mouth.clone().lerp(P, u); P.y = lerp(mouth.y, WY + .006, u * u); if (u > .85) any = true; } }
+      E.set(Math.PI / 2 + .15 * Math.sin(t * 1.3 + c.ph), c.yaw + spin * .2, i < 4 ? spin : 0, 'YXZ'); Q.setFromEuler(E); const sc = .032 * (i < 4 ? 1 - .12 * thk : 1); M.compose(P, Q, V3(sc, sc, sc)); coc.setMatrixAt(i, M); }
+    coc.instanceMatrix.needsUpdate = true;
+    if (any || (t - tLast < .9 && t > tLast)) { const u = fr01((t - tLast) * 1.3); ring.position.set(0, WY + .003, 0); ring.scale.setScalar(.1 + .35 * u); ring.material.opacity = .6 * (1 - u); } else ring.material.opacity = 0;
+    const sp = LINK['spool:' + (p.spool || 'spool')]; threads.forEach(m => { m.visible = false; });
+    if (thk > .01 && nC >= 4) { for (let i = 0; i < 4; i++) { const c = cps[i], top = V3(c.x, WY + .02, c.z), d = EY.clone().sub(top); seg(threads[i], top, top.clone().addScaledVector(d, Math.min(1, thk * 1.6)), .0004); }
+      if (sp?.top && thk > .6) { const tl = g.worldToLocal(sp.top.clone()); seg(threads[4], EY, EY.clone().lerp(tl, clamp((thk - .6) / .4)), .00055); } }
+    if (p.link) { const w = v => g.localToWorld(v.clone()); const wc = cps[p.whole ?? 6] || cps[0]; LINK['pot:' + p.link] = { whole: w(V3(wc.x, WY + .01, wc.z)), handle: w(V3(R1 + .03, HY, 0)), eye: w(EY), water: w(V3(0, WY, 0)), c0: w(V3(cps[0].x, WY + .01, cps[0].z)) }; } };
+  return g; }
+function silkWindTex() { return SPR.silkWind ||= canvasT(64, 128, (c, w, h) => { const r = rng(1061); c.fillStyle = '#f4ead0'; c.fillRect(0, 0, w, h);
+  for (let y = 0; y < h; y += 1) { c.fillStyle = `rgba(${r() < .5 ? '255,252,240' : '214,196,150'},${.25 + r() * .35})`; c.fillRect(0, y, w, 1); } }, [1, 3]); }
+function silkReel(p = {}) { const g = new THREE.Group(), inner = new THREE.Group(); g.add(inner); const T = '#8a6440', AY = p.stand === false ? 0 : .72, SL = .11, FR = .055, CR = .022;
+  if (p.stand !== false) { for (const s of [-1, 1]) inner.add(woodBox([.05, AY + .03, .05], 1, T, [s * .12, (AY + .03) / 2, 0])); inner.add(woodBox([.32, .04, .14], 0, T, [0, .02, 0]));
+    const ax = cyl(.007, .007, .3, std('#6f6f6a', { m: .7, r: .4 }), 8); ax.rotation.z = Math.PI / 2; ax.position.y = AY; inner.add(ax); }
+  if (p.brick) { const b = box(.1, .145, .1, new THREE.MeshStandardMaterial({ map: silkBrickTex(), roughness: .95 })); b.position.y = -FR - .0725; b.castShadow = b.receiveShadow = true; g.add(b); }
+  if (p.stool) { inner.add(woodBox([.2, .03, .16], 0, T, [0, .135, 0])); for (const sx of [-1, 1]) for (const sz of [-1, 1]) inner.add(woodBox([.03, .12, .03], 1, T, [sx * .08, .06, sz * .06])); }
+  const spool = new THREE.Group(); spool.position.y = p.stool ? .15 + FR : AY; inner.add(spool);
+  const fm = std('#a4774a', { r: .55 }); for (const s of [-1, 1]) { const f = cyl(FR, FR, .01, fm, 24); f.rotation.z = Math.PI / 2; f.position.x = s * SL / 2; spool.add(f); }
+  const core = cyl(CR, CR, SL, fm, 16); core.rotation.z = Math.PI / 2; spool.add(core);
+  const silkM = new THREE.MeshPhysicalMaterial({ map: silkWindTex(), color: col('#fbf3dc'), roughness: .22, clearcoat: .8, clearcoatRoughness: .2, sheen: 1, sheenColor: col('#fff6dd'), emissive: col('#4a4332'), emissiveIntensity: .18 });
+  const wound = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, SL - .012, 28), silkM); wound.rotation.z = Math.PI / 2; spool.add(wound);
+  if (p.stand !== false) { const crank = woodBox([.012, .08, .02], 1, T, [.16, -.04, 0]); const knob = cyl(.009, .009, .04, fm, 8); knob.rotation.z = Math.PI / 2; knob.position.set(.18, -.075, 0); spool.add(crank, knob); }
+  const glint = new THREE.Sprite(new THREE.SpriteMaterial({ map: dotTex(), color: col('#fffbe8'), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0, toneMapped: false })); spool.add(glint);
+  shadowed(inner); wound.castShadow = true; const cs = contactShadow(.12, .08, .4); cs.position.y = .006; g.add(cs);
+  g.userData.tick = t => { const wk = clamp(kv(p.windK, t, p.stand === false ? 1 : 0)), Rw = CR + .002 + wk * (FR - CR - .006); wound.scale.set(Rw, 1, Rw); wound.visible = wk > .01 || p.stand === false;
+    spool.rotation.x = -2 * Math.PI * kv(p.turnK, t, 0); const sh = clamp(kv(p.shineK, t, 0)); glint.material.opacity = .9 * sh; glint.scale.setScalar(.035 * (1 + .3 * Math.sin(t * 6))); glint.position.set(.03 * Math.sin(t * 2.2), Rw * Math.cos(spool.rotation.x), -Rw * Math.sin(spool.rotation.x) + .004);
+    if (p.at) { const pl = silkPlace(g, p, t, { hang: 0, yawOff: Math.PI / 2 }); inner.position.copy(pl.pos).sub(V3(0, spool.position.y, 0)); inner.rotation.y = pl.yaw; cs.visible = !pl.held; }
+    inner.visible = kv(p.showK, t, 1) > .5; cs.visible = cs.visible && inner.visible && !p.brick;
+    if (p.link) { g.updateWorldMatrix(true, false); spool.updateWorldMatrix(true, false); const top = spool.localToWorld(V3(0, 0, 0)).add(V3(0, Rw, 0)); LINK['spool:' + p.link] = { top, c: spool.localToWorld(V3(0, 0, 0)), r: Rw }; } };
+  return g; }
+function silkCocoon(p = {}) { const g = new THREE.Group(), r = rng(p.seed || 1063), L = p.size || .032;
+  if (p.stone) { const sg = new THREE.DodecahedronGeometry(.13, 1), P = sg.attributes.position; for (let i = 0; i < P.count; i++) { P.setY(i, P.getY(i) * .28); P.setX(i, P.getX(i) * (1 + .05 * Math.sin(P.getZ(i) * 30))); } sg.computeVertexNormals();
+    const st = new THREE.Mesh(sg, std('#9d968a', { r: .92 })); st.position.y = .03; st.castShadow = st.receiveShadow = true; g.add(st); }
+  const baseY = p.stone ? .066 : 0, c = new THREE.Mesh(cocoonGeo(p.hole), cocoonMat(p.hole)); c.scale.setScalar(L); c.rotation.z = Math.PI / 2; c.rotation.y = p.yaw || 0; c.position.y = baseY + L * .27; c.castShadow = true; g.add(c);
+  if (p.hole) { const hole = new THREE.Mesh(new THREE.CircleGeometry(.5 * .56 * .62, 16), std('#3b2a18', { r: 1 })); hole.position.y = .402; hole.rotation.x = -Math.PI / 2; c.add(hole);
+    const fr = []; for (let i = 0; i < 26; i++) { const a = i / 26 * 6.28, rr = .17, x = Math.cos(a) * rr, z = Math.sin(a) * rr; fr.push(x, .4, z, x * (1.3 + r() * .5), .43 + r() * .12, z * (1.3 + r() * .5)); }
+    c.add(new THREE.LineSegments(new THREE.BufferGeometry().setAttribute('position', new THREE.Float32BufferAttribute(fr, 3)), new THREE.LineBasicMaterial({ color: col('#efe2c0') })));
+    const bits = []; for (let k = 0; k < 7; k++) { const x0 = (r() - .5) * .14, z0 = .03 + r() * .06, a = r() * 6.3, l = .015 + r() * .03; bits.push(x0, baseY + .002, z0, x0 + Math.cos(a) * l, baseY + .002, z0 + Math.sin(a) * l); }   // broken thread bits
+    g.add(new THREE.LineSegments(new THREE.BufferGeometry().setAttribute('position', new THREE.Float32BufferAttribute(bits, 3)), new THREE.LineBasicMaterial({ color: col('#fff6dc'), toneMapped: false }))); }
+  g.userData.tick = t => { c.rotation.x = .02 * Math.sin(t * .8); if (p.link) { g.updateWorldMatrix(true, false); LINK['coc:' + p.link] = { c: c.getWorldPosition(V3(0, 0, 0)) }; } };
+  return g; }
+function clothTex() { return SPR.silkCloth ||= canvasT(256, 256, (c, w, h) => { const r = rng(1069); c.fillStyle = '#e4d6b8'; c.fillRect(0, 0, w, h);
+  for (let y = 0; y < h; y += 2) { c.fillStyle = `rgba(${r() < .5 ? '255,250,235' : '170,150,115'},${.12 + r() * .12})`; c.fillRect(0, y, w, 1); } for (let x = 0; x < w; x += 2) { c.fillStyle = `rgba(150,130,100,${.05 + r() * .08})`; c.fillRect(x, 0, 1, h); }
+  c.fillStyle = '#a8442e'; c.fillRect(0, h * .84, w, h * .07); c.fillStyle = '#5f7a4a'; c.fillRect(0, h * .8, w, h * .015); c.fillRect(0, h * .93, w, h * .015); c.fillStyle = 'rgba(168,68,46,.6)'; c.fillRect(0, h * .1, w, h * .012); }); }
+function silkCurtain(p = {}) { const g = new THREE.Group(), W = p.w || 1.6, H = p.h || 2.3, CH = H - .12;
+  const bam = new THREE.MeshStandardMaterial({ map: bambooTex(), roughness: .6, color: col('#e8dcc0') });
+  for (const s of [-1, 1]) { const po = cyl(.03, .035, H + .1, bam, 10); po.position.set(s * (W / 2 + .05), (H + .1) / 2, 0); po.castShadow = true; g.add(po); }
+  const rod = cyl(.018, .018, W + .2, bam, 8); rod.rotation.z = Math.PI / 2; rod.position.y = H; g.add(rod);
+  const geo = new THREE.PlaneGeometry(W, CH, 40, 22); geo.translate(0, H - .04 - CH / 2, 0); const P = geo.attributes.position, P0 = P.array.slice();
+  const cloth = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: clothTex(), roughness: .92, side: THREE.DoubleSide })); cloth.castShadow = true; cloth.receiveShadow = true; g.add(cloth);
+  g.userData.tick = t => { const gu = clamp(kv(p.gustK, t, 0));
+    for (let i = 0; i < P.count; i++) { const x = P0[i * 3], y = P0[i * 3 + 1], hang = clamp((H - .04 - y) / CH);
+      P.setZ(i, .028 * Math.sin(x * 2 * Math.PI / .16) * (1 - .3 * hang) - gu * (.13 * hang ** 1.2) * (1 + .25 * Math.sin(t * 6.5 + x * 7)) * (1 - .55 * (2 * x / W) ** 2) + .006 * Math.sin(t * 1.3 + x * 3) * hang); }
+    P.needsUpdate = true; geo.computeVertexNormals(); };
+  return g; }
+Object.assign(ASSETS, { silk_tray: silkTray, silk_table: silkTable, mulberry_tree: mulberryTree, silk_frame: silkFrame, silk_pot: silkPot, silk_reel: silkReel, silk_cocoon: silkCocoon, silk_curtain: silkCurtain });
+// silk_basket: copy of tomato_basket with mulberry leaves or cocoons inside, carried with milk_pail at keys and tipped for a pour
+function silkBasket(p = {}) { const g = new THREE.Group(), inner = new THREE.Group(), body = new THREE.Group(); g.add(inner); inner.add(body); const Rb = .17, Hb = .16, HH = .17, HANG = Hb + HH - .012, r = rng(p.seed || 1071);
+  const prof = [[0, 0], [.12, 0], [.135, .03], [.155, .09], [Rb, Hb]].map(([x, y]) => new THREE.Vector2(x, y));
+  body.add(new THREE.Mesh(new THREE.LatheGeometry(prof, 28), new THREE.MeshStandardMaterial({ map: wickerTex(), roughness: .85, side: THREE.DoubleSide })));
+  const rim = new THREE.Mesh(new THREE.TorusGeometry(Rb, .011, 6, 28), std('#9a7646', { r: .8 })); rim.rotation.x = Math.PI / 2; rim.position.y = Hb; body.add(rim);
+  const hd = new THREE.Mesh(new THREE.TorusGeometry(Rb - .01, .009, 6, 20, Math.PI), std('#8a6a3e', { r: .8 })); hd.position.y = Hb; hd.scale.y = HH / (Rb - .01); body.add(hd);
+  const leaves = p.kind !== 'cocoons', NI = leaves ? 16 : 34, im = new THREE.InstancedMesh(leaves ? mulLeafGeo(.2, .1) : cocoonGeo(), leaves ? mulLeafMat('fresh') : cocoonMat(), NI); im.castShadow = true; im.frustumCulled = false; body.add(im);
+  const spots = Array.from({ length: NI }, (_, i) => { const a = i * 2.4, d = .02 + (i % 5) * .025, lay = Math.floor(i / (leaves ? 6 : 12)); return { P: V3(Math.cos(a) * d, .03 + lay * (leaves ? .03 : .022) + (i % 2) * .008, Math.sin(a) * d), e: new THREE.Euler(leaves ? .2 + r() * .4 : Math.PI / 2, r() * 6.3, leaves ? r() * .4 : r() * .5), s: leaves ? .1 + r() * .03 : .032 }; });
+  shadowed(body); const cs = contactShadow(.2, .2, .4); cs.position.y = .006; g.add(cs); const M = new THREE.Matrix4(), Q = new THREE.Quaternion();
+  g.userData.tick = t => { const n = Math.min(NI, Math.round(stepKey(p.fillK, t, p.n0 ?? 4))); let tLast = -9; for (const [tk] of p.fillK || []) if (t >= tk) tLast = tk;
+    for (let i = 0; i < NI; i++) { if (i >= n) { im.setMatrixAt(i, M.makeScale(0, 0, 0)); continue; } const drop = i === n - 1 ? clamp(1 - (t - tLast) / .25) : 0; Q.setFromEuler(spots[i].e); M.compose(spots[i].P.clone().setY(spots[i].P.y + drop * .15), Q, V3(1, 1, 1).multiplyScalar(spots[i].s)); im.setMatrixAt(i, M); }
+    im.instanceMatrix.needsUpdate = true;
+    const pl = silkPlace(g, p, t, { hang: 0, yawOff: Math.PI / 2 }), tip = kv(p.tipK, t, 0);
+    if (pl.held) { inner.position.copy(pl.pos); inner.rotation.set(0, pl.yaw, 0); body.position.set(0, -HANG, 0); body.rotation.set(0, 0, 0);
+      const a = tip + .04 * Math.sin(t * 3.1); body.position.set(-HANG * Math.sin(a), -HANG * Math.cos(a), 0); body.rotation.set(0, 0, -a); cs.visible = false; }   // tip: the bottom swings ahead (over the pot), the mouth ends above the pot centre
+    else { inner.position.copy(pl.pos); inner.rotation.set(0, pl.yaw, 0); body.position.set(0, 0, 0); body.rotation.set(0, 0, 0); cs.visible = true; cs.position.set(pl.pos.x, .006, pl.pos.z); }
+    inner.visible = kv(p.showK, t, 1) > .5; cs.visible = cs.visible && inner.visible;
+    if (p.link) { g.updateWorldMatrix(true, false); body.updateMatrixWorld(true); LINK['basket:' + p.link] = { mouth: body.localToWorld(V3(0, Hb, 0)), grip: inner.localToWorld(V3(0, 0, 0)), held: pl.held }; } };
+  return g; }
+ASSETS.silk_basket = silkBasket;
