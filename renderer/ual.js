@@ -105,11 +105,14 @@ const RQ = new THREE.Quaternion(), RQ2 = new THREE.Quaternion(), RV = new THREE.
 export function ualReach(o, w, r, age) {
   // envelope: blend in hovering `lift` m above the target, then press down (slow-in); on release lift first, then blend back to the clip,
   // so the fingers never dip into the surface while the palm turns back
-  const [t0, t1, t2, t3] = r.t || [0, .15, .35, .5], lift = r.lift ?? .08, ss = x => { x = Math.min(1, Math.max(0, x)); return x * x * (3 - 2 * x); };
+  // The weight ramps use their whole window (smoothstep: peak speed 1.5x the mean) and the release lasts at least minOut (default .2 s):
+  // when the plan's out window is shorter, the release starts earlier (the hold shrinks, never below t1), so the end time t3 stays put.
+  const [t0, t1, t2p, t3] = r.t || [0, .15, .35, .5], lift = r.lift ?? .08, ss = x => { x = Math.min(1, Math.max(0, x)); return x * x * (3 - 2 * x); };
+  const t2 = Math.max(t1, Math.min(t2p, t3 - (r.minOut ?? .2)));
   if (age <= t0 || age >= t3) return;
   let e = 1, up = 0;
-  if (age < t1) { const k = (age - t0) / (t1 - t0); e = ss(k / .6); up = lift * (1 - ss((k - .6) / .4)); }
-  else if (age > t2) { const k = (age - t2) / (t3 - t2); up = lift * ss(k / .5); e = 1 - ss((k - .5) / .5); }
+  if (age < t1) { const k = (age - t0) / (t1 - t0); e = ss(k); up = lift * (1 - ss((k - .55) / .45)); }
+  else if (age > t2) { const k = (age - t2) / (t3 - t2); up = lift * ss(k / .35); e = 1 - ss((k - .2) / .8); }
   if (e <= 0) return;
   const S = r.hand === 'R' ? 'R' : 'L', B = n => o.getObjectByName(n);
   const hand = B('Hand' + S), mid = B('Middle2' + S), ix = B('Index2' + S), pk = B('Pinky2' + S); if (!hand || !mid || !ix || !pk) return;
