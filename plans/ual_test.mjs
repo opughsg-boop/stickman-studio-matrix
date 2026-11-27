@@ -10,7 +10,7 @@ const world = [farmer, glb('crate', 'medieval_village_pack/Crate', 0, .62, .8, {
   glb('bush', 'ph/shrub_01', -2.2, -1.4, .9), glb('barrel', 'ph/Barrel_01', 1.6, -1, .9), glb('stump', 'ph/tree_stump_01', -1.4, 1.2, .4)];
 const beats = [
   { t: 0, add: world, modes: { farmer: { ual: 'PickUp_Table' } }, camera: { target: [0, .95, .2], dist: 3.6, elev: .12, az: .7, zoom: 'in' } },
-  { t: H, modes: { farmer: { ual: 'Crouch_Idle_Loop' } }, camera: { target: [0, .6, .1], dist: 3.2, elev: .15, az: 1.1, zoom: 'out' } },
+  { t: H, modes: { farmer: { ual: 'Crouch_Idle_Loop' } }, camera: { target: [0, .6, .1], dist: 3.2, elev: .15, az: -.8, zoom: 'out' } },
 ];
 const plan = {
   version: 2, planner: 'directed', duration: D, language: 'ar', prompt: 'ual test', captions: [], fades: [], fov: 40,
