@@ -7,7 +7,7 @@ import { clone as skClone } from 'three/addons/utils/SkeletonUtils.js';
 import { Sky } from 'three/addons/objects/Sky.js';
 import { mergeVertices, mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { bankH, CANAL, vnoise, rampK, wallowE } from './buffalo_ground.js';
-import { UAL, UAL_MODEL, loadUALMap, ualClip, ualHas, ualGroundLock, ualRestFeet } from './ual.js';
+import { UAL, UAL_MODEL, loadUALMap, ualClip, ualHas, ualGroundLock, ualRestFeet, ualReach } from './ual.js';
 import { makePost, buildHorizon, buildCover, upgradeWater, buildMotes, buildBirds, handheld, sharpenTextures, realismTick, resetRealism } from './realism.js';
 
 const R = { W: 540, H: 960 };
@@ -1409,7 +1409,8 @@ ASSETS.glb = (p = {}) => {
       if (e < 1) { prev.play(); prev.time = at(prev, prev.getClip().userData.loop ? age : 1e9); prev.setEffectiveWeight(1 - e); }
       mixer.update(0);
       if (e < 1) ualGroundLock(o, feetRest, [[cur.getClip(), cur.time, e], [prev.getClip(), prev.time, 1 - e]]);
-      if (mo.face != null) o.parent.rotation.y = mo.face; };
+      if (mo.face != null) o.parent.rotation.y = mo.face;
+      if (mo.reach) ualReach(o, w, mo.reach, age); }; // hand placed on a surface (renderer/ual.js)
     return w; }
   let cur = null; const play = n => { if (!n || cur === n || !acts[n]) return; Object.values(acts).forEach(a => a.stop()); acts[n].play(); cur = n; };
   play(p.clip || (acts.Idle ? 'Idle' : Object.keys(acts)[0]));

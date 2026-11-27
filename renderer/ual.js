@@ -96,3 +96,68 @@ export function ualGroundLock(o, rest, parts) { // parts = [[clip, time, weight]
   o.worldToLocal(hips.getWorldPosition(V)); V.y += want - got; o.localToWorld(V); hips.position.copy(hips.parent.worldToLocal(V));
 }
 export function ualRestFeet(o, names) { o.updateMatrixWorld(true); const V = new THREE.Vector3(), r = {}; for (const n of names) { const b = o.getObjectByName(n); if (b) r[n] = o.worldToLocal(b.getWorldPosition(V)).y; } return r; }
+
+// mode key reach (a hand placed on a surface on top of the clip): { hand: 'L', at: [x, y, z], fingers: [x, z], t: [t0, t1, t2, t3], lean: .45, drop: 0, lift: .08 }
+// at = wrist target in the person's own frame (holder space: plan pos + rotY), t = blend envelope in mode-age seconds (in t0..t1, hold t1..t2, out t2..t3).
+// CCD IK over forearm, upper arm and (pitch only, at most `lean` rad each) chest/torso/abdomen moves the wrist to `at`; then the hand turns palm-down
+// with the fingers along `fingers` (default forward). Finger bones keep the bind pose (straight), so the hand lies flat. Feet and hips are untouched.
+const RQ = new THREE.Quaternion(), RQ2 = new THREE.Quaternion(), RV = new THREE.Vector3(), RV2 = new THREE.Vector3();
+export function ualReach(o, w, r, age) {
+  // envelope: blend in hovering `lift` m above the target, then press down (slow-in); on release lift first, then blend back to the clip,
+  // so the fingers never dip into the surface while the palm turns back
+  // The weight ramps use their whole window (smoothstep: peak speed 1.5x the mean) and the release lasts at least minOut (default .2 s):
+  // when the plan's out window is shorter, the release starts earlier (the hold shrinks, never below t1), so the end time t3 stays put.
+  const [t0, t1, t2p, t3] = r.t || [0, .15, .35, .5], lift = r.lift ?? .08, ss = x => { x = Math.min(1, Math.max(0, x)); return x * x * (3 - 2 * x); };
+  const t2 = Math.max(t1, Math.min(t2p, t3 - (r.minOut ?? .2)));
+  if (age <= t0 || age >= t3) return;
+  let e = 1, up = 0;
+  if (age < t1) { const k = (age - t0) / (t1 - t0); e = ss(k); up = lift * (1 - ss((k - .55) / .45)); }
+  else if (age > t2) { const k = (age - t2) / (t3 - t2); up = lift * ss(k / .35); e = 1 - ss((k - .2) / .8); }
+  if (e <= 0) return;
+  const S = r.hand === 'R' ? 'R' : 'L', B = n => o.getObjectByName(n);
+  const hand = B('Hand' + S), mid = B('Middle2' + S), ix = B('Index2' + S), pk = B('Pinky2' + S); if (!hand || !mid || !ix || !pk) return;
+  const arm = ['LowerArm' + S, 'UpperArm' + S].map(B).filter(Boolean), spine = ['Chest', 'Torso', 'Abdomen'].map(B).filter(Boolean), chain = [...arm, ...spine];
+  const save = new Map([...chain, hand].map(b => [b, b.quaternion.clone()]));
+  w.updateMatrixWorld(true);
+  const target = w.localToWorld(new THREE.Vector3(r.at[0], r.at[1] + up, r.at[2])), wq = w.getWorldQuaternion(new THREE.Quaternion());
+  const side = new THREE.Vector3(1, 0, 0).applyQuaternion(wq), lean = r.lean ?? .45;
+  const rotWorld = (b, q) => { b.getWorldQuaternion(RQ); b.parent.getWorldQuaternion(RQ2); b.quaternion.copy(RQ2.invert().multiply(q.clone().multiply(RQ))); b.updateMatrixWorld(true); };
+  const aim = (b, from, to) => { const u = from.clone().sub(b.getWorldPosition(new THREE.Vector3())), v = to.clone().sub(b.getWorldPosition(new THREE.Vector3()));
+    if (u.lengthSq() > 1e-10 && v.lengthSq() > 1e-10) rotWorld(b, new THREE.Quaternion().setFromUnitVectors(u.normalize(), v.normalize())); };
+  // drop: lower the hips by `drop` m (bent knees, feet stay planted: analytic two-bone leg IK, knees forward), so the shoulders come down without
+  // folding the head forward over the surface
+  const hips = B('Hips');
+  if (r.drop && hips) {
+    const legs = ['L', 'R'].map(s => [B('UpperLeg' + s), B('LowerLeg' + s), B('Foot' + s)]).filter(l => l.every(Boolean));
+    o.updateMatrixWorld(true);
+    const keep = legs.map(([, , f]) => [f.getWorldPosition(new THREE.Vector3()), f.getWorldQuaternion(new THREE.Quaternion())]);
+    // legs are solved for the blended hip height (drop * e), so they are not blended again below
+        const hw = hips.getWorldPosition(new THREE.Vector3()); hw.y -= r.drop * e; hips.position.copy(hips.parent.worldToLocal(hw)); o.updateMatrixWorld(true);
+    const fwd = new THREE.Vector3(0, 0, 1).applyQuaternion(wq);
+    legs.forEach(([ul, ll, ft], i) => { const [T, fq] = keep[i];
+      const A = ul.getWorldPosition(new THREE.Vector3()), Bm = ll.getWorldPosition(new THREE.Vector3()), C = ft.getWorldPosition(new THREE.Vector3());
+      const l1 = A.distanceTo(Bm), l2 = Bm.distanceTo(C), d = Math.min(l1 + l2 - 1e-4, A.distanceTo(T)), u = T.clone().sub(A).normalize();
+      const ca = Math.min(1, Math.max(-1, (l1 * l1 + d * d - l2 * l2) / (2 * l1 * d))), v = fwd.clone().sub(u.clone().multiplyScalar(fwd.dot(u))).normalize();
+      const B2 = A.clone().add(u.multiplyScalar(ca * l1)).add(v.multiplyScalar(Math.sqrt(1 - ca * ca) * l1));
+      aim(ul, Bm, B2); o.updateMatrixWorld(true); aim(ll, ft.getWorldPosition(new THREE.Vector3()), T); o.updateMatrixWorld(true);
+      ft.parent.getWorldQuaternion(RQ2); ft.quaternion.copy(RQ2.invert().multiply(fq)); ft.updateMatrixWorld(true); });
+  }
+  for (let it = 0; it < 16; it++) for (const b of chain) {
+    o.updateMatrixWorld(true);
+    const bp = b.getWorldPosition(new THREE.Vector3()), a = hand.getWorldPosition(RV).sub(bp), c = target.clone().sub(bp);
+    const isSpine = spine.includes(b); if (isSpine) { a.projectOnPlane(side); c.projectOnPlane(side); }
+    if (a.lengthSq() < 1e-8 || c.lengthSq() < 1e-8) continue;
+    rotWorld(b, new THREE.Quaternion().setFromUnitVectors(a.normalize(), c.normalize()));
+    if (isSpine && b.quaternion.angleTo(save.get(b)) > lean) { const q0 = save.get(b), q1 = b.quaternion.clone(); b.quaternion.copy(q0).slerp(q1, lean / q0.angleTo(q1)); b.updateMatrixWorld(true); }
+  }
+  // palm down, fingers along r.fingers (person frame), in world space
+  o.updateMatrixWorld(true);
+  const hp = hand.getWorldPosition(new THREE.Vector3()), f = mid.getWorldPosition(new THREE.Vector3()).sub(hp).normalize();
+  const ip = pk.getWorldPosition(new THREE.Vector3()).sub(ix.getWorldPosition(RV2)).normalize();
+  const n = f.clone().cross(ip).multiplyScalar(S === 'L' ? -1 : 1); n.sub(f.clone().multiplyScalar(n.dot(f))).normalize(); // palm normal (checked: hanging arm -> palm faces the thigh)
+  const fw = r.fingers || [0, 1], nd = new THREE.Vector3(0, -1, 0), fd = new THREE.Vector3(fw[0], 0, fw[1]).applyQuaternion(wq).projectOnPlane(nd).normalize();
+  const Mc = new THREE.Matrix4().makeBasis(f, n, f.clone().cross(n)), Md = new THREE.Matrix4().makeBasis(fd, nd, fd.clone().cross(nd));
+  rotWorld(hand, new THREE.Quaternion().setFromRotationMatrix(Md.multiply(Mc.transpose())));
+  if (e < 1) for (const [b, q0] of save) { const q1 = b.quaternion.clone(); b.quaternion.copy(q0).slerp(q1, e); } // hips: already lowered by drop * e
+  o.updateMatrixWorld(true);
+}
