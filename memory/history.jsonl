@@ -91,3 +91,4 @@
 {"run": "horse_care", "time": "2026-11-26 20:24", "score": 11, "issues": 25, "codes": ["beat_too_short", "dead_beat", "too_dark"]}
 {"run": "donkey_load", "time": "2026-11-26 23:03", "score": 78, "issues": 8, "codes": ["beat_too_short", "dead_beat"]}
 {"run": "pigeon_v1", "time": "2026-11-27 02:10", "score": 87, "issues": 5, "codes": ["beat_too_long", "beat_too_short", "caption_flash", "caption_too_long"]}
+{"run": "water_mill", "time": "2026-11-27 02:44", "score": 75, "issues": 5, "codes": ["dead_beat"]}
