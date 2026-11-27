@@ -2111,10 +2111,15 @@ function buffaloA(p = {}) {
   const MODEL = p.model || 'animals_pack/Bull', plain = MODEL !== 'animals_pack/Bull';
   const g = new THREE.Group(), src = GLB[MODEL]; if (!src) return g;
   const H = p.height || 1.65, o = skClone(src.scene); o.updateMatrixWorld(true);
+  // noUdder (dairy pack): tuck the library Cow's low-poly udder (pink 'Muzzle' verts behind the head) inside the belly, e.g. for a calf
+  //   or when a dairy_udder replaces it. The geometry is cloned so other instances keep theirs.
+  if (p.noUdder) o.traverse(m => { const mt = m.isMesh && (Array.isArray(m.material) ? m.material[0] : m.material); if (!mt || mt.name !== 'Muzzle') return;
+    m.geometry = m.geometry.clone(); const P = m.geometry.attributes.position; for (let i = 0; i < P.count; i++) if (P.getY(i) > -.01) P.setZ(i, Math.max(P.getZ(i), .03)); P.needsUpdate = true; });
   const bb = new THREE.Box3().setFromObject(o, true), s = H / (bb.max.y - bb.min.y);
   o.scale.setScalar(s); o.position.set(-(bb.min.x + bb.max.x) / 2 * s, -bb.min.y * s, -(bb.min.z + bb.max.z) / 2 * s);
   const mover = new THREE.Group(), roller = new THREE.Group(), shape = new THREE.Group(); g.add(mover); mover.add(roller); roller.position.y = .8; roller.add(shape); shape.position.y = -.8; shape.add(o);
   if (!plain) shape.scale.set(1.14, .97, 1.05); // buffalo: wider barrel, a little lower, longer than the bull
+  if (p.shapeScale) shape.scale.set(...p.shapeScale); // e.g. a calf: [.9, 1, .84] = shorter, narrower body on the same legs height
   const U = { uWet: { value: 0 }, uMud: { value: 0 }, uMudDry: { value: 0 }, uDust: { value: .6 }, uBaseY: { value: 0 }, uH: { value: H } };
   o.traverse(m => { if (!m.isMesh) return; m.frustumCulled = false; m.castShadow = m.receiveShadow = true; m.geometry.computeBoundingBox(); if (plain) return;
     const k = 1 / Math.max(1e-4, m.geometry.boundingBox.max.y - m.geometry.boundingBox.min.y);
@@ -7478,3 +7483,157 @@ function olCan(p = {}) { const g = new THREE.Group(), can = new THREE.Group(); g
       s.geometry.dispose(); s.geometry = new THREE.TubeGeometry(new THREE.QuadraticBezierCurve3(tp.clone().add(V3(off[i][0] * .3, 0, off[i][1] * .3)), mid, end), 8, .0014, 4); }); };
   return shadowed(g); }
 Object.assign(ASSETS, { ol_seedling: olSeedling, ol_pool: olPool, ol_bed: olBed, ol_channel: olChannel, ol_sand: olSand, ol_hoe: olHoe, ol_can: olCan });
+// ================= Dairy pack (2026-11-27, plans/dairy_cow.mjs) =================
+// dairy_udder: a real-size Holstein udder (four quarters, rear quarters deeper, a median cleft, milk veins, fine hair, 4 teats 6-7 cm x 2.5 cm)
+//   riding the library Cow on the walker (LINK['buf:'+cow]: midpoint of the hind upper-leg bones + off [lat, up, fwd] in the body frame).
+//   Use with noUdder:true on the cow so the low-poly model udder is tucked away. fillK [[t, .85..1.1]] = how full. milkK [[t, 0..1]] =
+//   hand-milking squirts from teats milkTeats [i, j] (alternating, ~1.7 squeezes/s per hand) falling on a ballistic path into the milk of
+//   LINK['pail:'+pail]. Publishes LINK['udder:'+cow] = { c (bottom centre), t0..t3 (teat tips) }. Teat order: 0 FL, 1 FR, 2 RL, 3 RR (L = cow's left).
+// milk_pail: a 12-litre stainless pail (0.30 m, mouth r .155) with bail and grip; white milk at fillK [[t, 0..1]], a foam rim while milk
+//   is coming in (foamK). at [[t, spec]]: spec [x, z] = on the ground there (local), 'R' | 'L' = hangs from that palm of LINK[by]
+//   (blends .35 s). Publishes LINK['pail:'+link] = { mouth (milk surface centre), grip }.
+// dairy_tool: kind 'ai_gun' (stainless insemination gun 46 cm with a sheath and finger ring, held in the palm, pointing along the yaw,
+//   tilt rad) or 'bag' (vet's leather doctor's bag 36 x 20 x 22 cm, brass frame, handle). Same at/showK keys as the pail.
+// dairy_barn: lime-washed mud-brick back wall (front face at local z 0) + left side wall, two eucalyptus poles, a reed-mat roof over the
+//   rear strip only (the front stays open to the sky), a dirt splash band at the foot of the walls.
+// straw_bed: clean wheat straw bedding (instanced straws on a soft golden base that fades into the soil).
+// hay_rack: a timber manger with a slatted rack above (rack:false = manger only, the back board up to `top`), filled with fresh green berseem
+//   (leaves + stems) heaped in the manger and against the back board; front (the animal side) at +z.
+function udderTex() { return SPR.udder ||= canvasT(256, 256, (c, w, h) => { const r = rng(511); const gr = c.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#e8c5b8'); gr.addColorStop(1, '#f1cbbd'); c.fillStyle = gr; c.fillRect(0, 0, w, h);
+  for (let i = 0; i < 1600; i++) { c.fillStyle = `rgba(${r() > .5 ? '252,238,230' : '170,112,100'},${r() * .12})`; c.fillRect(r() * w, r() * h, 1 + r() * 2, 1 + r() * 2); }
+  c.lineCap = 'round'; for (let k = 0; k < 8; k++) { c.strokeStyle = `rgba(118,104,150,${.1 + r() * .1})`; c.lineWidth = 1.2 + r() * 2.2; c.beginPath(); let x = r() * w, y = 0; c.moveTo(x, y); for (let s = 0; s < 9; s++) { x += (r() - .5) * 36; y += h / 9; c.lineTo(x, y); } c.stroke(); }
+  for (let i = 0; i < 1100; i++) { c.strokeStyle = `rgba(255,250,244,${.07 + r() * .1})`; c.lineWidth = .6; const x = r() * w, y = r() * h; c.beginPath(); c.moveTo(x, y); c.lineTo(x + (r() - .5) * 3, y + 3 + r() * 4); c.stroke(); } }); }
+function dairyUdder(p = {}) { const g = new THREE.Group(), U = new THREE.Group(), B = new THREE.Group(); g.add(U); U.add(B); const S = p.scale || 1;
+  const skin = new THREE.MeshStandardMaterial({ map: udderTex(), roughness: .6, emissive: col('#4a2420'), emissiveIntensity: .1 });
+  const RX = .17 * S, RZ = .19 * S, RY = .21 * S, TY = .06 * S;
+  const shapeY = (u, y, w) => y > 0 ? y * TY : y * RY * (1 + .1 * Math.max(0, -w)) * (1 - .16 * Math.exp(-((u / .2) ** 2)) * Math.min(1, -y * 1.4)) * (1 - .06 * Math.exp(-((w / .18) ** 2)));
+  const geo = new THREE.SphereGeometry(1, 48, 28), P = geo.attributes.position;
+  for (let i = 0; i < P.count; i++) { const u = P.getX(i), y = P.getY(i), w = P.getZ(i), bulge = 1 + .05 * Math.max(0, -y) * Math.cos(2 * Math.atan2(w, u)) ** 2; P.setXYZ(i, u * RX * bulge, shapeY(u, y, w), w * RZ * bulge); }
+  geo.computeVertexNormals(); const body = new THREE.Mesh(geo, skin); B.add(body);
+  const teatM = new THREE.MeshStandardMaterial({ color: col('#dca496'), roughness: .55, emissive: col('#4a2420'), emissiveIntensity: .1 }), teats = [], TL = .065 * S;
+  [[1, 1], [-1, 1], [1, -1], [-1, -1]].forEach(([sx, sz]) => { const x = sx * .062 * S, z = sz * (sz > 0 ? .08 : .066) * S, u = x / RX, w = z / RZ, yy = -Math.sqrt(Math.max(0, 1 - u * u - w * w));
+    const base = V3(x, shapeY(u, yy, w) + .012 * S, z), dir = V3(sx * .14, -1, sz * .1).normalize();
+    const m = new THREE.Mesh(new THREE.CapsuleGeometry(.0125 * S, TL - .025 * S, 6, 12), teatM); m.position.copy(base).addScaledVector(dir, TL / 2); m.quaternion.setFromUnitVectors(Y_UP, dir.clone().negate()); B.add(m);
+    teats.push({ base, dir }); });
+  shadowed(U);
+  // milk squirts (instanced droplets) + a splash ring on the pail milk
+  const NP = 22, milkM = new THREE.MeshStandardMaterial({ color: col('#fbf8f1'), roughness: .3, emissive: col('#c9c3b6'), emissiveIntensity: .35 });
+  const drops = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 8, 6), milkM, NP * 2); drops.frustumCulled = false; g.add(drops);
+  const ring = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: rippleRingTex(), color: col('#ffffff'), transparent: true, opacity: 0, depthWrite: false })); ring.rotation.x = -Math.PI / 2; g.add(ring);
+  const M4 = new THREE.Matrix4(), Q = new THREE.Quaternion(), Z0 = new THREE.Matrix4().makeScale(0, 0, 0), tipW = [V3(0, 0, 0), V3(0, 0, 0), V3(0, 0, 0), V3(0, 0, 0)];
+  g.userData.tick = t => { const D2 = LINK['buf:' + p.cow]; U.visible = !!(D2 && D2.bp && D2.bp.BackUpperLegL && D2.bp.BackUpperLegR); drops.visible = U.visible; ring.visible = U.visible; if (!U.visible) return;
+    g.updateWorldMatrix(true, false); const off = p.off || [0, .03, .3];
+    const anchor = D2.bp.BackUpperLegL.clone().lerp(D2.bp.BackUpperLegR, .5).add(V3(off[0], off[1], off[2]).applyQuaternion(D2.q));
+    U.position.copy(g.worldToLocal(anchor.clone())); U.quaternion.copy(D2.q); const fill = kv(p.fillK, t, 1); B.scale.set(1, fill, 1);
+    U.updateMatrixWorld(true); const L2 = { c: U.localToWorld(V3(0, -RY * fill, 0)) };
+    teats.forEach((tq, i) => { tipW[i].copy(B.localToWorld(tq.base.clone().addScaledVector(tq.dir, TL))); L2['t' + i] = tipW[i].clone(); });
+    LINK['udder:' + p.cow] = L2;
+    // squirts
+    const pl = LINK['pail:' + (p.pail || 'pail')], tgt = pl && pl.mouth, idx = p.milkTeats || [0, 2]; let any = 0;
+    for (let h = 0; h < 2; h++) { const tip = tipW[idx[h]]; for (let i = 0; i < NP; i++) { const k = h * NP + i; let show = false;
+      if (tgt) { const dh = Math.max(.05, tip.y - tgt.y), Tf = (-1.1 + Math.sqrt(1.21 + 19.6 * dh)) / 9.8, age = (i + .5) / NP * Tf, tl = t - age;
+        if (kv(p.milkK, tl, 0) > .3 && fr01(tl * 1.7 + h * .5) < .42) { show = true; any++; const u = age / Tf, jx = (hr(k, 1) - .5) * .012, jz = (hr(k, 2) - .5) * .012;
+          const P0 = V3(lerp(tip.x, tgt.x + (h ? .03 : -.03) + jx, u), tip.y - 1.1 * age - 4.9 * age * age, lerp(tip.z, tgt.z + jz, u));
+          const sp = 1.1 + 9.8 * age; Q.identity(); M4.compose(g.worldToLocal(P0), Q, V3(.0055, .0055 * (1 + sp * 1.2), .0055)); drops.setMatrixAt(k, M4); } }
+      if (!show) drops.setMatrixAt(k, Z0); } }
+    drops.instanceMatrix.needsUpdate = true;
+    if (tgt && any) { ring.position.copy(g.worldToLocal(tgt.clone().add(V3(0, .004, 0)))); const s = .05 + .06 * fr01(t * 3.4); ring.scale.set(s, s, s); ring.material.opacity = .5 * (1 - fr01(t * 3.4)); } else ring.material.opacity = 0; };
+  return g; }
+// shared placement: at keys [[t, spec]] -> { pos (local), q } blended .35 s between consecutive specs; hang = palm offset below the palm
+function dairyPlace(g, p, t, hangY, yawOff = 0) { const K = p.at || [[0, [0, 0]]]; let i = 0; while (i + 1 < K.length && t >= K[i + 1][0]) i++;
+  const one = spec => { const Lk = LINK[p.by || 'farmer']; if (typeof spec === 'string') { const P = Lk && Lk[spec]; if (P) { const pos = g.worldToLocal(P.clone()).add(V3(0, -hangY, 0));
+        const q = new THREE.Quaternion().setFromAxisAngle(Y_UP, (Lk.yaw || 0) + yawOff - (g.parent?.rotation.y || 0)); if (p.tilt) q.multiply(new THREE.Quaternion().setFromAxisAngle(V3(1, 0, 0), -p.tilt));
+        if (p.swing !== false && !p.tilt) q.multiply(new THREE.Quaternion().setFromAxisAngle(V3(1, 0, 0), .04 * Math.sin(t * 3.1))); return { pos, q, held: true }; } return { pos: V3(0, -50, 0), q: new THREE.Quaternion() }; }
+    return { pos: V3(spec[0], spec[2] || 0, spec[1]), q: new THREE.Quaternion().setFromAxisAngle(Y_UP, spec[3] || 0), held: false }; };
+  g.updateWorldMatrix(true, false); const cur = one(K[i][1]); if (i === 0) return cur; const k = sEase((t - K[i][0]) / .35); if (k >= 1) return cur;
+  const prev = one(K[i - 1][1]); return { pos: prev.pos.lerp(cur.pos, k), q: prev.q.slerp(cur.q, k), held: cur.held }; }
+function milkPail(p = {}) { const g = new THREE.Group(), inner = new THREE.Group(); g.add(inner); const H = .3, R1 = .125, R2 = .155, BAIL = H + .14;
+  const steel = new THREE.MeshStandardMaterial({ map: bucketTex(), color: col('#f2f5f6'), metalness: .75, roughness: .26, side: THREE.DoubleSide });
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(R2, R1, H, 32, 1, true), steel); body.position.y = H / 2; inner.add(body);
+  const bot = new THREE.Mesh(new THREE.CircleGeometry(R1, 32), steel); bot.rotation.x = -Math.PI / 2; bot.position.y = .004; inner.add(bot);
+  const rimM = std('#dfe3e4', { r: .25, m: .7 }); const rim = new THREE.Mesh(new THREE.TorusGeometry(R2, .007, 6, 36), rimM); rim.rotation.x = Math.PI / 2; rim.position.y = H; inner.add(rim);
+  const foot = new THREE.Mesh(new THREE.TorusGeometry(R1 + .002, .006, 6, 32), rimM); foot.rotation.x = Math.PI / 2; foot.position.y = .008; inner.add(foot);
+  for (const s of [-1, 1]) { const lug = box(.02, .035, .012, rimM); lug.position.set(s * (R2 - .004), H - .03, 0); inner.add(lug); }
+  const wire = std('#9a9fa1', { r: .35, m: .75 }); const bail = new THREE.Mesh(new THREE.TorusGeometry(R2 + .004, .0035, 5, 28, Math.PI), wire); bail.scale.y = (BAIL - H + .03) / (R2 + .004); bail.position.y = H - .03; inner.add(bail);
+  const grip = new THREE.Mesh(new THREE.CylinderGeometry(.012, .012, .1, 10), std('#2f2c29', { r: .7 })); grip.rotation.z = Math.PI / 2; grip.position.y = BAIL; inner.add(grip);
+  const milkMat = new THREE.MeshStandardMaterial({ color: col('#faf7ef'), roughness: .32, emissive: col('#cfc9bb'), emissiveIntensity: .32 });
+  const milk = new THREE.Mesh(new THREE.CircleGeometry(1, 32), milkMat); milk.rotation.x = -Math.PI / 2; inner.add(milk);
+  const foam = new THREE.Mesh(new THREE.TorusGeometry(1, .06, 6, 32), new THREE.MeshStandardMaterial({ color: col('#ffffff'), roughness: .8, emissive: col('#d8d4ca'), emissiveIntensity: .35, transparent: true, opacity: 0 })); foam.rotation.x = Math.PI / 2; inner.add(foam);
+  shadowed(inner); milk.castShadow = foam.castShadow = false; const cs = contactShadow(.19, .19, .45); cs.position.y = .007; g.add(cs);
+  g.userData.tick = t => { const pl = dairyPlace(g, p, t, BAIL, Math.PI / 2); inner.position.copy(pl.pos); inner.quaternion.copy(pl.q); inner.visible = kv(p.showK, t, 1) > .5;
+    cs.visible = inner.visible && pl.pos.y < .05; cs.position.set(pl.pos.x, .007, pl.pos.z);
+    const f = clamp(kv(p.fillK, t, 0)), y = .012 + f * (H - .035), r = lerp(R1, R2, y / H) - .004; milk.visible = f > .01; milk.position.y = y; milk.scale.setScalar(r);
+    const fo = clamp(kv(p.foamK, t, 0)) * (f > .02 ? 1 : 0); foam.visible = fo > .01; foam.material.opacity = .85 * fo; foam.position.y = y + .002; foam.scale.set(r - .008, r - .008, r * .4);
+    g.updateWorldMatrix(true, false); inner.updateMatrixWorld(true); if (p.link) LINK['pail:' + p.link] = { mouth: inner.localToWorld(V3(0, y, 0)), grip: inner.localToWorld(V3(0, BAIL, 0)), held: pl.held }; };
+  return g; }
+function dairyTool(p = {}) { const g = new THREE.Group(), inner = new THREE.Group(); g.add(inner); const kind = p.kind || 'ai_gun'; let hang = 0;
+  if (kind === 'ai_gun') { const steel = new THREE.MeshStandardMaterial({ color: col('#c9ced0'), metalness: .85, roughness: .25 });
+    const rod = new THREE.Mesh(new THREE.CylinderGeometry(.0042, .0042, .4, 10), steel); rod.rotation.x = Math.PI / 2; rod.position.z = .22; inner.add(rod);
+    const sheath = new THREE.Mesh(new THREE.CylinderGeometry(.0034, .005, .13, 10), std('#f2ece6', { r: .4 })); sheath.rotation.x = Math.PI / 2; sheath.position.z = .43; inner.add(sheath);
+    const tipC = new THREE.Mesh(new THREE.SphereGeometry(.0036, 8, 6), std('#e7a6b0', { r: .4 })); tipC.position.z = .495; inner.add(tipC);
+    const grip = new THREE.Mesh(new THREE.CylinderGeometry(.009, .009, .07, 12), steel); grip.rotation.x = Math.PI / 2; grip.position.z = .0; inner.add(grip);
+    const ringT = new THREE.Mesh(new THREE.TorusGeometry(.014, .0028, 6, 18), steel); ringT.position.z = -.045; ringT.rotation.y = Math.PI / 2; inner.add(ringT);
+    const plunger = new THREE.Mesh(new THREE.CylinderGeometry(.0028, .0028, .07, 8), steel); plunger.rotation.x = Math.PI / 2; plunger.position.z = -.07; inner.add(plunger); }
+  else { const leather = new THREE.MeshStandardMaterial({ color: col('#5c3a25'), roughness: .5, metalness: .05 }), brass = std('#b9a06a', { r: .3, m: .8 }); hang = .3;
+    const bw = .36, bh = .2, bd = .2; const bx = box(bw, bh, bd, leather); bx.position.y = bh / 2; inner.add(bx);
+    const top = new THREE.Mesh(new THREE.CylinderGeometry(bd / 2, bd / 2, bw, 20, 1, false, 0, Math.PI), leather); top.rotation.z = Math.PI / 2; top.rotation.x = Math.PI / 2; top.position.y = bh; top.scale.set(1, 1, .55); inner.add(top);
+    const frame = box(bw + .006, .012, .012, brass); frame.position.y = bh + .052; inner.add(frame); const clasp = box(.03, .025, .01, brass); clasp.position.set(0, bh + .03, bd / 2 + .004); inner.add(clasp);
+    const handle = new THREE.Mesh(new THREE.TorusGeometry(.055, .009, 6, 18, Math.PI), leather); handle.position.y = bh + .06; inner.add(handle);
+    for (const [x, z] of [[-.15, -.07], [.15, -.07], [-.15, .07], [.15, .07]]) { const s = new THREE.Mesh(new THREE.SphereGeometry(.007, 6, 4), brass); s.position.set(x, .003, z); inner.add(s); } }
+  shadowed(inner); const cs = contactShadow(kind === 'bag' ? .24 : .01, kind === 'bag' ? .15 : .01, .45); cs.position.y = .007; g.add(cs);
+  g.userData.tick = t => { const pl = dairyPlace(g, { swing: kind === 'bag', ...p }, t, hang + (kind === 'bag' ? .11 : 0), kind === 'bag' ? Math.PI / 2 : 0); inner.position.copy(pl.pos); inner.quaternion.copy(pl.q);
+    inner.visible = kv(p.showK, t, 1) > .5; cs.visible = inner.visible && pl.pos.y < .05; cs.position.set(pl.pos.x, .007, pl.pos.z); };
+  return g; }
+function dLimeTex() { return SPR.limeWall ||= canvasT(512, 256, (c, w, h) => { const r = rng(613); c.fillStyle = '#ebe5d8'; c.fillRect(0, 0, w, h);
+  for (let y = 0; y < h; y += 16) for (let x = ((y / 16) % 2) * 24 - 24; x < w; x += 48) { c.fillStyle = `rgba(${150 + r() * 30 | 0},${128 + r() * 20 | 0},${96 + r() * 20 | 0},${.05 + r() * .08})`; c.fillRect(x + 2, y + 2, 44, 12); }
+  c.strokeStyle = 'rgba(140,120,92,.16)'; for (let y = 0; y < h; y += 16) { c.beginPath(); c.moveTo(0, y); c.lineTo(w, y + (r() - .5) * 2); c.stroke(); }
+  for (let i = 0; i < 40; i++) { const x = r() * w, y = r() * h * .8, R = 10 + r() * 50, g2 = c.createRadialGradient(x, y, 0, x, y, R); g2.addColorStop(0, `rgba(${r() > .5 ? '255,253,246' : '190,176,150'},${.12 + r() * .14})`); g2.addColorStop(1, 'rgba(0,0,0,0)'); c.fillStyle = g2; c.fillRect(x - R, y - R, 2 * R, 2 * R); }
+  const gb = c.createLinearGradient(0, h * .78, 0, h); gb.addColorStop(0, 'rgba(120,92,60,0)'); gb.addColorStop(1, 'rgba(110,82,52,.55)'); c.fillStyle = gb; c.fillRect(0, h * .78, w, h * .22);
+  for (let i = 0; i < 260; i++) { c.fillStyle = `rgba(105,78,50,${.1 + r() * .25})`; c.beginPath(); c.arc(r() * w, h * (.82 + r() * .18), .8 + r() * 2.2, 0, 7); c.fill(); } }, [1, 1]); }
+function reedTex() { return SPR.reedMat ||= canvasT(256, 64, (c, w, h) => { const r = rng(617); c.fillStyle = '#b89a62'; c.fillRect(0, 0, w, h);
+  for (let x = 0; x < w; x += 3 + r() * 2) { const v = .8 + r() * .35; c.fillStyle = `rgb(${200 * v | 0},${172 * v | 0},${112 * v | 0})`; c.fillRect(x, 0, 2.2, h); c.fillStyle = 'rgba(70,52,28,.35)'; c.fillRect(x + 2.2, 0, .8, h); }
+  for (const y of [h * .25, h * .75]) { c.fillStyle = 'rgba(80,60,34,.6)'; c.fillRect(0, y, w, 2); } }, [3, 1]); }
+function dairyBarn(p = {}) { const g = new THREE.Group(), L = p.len || 7.4, H = p.h || 2.7, SD = p.side || 2.8, RD = p.roofD || 1.5, T = .3;
+  const lt = dLimeTex().clone(); lt.needsUpdate = true; lt.wrapS = lt.wrapT = THREE.RepeatWrapping; lt.repeat.set(L / 2.6, H / 1.3); const wm = new THREE.MeshStandardMaterial({ map: lt, roughness: .95 });
+  const back = box(L, H, T, wm); back.position.set(0, H / 2, -T / 2); g.add(back);
+  const lt2 = lt.clone(); lt2.needsUpdate = true; lt2.repeat.set(SD / 2.6, H / 1.3); const side = box(T, H, SD, new THREE.MeshStandardMaterial({ map: lt2, roughness: .95 })); side.position.set(-L / 2 + T / 2, H / 2, SD / 2); g.add(side);
+  const cap = box(L + .04, .06, T + .06, std('#d6cdbb', { r: .9 })); cap.position.set(0, H + .03, -T / 2); g.add(cap);
+  const pole = std('#7b6448', { r: .85 }), ry = H - .22, rt = reedTex().clone(); rt.needsUpdate = true; rt.wrapS = rt.wrapT = THREE.RepeatWrapping; rt.repeat.set(L / 1.2, 1);
+  for (const x of [-L / 2 + .35, L / 2 - .25]) { const m = cyl(.065, .075, ry, pole, 10); m.position.set(x, ry / 2, RD); g.add(m); }
+  const beamM = cyl(.06, .06, L - .3, pole, 10); beamM.rotation.z = Math.PI / 2; beamM.position.set(.05, ry + .02, RD); g.add(beamM);
+  const len = Math.hypot(RD + T, H - ry), roofM = new THREE.MeshStandardMaterial({ map: rt, roughness: .95, side: THREE.DoubleSide });
+  const roof = box(L + .2, .035, len + .25, roofM); roof.position.set(0, (H + ry) / 2 + .07, (RD - T) / 2 + .06); roof.rotation.x = Math.atan2(H - ry, RD + T); g.add(roof);
+  for (let i = 0; i < 9; i++) { const rf = cyl(.025, .025, len + .2, pole, 6); rf.rotation.x = Math.PI / 2 + Math.atan2(H - ry, RD + T); rf.position.set(-L / 2 + .3 + i * (L - .6) / 8, (H + ry) / 2 + .03, (RD - T) / 2 + .06); g.add(rf); }
+  shadowed(g); return g; }
+function strawBed(p = {}) { const g = new THREE.Group(), W = p.w || 6, D = p.d || 4, n = p.n || 8000, r = rng(p.seed || 619);
+  const base = new THREE.Mesh(new THREE.PlaneGeometry(W + .6, D + .6), new THREE.MeshStandardMaterial({ map: canvasT(256, 256, (c, w, h) => { const rr = rng(621);
+      const gr = c.createRadialGradient(w / 2, h / 2, w * .3, w / 2, h / 2, w * .52); gr.addColorStop(0, 'rgba(206,172,96,1)'); gr.addColorStop(1, 'rgba(206,172,96,0)'); c.fillStyle = gr; c.fillRect(0, 0, w, h);
+      for (let i = 0; i < 2600; i++) { const x = rr() * w, y = rr() * h, d = Math.hypot(x - w / 2, y - h / 2) / (w * .5); if (d > .95) continue; c.strokeStyle = `rgba(${rr() > .5 ? '232,206,140' : '150,118,60'},${.25 + rr() * .3})`; c.lineWidth = .8; const a = rr() * 6.3, l = 3 + rr() * 9; c.beginPath(); c.moveTo(x, y); c.lineTo(x + Math.cos(a) * l, y + Math.sin(a) * l); c.stroke(); } }),
+    transparent: true, roughness: 1, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }));
+  base.rotation.x = -Math.PI / 2; base.position.y = .008; base.receiveShadow = true; base.scale.set(1, 1, 1); g.add(base);
+  const im = new THREE.InstancedMesh(new THREE.CylinderGeometry(.0026, .0032, 1, 4), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: .8 }), n), M = new THREE.Matrix4(), Q = new THREE.Quaternion(), E = new THREE.Euler(), C = new THREE.Color();
+  const pal = ['#e2c779', '#d4b25e', '#c9a24a', '#ebd595', '#b89140', '#dcbf6c'];
+  for (let i = 0; i < n; i++) { let x, z; do { x = (r() - .5) * W; z = (r() - .5) * D; } while (Math.abs(x) / (W / 2) + (r() * .25) > 1.08 || Math.abs(z) / (D / 2) + (r() * .25) > 1.08);
+    const l = .07 + r() * .2, y = .01 + r() * .045; E.set(Math.PI / 2 + (r() - .5) * .5, r() * 6.3, 0, 'YXZ'); Q.setFromEuler(E); M.compose(V3(x, y, z), Q, V3(1, l, 1)); im.setMatrixAt(i, M); im.setColorAt(i, C.set(pal[i % pal.length]).multiplyScalar(.88 + r() * .2)); }
+  im.receiveShadow = true; im.castShadow = false; g.add(im); return g; }
+function hayRack(p = {}) { const g = new THREE.Group(), W = p.w || 1.0, D = p.d || .5, r = rng(p.seed || 623), wd = woodMat(), M0 = .45, M1 = .78, TOP = p.top || 1.35;
+  const pl = (w, h, d, x, y, z) => { const m = box(w, h, d, wd); m.position.set(x, y, z); g.add(m); return m; };
+  pl(W, .04, D, 0, M0, 0); pl(W, M1 - M0, .04, 0, (M0 + M1) / 2, D / 2 - .02); pl(W, TOP - M0, .04, 0, (M0 + TOP) / 2, -D / 2 + .02); for (const s of [-1, 1]) pl(.04, M1 - M0, D, s * (W / 2 - .02), (M0 + M1) / 2, 0);
+  for (const [x, z, h] of [[-W / 2 + .04, D / 2 - .04, M1], [W / 2 - .04, D / 2 - .04, M1], [-W / 2 + .04, -D / 2 + .04, TOP + .05], [W / 2 - .04, -D / 2 + .04, TOP + .05]]) pl(.07, h, .07, x, h / 2, z);
+  const RK = p.rack !== false; if (RK) { const rail = cyl(.022, .022, W, wd, 8); rail.rotation.z = Math.PI / 2; rail.position.set(0, TOP, D / 2 - .06); g.add(rail); }
+  const n = RK ? Math.round(W / .11) : -1; for (let i = 0; i <= n; i++) { const x = -W / 2 + .05 + i * (W - .1) / n, a = V3(x, M1, -D / 2 + .12), b = V3(x, TOP, D / 2 - .06), s = cyl(.012, .012, a.distanceTo(b), wd, 6);
+    s.position.copy(a).lerp(b, .5); s.quaternion.setFromUnitVectors(Y_UP, b.clone().sub(a).normalize()); g.add(s); }
+  // fresh berseem: leaflets (oval) + stems, a mound in the manger and a loose pack in the rack
+  const NL = p.leaves || 1700, NS = 420, leaf = new THREE.InstancedMesh(new THREE.CircleGeometry(.016, 7), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: .55, side: THREE.DoubleSide }), NL);
+  const stem = new THREE.InstancedMesh(new THREE.CylinderGeometry(.0025, .0025, 1, 4), new THREE.MeshStandardMaterial({ color: col('#6c9a3c'), roughness: .7 }), NS), Mx = new THREE.Matrix4(), Qx = new THREE.Quaternion(), E = new THREE.Euler(), C = new THREE.Color();
+  const pal = ['#4c7d26', '#5a8f2e', '#679e38', '#43722a', '#76a943', '#3f6b22'];
+  const spot = () => { if (r() < .55) { const x = (r() - .5) * (W - .1), z = (r() - .5) * (D - .1), hm = (1 - (2 * x / W) ** 2) * (1 - (2 * z / D) ** 2); return V3(x, M0 + .03 + r() * (M1 - M0 + .06 * hm), z); }
+    const u = r(), x = (r() - .5) * (W - .12); if (!RK) { const zz = -D / 2 + .05 + r() * (D * .45); return V3(x, M1 + u * (TOP - M1 - .12) * (1 - (zz + D / 2) / D * 1.4), zz); }
+    const y = M1 + u * (TOP - M1 - .08), zb = -D / 2 + .06, zf = -D / 2 + .12 + u * (D - .18); return V3(x, y, zb + r() * (zf - zb)); };
+  for (let i = 0; i < NL; i++) { const P = spot(); E.set(r() * 6.3, r() * 6.3, r() * 6.3); Qx.setFromEuler(E); Mx.compose(P, Qx, V3(1, .62 + r() * .2, 1).multiplyScalar(.8 + r() * .5)); leaf.setMatrixAt(i, Mx); leaf.setColorAt(i, C.set(pal[i % pal.length]).multiplyScalar(.9 + r() * .25)); }
+  for (let i = 0; i < NS; i++) { const P = spot(); E.set((r() - .5) * 2.4, r() * 6.3, (r() - .5) * 2.4); Qx.setFromEuler(E); Mx.compose(P, Qx, V3(1, .1 + r() * .14, 1)); stem.setMatrixAt(i, Mx); }
+  leaf.castShadow = stem.castShadow = true; g.add(leaf, stem); shadowed(g); return g; }
+// milkSquat: squatting milker (track y -.55), both palms at the near-side teats: palms (-.08/+.1 lateral, .49 m high, .41 m forward of the
+//   feet); coordinate-searched with the palm probe from tieLow (keeps the head within .33 m of the feet so it rests on the flank). shake = squeezes.
+Object.assign(RIG_POSES, { milkSquat: { adL: 1.66, adR: 1.6, fL: .55, fR: .36, eL: .37, eR: .61, sp: .5, hd: -.35, kL: 2.3, kR: 2.3, hL: 1.0, hR: 1.0, shake: .5 } });
+Object.assign(ASSETS, { dairy_udder: dairyUdder, milk_pail: milkPail, dairy_tool: dairyTool, dairy_barn: dairyBarn, straw_bed: strawBed, hay_rack: hayRack });
