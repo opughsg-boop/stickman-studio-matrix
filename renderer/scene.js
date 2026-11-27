@@ -1424,7 +1424,13 @@ ASSETS.glb = (p = {}) => {
       if (e < 1) ualGroundLock(o, feetRest, [[cur.getClip(), cur.time, e], [prev.getClip(), prev.time, 1 - e]]);
       if (mo.face != null) o.parent.rotation.y = mo.face;
       if (mo.reach) ualReach(o, w, mo.reach, age); // hand placed on a surface (renderer/ual.js)
-      else if (ho && pm.reach) ualReachHandoff(o, w, pm.reach, pAge, raw * spd(pm)); };
+      else if (ho && pm.reach) ualReachHandoff(o, w, pm.reach, pAge, raw * spd(pm));
+      if (p.link) { // palms for carried props (pigeon_coop broom / jug): a point 8 cm past the wrist along the hand bone, plus the facing
+        const hb = s => w.userData['hb' + s] ??= o.getObjectByName('Hand' + s) || o.getObjectByName('Hand.' + s) || null;
+        o.updateMatrixWorld(true); const palm = s => { const b = hb(s); if (!b) return null; const P = b.getWorldPosition(V3(0, 0, 0)), c = b.children.find(k => k.isBone);
+          if (c) P.lerp(c.getWorldPosition(V3(0, 0, 0)), .6); return P; };
+        const fw = V3(0, 0, 1).applyQuaternion(o.parent.getWorldQuaternion(new THREE.Quaternion()));
+        LINK[p.link] = { L: palm('L'), R: palm('R'), yaw: Math.atan2(fw.x, fw.z), pos: o.parent.getWorldPosition(V3(0, 0, 0)) }; } };
     return w; }
   let cur = null; const play = n => { if (!n || cur === n || !acts[n]) return; Object.values(acts).forEach(a => a.stop()); acts[n].play(); cur = n; };
   play(p.clip || (acts.Idle ? 'Idle' : Object.keys(acts)[0]));
@@ -4415,12 +4421,16 @@ function pigeonWalker(p = {}) { const g = new THREE.Group(), mover = new THREE.G
       const eh = sEase((u - .3) / .4), cr = u < .3 ? sEase(u / .3) : u > .7 ? 1 - sEase((u - .7) / .3) : .15;
       return { x: lerp(q.a.x, q.b.x, eh), z: lerp(q.a.z, q.b.z, eh), y: lerp(q.a.y, q.b.y, eh) + Math.sin(Math.PI * eh) * .07, yaw: lerp(q.y0, q.y1, clamp(u / .3)), act: 'idle', prev: i ? actOf(seg[i - 1]) : actOf(q), t0: q.a.t, dist: q.cum, sp: 0, fly: u > .28 && u < .74 ? 1 : 0, crouch: cr }; }
     return { x: lerp(q.a.x, q.b.x, e), z: lerp(q.a.z, q.b.z, e), y: lerp(q.a.y, q.b.y, e), yaw: lerp(q.y0, q.y1, easeIO(u * D / Math.min(D, .4))), act: actOf(q), prev: i ? actOf(seg[i - 1]) : actOf(q), t0: q.a.t, dist: q.cum + q.len * e, sp: q.mv ? q.len / D * trapV(u, .2) : 0 }; };
-  const pose = (act, t) => { const o = { pitch: 0, hy: 0, hz: 0, hrx: 0, hry: 0, puff: 0, tail: 0, bow: 0 };
+  const pose = (act, t) => { const o = { pitch: 0, hy: 0, hz: 0, hrx: 0, hry: 0, puff: 0, tail: 0, bow: 0, sit: 0, fluff: 0, sway: 0 };
     if (act === 'idle' || act === 'walk') { const per = .9, k = Math.floor((t + sd) / per), f = fr01((t + sd) / per); o.hry = lerp((hr(k, sd) - .5) * 1.4, (hr(k + 1, sd) - .5) * 1.4, clamp((f - .85) / .08)) * (act === 'walk' ? .2 : 1); o.hrx = (hr(k, sd + 3) - .5) * .3; }
     if (act === 'peck') { const per = 1.1, f = fr01((t + sd * .41) / per), sk = f < .14 ? sEase(f / .14) : f < .26 ? 1 : f < .5 ? 1 - sEase((f - .26) / .24) : 0; o.pitch = .5 * sk; o.hy = -.07 * sk; o.hz = .02 * sk; o.hrx = .8 * sk; }
     if (act === 'coo') { const f = fr01((t + sd) / 1.6), b = Math.sin(f * Math.PI * 2); o.puff = .9 + .2 * b; o.bow = Math.max(0, b) * .35; o.hrx = .25 * Math.max(0, b); o.tail = .3 * Math.max(0, -b); o.hry = Math.sin(t * .8) * .5; }
     // drink: body tipped forward, head down, beak held IN the water (no head lift: pigeons suck); the beak tip is solved onto the water level below
     if (act === 'drink') { o.pitch = .62; o.hy = -.05; o.hz = .03; o.hrx = .95 + .03 * Math.sin(t * 15.7); o.tail = -.15; }
+    // sit (brooding on eggs, pigeon_coop 2026-11-27): legs folded under, belly down, feathers fluffed, head drawn in, slow look round
+    if (act === 'sit') { o.sit = 1; o.fluff = 1; o.hy = -.03; o.hz = -.02; o.tail = -.1; o.hry = Math.sin(t * .6 + sd) * .45; o.hrx = .1; }
+    // tired (stuffy closed coop): standing hunched and puffed, head sunk into the shoulders and drooping, eyes half shut, a slow sway
+    if (act === 'tired') { o.fluff = 1.3; o.hy = -.045; o.hz = -.03; o.hrx = .35 + .06 * Math.sin(t * 1.1); o.tail = .12; o.sway = 1; }
     return o; };
   const vT = V3(0, 0, 0), vD = V3(0, 0, 0), Y1 = V3(0, 1, 0);
   const solveNeck = () => { vT.copy(nOff).applyQuaternion(head.quaternion).add(head.position); vD.subVectors(vT, nBase); const Ln = clamp(vD.length(), .03, .16);
@@ -4431,9 +4441,9 @@ function pigeonWalker(p = {}) { const g = new THREE.Group(), mover = new THREE.G
     head.position.set(h0.x, h0.y + P.hy - P.bow * .03, h0.z + P.hz + stab * STR / S * mvK * .9); head.rotation.set(P.hrx, P.hry, 0, 'YXZ');
     c.rotation.x = P.pitch + P.bow + .04 * mvK + .12 * (st.crouch || 0); U.body.scale.copy(b0).multiplyScalar(1 + .012 * Math.sin(t * 3.1 + sd) + .015 * dw * Math.max(0, Math.sin(t * 15.7)));
     U.tail.rotation.x = -P.tail + .06 * Math.sin(t * .7 + sd); U.legs[0].rotation.x = Math.sin(ph) * .5 * mvK; U.legs[1].rotation.x = -Math.sin(ph) * .5 * mvK;
-    U.legs.forEach(l => { l.scale.y = 1 - .3 * (st.crouch || 0); if (st.fly) l.rotation.x = .7; });
+    U.legs.forEach(l => { l.scale.y = (1 - .3 * (st.crouch || 0)) * (1 - .85 * P.sit); if (st.fly) l.rotation.x = .7; }); if (P.fluff) U.body.scale.multiplyScalar(1 + .07 * P.fluff);
     const fl = fr01((t + sd * 1.7) / 4.1); U.wings.forEach(w => { w.m.rotation.z = w.s * (st.fly ? .35 + .85 * (.5 + .5 * Math.sin(t * 46)) : fl < .06 ? Math.sin(fl / .06 * Math.PI) * .25 : 0); });       // flaps on a hop, a wing shuffle now and then
-    mover.position.set(st.x, st.y + Math.abs(Math.sin(ph)) * .004 * mvK - .012 * (st.crouch || 0), st.z); mover.rotation.y = st.yaw; mover.rotation.z = Math.sin(ph) * .06 * mvK;  // waddle
+    mover.position.set(st.x, st.y + Math.abs(Math.sin(ph)) * .004 * mvK - .012 * (st.crouch || 0) - .05 * S * P.sit, st.z); mover.rotation.y = st.yaw; mover.rotation.z = Math.sin(ph) * .06 * mvK + .05 * P.sway * Math.sin(t * 1.3 + sd);  // waddle; sit drops the belly onto the nest
     if (dw > .001 && p.waterYK) { const wy = kv(p.waterYK, t, 0) - .005;                     // beak tip onto the water: two solve passes along the tipped head axis
       for (let it = 0; it < 3; it++) { g.updateMatrixWorld(true); U.beakTip.getWorldPosition(bw); const cp = Math.max(.35, Math.cos(c.rotation.x)); head.position.y += (wy - bw.y) * dw / (S * cp); } }
     const Ln = solveNeck(), gulp = dw * Math.max(0, Math.sin(t * 15.7 - .8));                // throat pumps ~2.5 times a second while sucking
@@ -6832,6 +6842,206 @@ function gfTank(p = {}) { const g = new THREE.Group(), L = p.L || 1.2, D = p.D |
     if (p.link) { g.updateWorldMatrix(true, false); LINK[p.link] = { rim: g.localToWorld(V3(0, Y0 + H, 0)).y, water: g.localToWorld(V3(0, lv, 0)).y, fish0: g.localToWorld(FISH[0].g.position.clone()) }; } };
   [cab, grav, rock, wood2, filt, pump, bucket, anubias].forEach(o => shadowed(o)); return g; }
 Object.assign(ASSETS, { gf_bowl: gfBowl, gf_tank: gfTank });
+// ================= Pigeon coop pack (2026-11-27, plans/pigeon_coop.mjs) =================
+// card_box: a 40 x 30 x 30 cm brown corrugated carton with its four flaps folded open (real RSC flaps: half the depth). wetK 0..1 soaks it
+//   (darker kraft, a mould-spotted wet band rising from the base, flaps drooping, walls bowing out, a damp ring on the slab); chewK 0..1 swaps
+//   the front wall for a pecked one (ragged notches along the top edge) and scatters cardboard crumbs.
+function kraftTex(wet) { const k = wet ? 'kraftW' : 'kraftD'; return SPR[k] ||= canvasT(256, 256, (c, w, h) => { const r = rng(wet ? 707 : 701);
+  c.fillStyle = wet ? '#6e5236' : '#b88d5c'; c.fillRect(0, 0, w, h);
+  for (let x = 0; x < w; x += 4) { c.fillStyle = `rgba(${wet ? '40,28,16' : '120,86,50'},${.1 + .05 * Math.sin(x)})`; c.fillRect(x, 0, 1.5, h); }   // flute ridges showing through the liner
+  for (let i = 0; i < 1600; i++) { c.fillStyle = `rgba(${r() > .5 ? '230,200,150' : '70,48,26'},${r() * .12})`; c.fillRect(r() * w, r() * h, 1 + r() * 2, 1); }
+  c.fillStyle = wet ? 'rgba(150,120,80,.35)' : 'rgba(205,170,115,.55)'; c.fillRect(0, h * .04, w, h * .1);                                  // a strip of brown packing tape
+  if (wet) { for (let i = 0; i < 260; i++) { const x = r() * w, y = h * (.35 + .65 * r() ** .6), R = .8 + r() * 3.5; c.fillStyle = r() > .6 ? `rgba(60,72,52,${.4 + r() * .4})` : `rgba(28,26,22,${.35 + r() * .4})`; c.beginPath(); c.arc(x, y, R, 0, 6.3); c.fill(); }   // mould spots
+    const g2 = c.createLinearGradient(0, 0, 0, h); g2.addColorStop(0, 'rgba(0,0,0,0)'); g2.addColorStop(.45, 'rgba(30,20,10,.1)'); g2.addColorStop(1, 'rgba(25,16,8,.55)'); c.fillStyle = g2; c.fillRect(0, 0, w, h);
+    c.strokeStyle = 'rgba(40,28,16,.6)'; c.lineWidth = 2; c.beginPath(); for (let x = 0; x <= w; x += 6) c.lineTo(x, h * .42 + Math.sin(x * .07) * 8 + Math.sin(x * .23) * 3); c.stroke(); } }); }  // tide line
+function chewAlpha() { return SPR.chewA ||= canvasT(256, 192, (c, w, h) => { const r = rng(713); c.fillStyle = '#fff'; c.fillRect(0, 0, w, h); c.fillStyle = '#000';
+  for (let i = 0; i < 7; i++) { const x = 40 + r() * (w - 80), y = h * (.5 + .2 * r()), R = 5 + r() * 9; c.beginPath(); for (let a = 0; a <= 14; a++) { const u = a / 14 * 6.283, rr = R * (.55 + .6 * r()); c.lineTo(x + Math.cos(u) * rr * 1.3, y + Math.sin(u) * rr); } c.closePath(); c.fill(); } }); }  // ragged pecked holes at beak height
+function cardBox(p = {}) { const g = new THREE.Group(), W = p.w || .4, D = p.d || .3, H = p.h || .3, th = .005, r = rng(p.seed || 719);
+  const dry = new THREE.MeshStandardMaterial({ map: kraftTex(false), color: col('#ffffff'), roughness: .92 });
+  const wetM = new THREE.MeshStandardMaterial({ map: kraftTex(true), color: col('#ffffff'), roughness: .7, transparent: true, opacity: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 });
+  const inner = new THREE.MeshStandardMaterial({ map: kraftTex(false), color: col('#c9a678'), roughness: .95 });
+  const walls = new THREE.Group(); g.add(walls);
+  const wall = (w, h, x, z, ry, m = dry) => { const q = new THREE.Group(); q.position.set(x, 0, z); q.rotation.y = ry; walls.add(q);
+    const s = box(w, h, th, [inner, inner, inner, inner, m, inner]); s.position.y = h / 2; q.add(s);
+    const o = new THREE.Mesh(new THREE.PlaneGeometry(w, h), wetM); o.position.set(0, h / 2, th / 2 + .0008); q.add(o); return { q, s, o }; };
+  const front = wall(W, H, 0, D / 2, 0), back = wall(W, H, 0, -D / 2, Math.PI), left = wall(D, H, -W / 2, 0, -Math.PI / 2), right = wall(D, H, W / 2, 0, Math.PI / 2);
+  const chewM = new THREE.MeshStandardMaterial({ map: kraftTex(false), color: col('#ffffff'), roughness: .92, alphaMap: chewAlpha(), alphaTest: .5, side: THREE.DoubleSide });
+  const chewed = new THREE.Mesh(new THREE.PlaneGeometry(D, H), chewM); chewed.position.set(0, H / 2, th / 2 + .0004); right.q.add(chewed);   // the pigeon pecks the right (+x) wall: its body fits the 40 cm length only
+  if (p.feed) { const fg = feedGrains(70, p.feed[2] || .04, .02, 723); fg.position.set(p.feed[0], .005, p.feed[1]); g.add(fg); }
+  const bot = box(W, th, D, inner); bot.position.y = th / 2; g.add(bot);
+  // flaps hinged on the top edges, open outward and resting a little below horizontal
+  const flaps = [[W, D / 2, 0, D / 2, 0], [W, D / 2, 0, -D / 2, Math.PI], [D, D / 2, -W / 2, 0, -Math.PI / 2], [D, D / 2, W / 2, 0, Math.PI / 2]].map(([fw, fh, x, z, ry], i) => {
+    const hinge = new THREE.Group(); hinge.position.set(x, H, z); hinge.rotation.y = ry; g.add(hinge); const f = box(fw - .004, th, fh, [inner, inner, dry, inner, inner, inner]); f.position.set(0, 0, fh / 2); hinge.add(f);
+    return { hinge, a0: .45 + .14 * (r() - .5) + (i > 1 ? .12 : 0) }; });   // folded open outward, drooping below horizontal (the inside stays in view)
+  const NC = 26, crumbs = new THREE.InstancedMesh(new THREE.BoxGeometry(.012, .003, .009), dry, NC); crumbs.frustumCulled = false; g.add(crumbs);
+  const CD = Array.from({ length: NC }, () => [W / 2 + .03 + r() * .1, (r() - .5) * D * 1.1, r() * 6.3, .5 + r()]), m4 = new THREE.Matrix4(), q = new THREE.Quaternion();
+  const damp = new THREE.Mesh(new THREE.CircleGeometry(1, 40), new THREE.MeshStandardMaterial({ color: col('#4a4033'), roughness: .3, transparent: true, opacity: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }));
+  damp.rotation.x = -Math.PI / 2; damp.scale.set(W * .78, D * .85, 1); damp.position.y = .003; g.add(damp);
+  const sh = contactShadow(W * .62, D * .62, .55); g.add(sh);
+  g.userData.tick = t => { const wk = clamp(kv(p.wetK, t, 0)), ck = kv(p.chewK, t, 0) > .5;
+    wetM.opacity = wk * .95; dry.color.set('#ffffff').multiplyScalar(1 - .2 * wk);
+    flaps.forEach((f, i) => { f.hinge.rotation.x = f.a0 + .7 * wk + .015 * Math.sin(t * 1.3 + i); });
+    [left, right].forEach((s, i) => { s.q.scale.set(1, 1 - .03 * wk, 1); }); walls.scale.set(1 + .04 * wk, 1 - .03 * wk, 1 + .05 * wk);
+    right.s.visible = !ck; right.o.visible = !ck; chewed.visible = ck; chewM.map = wk > .5 ? kraftTex(true) : kraftTex(false); chewM.color.set('#ffffff').multiplyScalar(1 - .2 * wk);
+    for (let i = 0; i < NC; i++) { const [x, z, a, s] = CD[i]; q.setFromAxisAngle(YUP, a); m4.compose(V3(x, .002, z), q, ck ? V3(s, 1, s) : V3(0, 0, 0)); crumbs.setMatrixAt(i, m4); } crumbs.instanceMatrix.needsUpdate = true;
+    damp.material.opacity = .55 * wk; damp.scale.set(W * (.78 + .25 * wk), D * (.85 + .3 * wk), 1); };
+  return shadowed(g); }
+// feed_heap: a small heap of mixed pigeon feed (maize, wheat, field peas, sorghum), radius r, height h, n grains (instanced, 3-5 mm grains).
+const FEED_C = ['#e3a83c', '#c99f5c', '#d7b46a', '#a3a457', '#9a5a3c', '#e9c782'];
+function feedGrains(n, R, Hh, seed, flat = false) { const r = rng(seed), geo = new THREE.SphereGeometry(1, 7, 5), im = new THREE.InstancedMesh(geo, new THREE.MeshStandardMaterial({ color: col('#ffffff'), roughness: .55 }), n);
+  const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), c = new THREE.Color();
+  for (let i = 0; i < n; i++) { const a = r() * 6.283, d = R * Math.sqrt(r()), hgt = flat ? Hh * (.6 + .4 * r()) : Hh * Math.max(0, 1 - (d / R) ** 1.6) * (.4 + .6 * r()) + .002;
+    const k = r(), sz = k < .3 ? [.0042, .0034, .0042] : k < .6 ? [.0026, .0022, .0045] : k < .8 ? [.0032, .0032, .0032] : [.0024, .0024, .0024];
+    e.set(r() * 6, r() * 6, r() * 6); q.setFromEuler(e); m4.compose(V3(Math.cos(a) * d, hgt, Math.sin(a) * d), q, V3(...sz)); im.setMatrixAt(i, m4);
+    im.setColorAt(i, c.set(FEED_C[k < .3 ? 0 : k < .6 ? 1 + (r() * 2 | 0) : k < .8 ? 3 : 4 + (r() * 2 | 0)])); }
+  im.castShadow = true; im.receiveShadow = true; return im; }
+function feedHeap(p = {}) { const g = new THREE.Group(); g.add(feedGrains(p.n || 240, p.r || .07, p.h || .035, p.seed || 727)); g.add(contactShadow((p.r || .07) * 1.1, (p.r || .07) * 1.1, .35)); return g; }
+
+// pg_coop: the 1.2 x 0.6 m pine pigeon loft (pigeon_cage, complete, on its brick piers, 1.11 m to the roof) with what a pigeon needs inside
+//   (all in cage space, origin = cage origin): a terracotta nest bowl with a straw lining and two white pigeon eggs (eggsK [[t, n]]),
+//   two downy squabs (chicksK [[t, n]], they replace the eggs), a box perch (dowel on a post), an inside water dish and a feed trough, and
+//   droppings on the floor (dirtK 1..0 = cleaned). Outside: louvred vents high on both side walls and a raised ridge vent on the roof;
+//   airK shows the airflow as soft white wisps coming in through the side louvres and rising out of the ridge; shutK slides a plywood
+//   board down over the top of the mesh front and closes the louvres; smellK fills it with a stale yellow-green haze and wavy stink lines.
+//   A galvanised drinker hangs on the front mesh (p.drinker local [x,y,z]); fillK raises its water (poured by pg_jug). openK swings the door.
+//   litter on the slab in front (slabDirt [x0,x1,z0,z1]) is swept off by cleanK. LINK[link] = { drinker: world water point, floorY }.
+function pgStinkTex() { return SPR.stink ||= canvasT(64, 256, (c, w, h) => { c.clearRect(0, 0, w, h); c.strokeStyle = 'rgba(255,255,255,.95)'; c.lineWidth = 7; c.lineCap = 'round'; c.beginPath();
+  for (let y = 10; y <= h - 10; y += 4) c.lineTo(w / 2 + Math.sin(y / h * Math.PI * 3) * w * .28, h - y); c.stroke(); }); }
+function pgPuffTex() { return SPR.puffT ||= canvasT(128, 128, (c, w, h) => { const r = rng(733); c.clearRect(0, 0, w, h); for (let i = 0; i < 9; i++) { const x = w * (.3 + .4 * r()), y = h * (.3 + .4 * r()), R = w * (.18 + .14 * r()), g2 = c.createRadialGradient(x, y, 0, x, y, R);
+  g2.addColorStop(0, 'rgba(255,255,255,.55)'); g2.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = g2; c.fillRect(0, 0, w, h); } }); }
+function pgWispTex() { return SPR.wispT ||= canvasT(256, 64, (c, w, h) => { c.clearRect(0, 0, w, h); const g2 = c.createLinearGradient(0, 0, w, 0); g2.addColorStop(0, 'rgba(255,255,255,0)'); g2.addColorStop(.6, 'rgba(255,255,255,.9)'); g2.addColorStop(1, 'rgba(255,255,255,0)');
+  c.strokeStyle = g2; c.lineCap = 'round'; for (const [y, lw] of [[h * .5, 7], [h * .3, 3], [h * .72, 3]]) { c.lineWidth = lw; c.beginPath(); for (let x = 0; x <= w; x += 8) c.lineTo(x, y + Math.sin(x * .05) * 4); c.stroke(); } }); }
+function pgSquab(seed) { const g = new THREE.Group(), r = rng(seed), down = new THREE.MeshStandardMaterial({ color: col('#e4c868'), roughness: 1 }), skin = std('#c9a08e', { r: .8 });
+  const fuzz = new THREE.MeshStandardMaterial({ color: col('#f0d77a'), roughness: 1, transparent: true, opacity: .45, depthWrite: false });
+  const body = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 12), skin); body.scale.set(.026, .022, .034); body.position.y = .022; g.add(body);
+  const bf = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 12), down); bf.scale.set(.029, .024, .036); bf.position.y = .024; g.add(bf);
+  const bz = new THREE.Mesh(new THREE.SphereGeometry(1, 14, 10), fuzz); bz.scale.set(.034, .028, .041); bz.position.y = .024; g.add(bz);
+  const head = new THREE.Group(); head.position.set(0, .042, .03); g.add(head);
+  const hd = new THREE.Mesh(new THREE.SphereGeometry(1, 14, 10), down); hd.scale.set(.015, .015, .016); head.add(hd);
+  const hz = new THREE.Mesh(new THREE.SphereGeometry(1, 12, 8), fuzz); hz.scale.set(.019, .019, .02); head.add(hz);
+  const bk = new THREE.Mesh(new THREE.ConeGeometry(.0055, .018, 10), std('#4a4040', { r: .5 })); bk.rotation.x = Math.PI / 2; bk.position.set(0, -.003, .019); head.add(bk);       // squabs have big dark beaks
+  [-1, 1].forEach(s => { const e = new THREE.Mesh(new THREE.SphereGeometry(.0028, 8, 6), std('#1a1414', { r: .3 })); e.position.set(s * .011, .004, .009); head.add(e); });
+  g.userData.head = head; return shadowed(g); }
+function pgCoop(p = {}) { const g = new THREE.Group(), link = p.link || 'coop', one = [[0, 1]], { L, D, H, HB, PH, PW, FLOOR, ZF, XP } = PGC;
+  const cage = pigeonCage({ full: false, link: link + '_cage', frameK: one, braceK: one, roofK: one, meshK: one, tautK: one, latchK: one, boards: [-100, 0, .01], doorAt: -1, openK: p.openK || [[0, 0]] }); g.add(cage);
+  const r = rng(p.seed || 741), TN = ['#c9a274', '#d2ad7d', '#bf9668'];
+  // ---- vents: a louvre hood high on each side wall (4 slats at 40 degrees in a frame) and a raised ridge cap on the roof
+  const louvres = [], covers = [];
+  [-1, 1].forEach(sx => { const v = new THREE.Group(); v.position.set(sx * (L / 2 + .02), PH + .66, -.02); g.add(v);
+    v.add(woodBox([.02, .17, .02], 1, TN[0], [0, 0, -.16]), woodBox([.02, .17, .02], 1, TN[1], [0, 0, .16]), woodBox([.02, .02, .34], 2, TN[2], [0, .085, 0]), woodBox([.02, .02, .34], 2, TN[0], [0, -.085, 0]));
+    const dark = box(.004, .15, .3, std('#2a2219', { r: 1 })); dark.position.x = -sx * .008; v.add(dark);
+    for (let k = 0; k < 4; k++) { const s = woodBox([.045, .009, .3], 2, TN[k % 3], [sx * .012, -.055 + k * .036, 0]); s.rotation.z = sx * .7; v.add(s); }
+    louvres.push(v); const cv = woodBox([.012, .19, .36], 1, '#b08a5e', [sx * (L / 2 + .045), PH + .66, -.02]); g.add(cv); covers.push(cv); });
+  const ridge = new THREE.Group(); ridge.position.set(0, PGC.roofUnder(0) + .02, 0); ridge.rotation.x = -Math.atan2(H - HB, 2 * ZF); g.add(ridge);
+  [-.24, 0, .24].forEach(x => ridge.add(woodBox([.03, .035, .1], 0, TN[1], [x, .03, 0])));
+  ridge.add(woodBox([.6, .016, .16], 0, TN[0], [0, .055, 0]));
+  const ridgeGap = box(.56, .03, .004, std('#2a2219', { r: 1 })); ridgeGap.position.set(0, .03, .05); ridge.add(ridgeGap);
+  const ridgeCover = woodBox([.62, .05, .02], 0, '#b08a5e', [0, .035, .07]); ridge.add(ridgeCover); covers.push(ridgeCover);
+  // ---- plywood shutter over the upper mesh front (slides down from above the roof line)
+  const ply = new THREE.MeshStandardMaterial({ map: woodMats('#c7a982').side.map, color: col('#d9bf98'), roughness: .8 });
+  const shutH = H - .34, shut = box(L - .02, shutH, .012, ply); g.add(shut); const shutY = PH + H - shutH / 2 - .01;
+  // ---- inside: nest bowl, eggs, squabs, perch, water dish, feed trough, droppings
+  const NB = p.nest || [-.32, -.06], terra = new THREE.MeshStandardMaterial({ color: col('#b0603c'), roughness: .85 });
+  const bowlPts = []; for (let i = 0; i <= 12; i++) { const u = i / 12; bowlPts.push(new THREE.Vector2(.075 + .03 * Math.sin(u * Math.PI / 2), u * .055)); }
+  for (let i = 12; i >= 0; i--) { const u = i / 12; bowlPts.push(new THREE.Vector2(.068 + .03 * Math.sin(u * Math.PI / 2), .006 + u * .049)); }
+  const bowl = new THREE.Mesh(new THREE.LatheGeometry(bowlPts, 36), terra); bowl.material.side = THREE.DoubleSide; bowl.position.set(NB[0], FLOOR, NB[1]); g.add(bowl);
+  const bowlBase = cyl(.072, .072, .008, terra, 28); bowlBase.position.set(NB[0], FLOOR + .004, NB[1]); g.add(bowlBase);
+  const strawM = new THREE.MeshStandardMaterial({ map: strawTex(false), color: col('#e1c48a'), roughness: 1 });
+  const lining = new THREE.Mesh(new THREE.TorusGeometry(.06, .022, 10, 30), strawM); lining.rotation.x = Math.PI / 2; lining.scale.z = .7; lining.position.set(NB[0], FLOOR + .03, NB[1]); g.add(lining);
+  const pad = cyl(.068, .06, .02, strawM, 24); pad.position.set(NB[0], FLOOR + .015, NB[1]); g.add(pad);
+  for (let i = 0; i < 26; i++) { const s = cyl(.0012, .0012, .05 + r() * .04, strawM, 4), a = r() * 6.28, d = .05 + r() * .05; s.position.set(NB[0] + Math.cos(a) * d, FLOOR + .045 + r() * .012, NB[1] + Math.sin(a) * d); s.rotation.set(Math.PI / 2 + (r() - .5) * .5, 0, a + (r() - .5)); g.add(s); }
+  const eggM = eggMat('#f6f3ec'), eggs = [[-.018, .004, .3], [.02, -.01, -.5]].map(([x, z, a]) => { const e = new THREE.Mesh(eggGeo(), eggM); e.scale.setScalar(.72); e.rotation.set(Math.PI / 2, 0, a); e.position.set(NB[0] + x, FLOOR + .036, NB[1] + z); e.castShadow = true; g.add(e); return e; });
+  const chicks = [[-.022, .008, .5, 1], [.026, -.01, -.7, 2]].map(([x, z, a, s]) => { const c = pgSquab(750 + s); c.position.set(NB[0] + x, FLOOR + .028, NB[1] + z); c.rotation.y = a; g.add(c); return c; });
+  const PR = p.perch || { x0: .14, x1: L / 2 - PW, y: .64, z: -.17 };
+  const dowel = cyl(.012, .012, PR.x1 - PR.x0, std('#b98e5e', { r: .6 }), 14); dowel.rotation.z = Math.PI / 2; dowel.position.set((PR.x0 + PR.x1) / 2, PR.y, PR.z); g.add(dowel);
+  g.add(woodBox([.04, PR.y - FLOOR, .04], 1, TN[2], [PR.x0, (PR.y + FLOOR) / 2, PR.z]));
+  const glaze = new THREE.MeshPhysicalMaterial({ color: col('#3d6f7a'), roughness: .25, clearcoat: .6 }), WD = p.dish || [.02, .12];
+  const dish = new THREE.Mesh(new THREE.CylinderGeometry(.065, .05, .04, 28, 1, true), glaze); dish.material.side = THREE.DoubleSide; dish.position.set(WD[0], FLOOR + .02, WD[1]); g.add(dish);
+  const dishB = cyl(.05, .05, .006, glaze, 24); dishB.position.set(WD[0], FLOOR + .003, WD[1]); g.add(dishB);
+  const waterM = new THREE.MeshPhysicalMaterial({ color: col('#9fc3c8'), roughness: .05, transmission: .2, transparent: true, opacity: .8, clearcoat: 1 });
+  const dWater = new THREE.Mesh(new THREE.CircleGeometry(.061, 28), waterM); dWater.rotation.x = -Math.PI / 2; dWater.position.set(WD[0], FLOOR + .032, WD[1]); g.add(dWater);
+  const TR = p.trough || [.32, .13];
+  g.add(woodBox([.22, .012, .085], 0, TN[0], [TR[0], FLOOR + .006, TR[1]]), woodBox([.22, .04, .01], 0, TN[1], [TR[0], FLOOR + .02, TR[1] + .0375]), woodBox([.22, .04, .01], 0, TN[2], [TR[0], FLOOR + .02, TR[1] - .0375]),
+    woodBox([.01, .04, .075], 2, TN[0], [TR[0] - .105, FLOOR + .02, TR[1]]), woodBox([.01, .04, .075], 2, TN[1], [TR[0] + .105, FLOOR + .02, TR[1]]));
+  const tg = feedGrains(110, .03, .016, 761, true); tg.scale.set(3.1, 1, 1); tg.position.set(TR[0], FLOOR + .012, TR[1]); g.add(tg);
+  const dropM = new THREE.MeshStandardMaterial({ color: col('#e9e6dc'), roughness: .9, transparent: true }), dropD = new THREE.MeshStandardMaterial({ color: col('#5e5545'), roughness: .9, transparent: true });
+  const drops = []; for (let i = 0; i < 34; i++) { const m = new THREE.Mesh(new THREE.SphereGeometry(1, 6, 4), i % 3 ? dropM : dropD); const sz = .004 + r() * .005; m.scale.set(sz, sz * .4, sz * 1.2);
+    m.position.set(-.5 + r() * 1.0, FLOOR + .002, -.24 + r() * .48); m.rotation.y = r() * 6; g.add(m); drops.push(m); }
+  // ---- outside drinker hooked on the front mesh: a galvanised trough 16 x 7 x 6 cm with two wire hooks over the top rail
+  const DK = p.drinker || [.36, .44, .345], zn = new THREE.MeshStandardMaterial({ map: zincTex(743), color: col('#ffffff'), metalness: .55, roughness: .4, side: THREE.DoubleSide });
+  const drk = new THREE.Group(); drk.position.set(...DK); g.add(drk);
+  [[.16, .06, 0, .035, 0], [.16, .06, 0, -.035, 0], [.07, .06, .08, 0, Math.PI / 2], [.07, .06, -.08, 0, Math.PI / 2]].forEach(([w, h, x, z, ry]) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), zn); m.position.set(x, h / 2, z); m.rotation.y = ry; drk.add(m); });
+  const dkb = box(.16, .003, .07, zn); dkb.position.y = .0015; drk.add(dkb);
+  [-.06, .06].forEach(x => { const hk = cyl(.0015, .0015, .07, std('#8d9397', { m: .8, r: .4 }), 6); hk.position.set(x, .085, -.03); hk.rotation.x = -.3; drk.add(hk); });
+  const dkW = new THREE.Mesh(new THREE.PlaneGeometry(.154, .064), waterM.clone()); dkW.rotation.x = -Math.PI / 2; drk.add(dkW);
+  // ---- airflow wisps, smell haze and stink lines (sprites: wordless pictures, not solid objects)
+  const spr = (tex, c, op) => { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, color: col(c), transparent: true, depthWrite: false, opacity: op })); g.add(s); return s; };
+  const NW = 10, wisps = Array.from({ length: NW }, (_, i) => ({ s: spr(pgWispTex(), '#ffffff', 0), side: i % 2 ? 1 : -1, ph: i / NW }));
+  const NS = 9, haze = Array.from({ length: NS }, (_, i) => ({ s: spr(pgPuffTex(), '#b7b45e', 0), x: -.45 + r() * .9, y: FLOOR + .1 + r() * .5, z: -.2 + r() * .35, ph: r() * 6 }));
+  const stinks = Array.from({ length: 5 }, (_, i) => ({ s: spr(pgStinkTex(), '#9aa04a', 0), x: -.45 + i * .22, ph: i * .37 }));
+  const LS = V3(0, 0, 0);
+  g.userData.tick = t => { const air = clamp(kv(p.airK, t, 0)), sk = sEase(kv(p.shutK, t, 0)), sm = clamp(kv(p.smellK, t, 0)), ne = Math.round(kv(p.eggsK, t, 0)), nc = Math.round(kv(p.chicksK, t, 0)), dirt = clamp(kv(p.dirtK, t, 1)), fill = clamp(kv(p.fillK, t, 1));
+    shut.visible = sk > .001; shut.position.set(0, shutY + (1 - sk) * (shutH + .1), D / 2 + .03); covers.forEach(c => { c.visible = sk > .5; });
+    eggs.forEach((e, i) => { e.visible = i < ne && nc === 0; });
+    chicks.forEach((c, i) => { c.visible = i < nc; c.userData.head.rotation.set(-.4 + .25 * Math.sin(t * 2.2 + i * 2), .4 * Math.sin(t * 1.3 + i), 0); c.userData.head.position.y = .042 + .008 * Math.max(0, Math.sin(t * 2.2 + i * 2)); c.scale.setScalar(1 + .03 * Math.sin(t * 3 + i)); });
+    drops.forEach((m, i) => { m.visible = dirt > i / drops.length; });
+    dWater.position.y = FLOOR + .032 + .0015 * Math.sin(t * 2); dkW.position.y = .008 + .044 * fill; dkW.visible = fill > .02;
+    wisps.forEach((w, i) => { const f = fr01(t * .45 + w.ph), sx = w.side; let P;
+      if (f < .45) { const u = f / .45; P = [sx * lerp(L / 2 + .45, L / 2 - .05, u), PH + .66 + .02 * Math.sin(u * 6 + i), -.02 + .1 * Math.sin(i)]; }
+      else { const u = (f - .45) / .55; P = [sx * lerp(L / 2 - .05, .05, Math.min(1, u * 1.6)), lerp(PH + .66, PH + H + .45, u * u), -.02 + .05 * Math.sin(i)]; }
+      w.s.position.set(...P); w.s.scale.set(.2, .05, 1); w.s.material.rotation = f < .45 ? (sx > 0 ? Math.PI : 0) : Math.PI / 2 * (u => u)(1) * (sx > 0 ? 1 : 1);
+      w.s.material.opacity = air * .75 * Math.sin(Math.PI * f) * (1 - sk); });
+    haze.forEach((h, i) => { h.s.position.set(h.x + .04 * Math.sin(t * .5 + h.ph), h.y + .03 * Math.sin(t * .7 + h.ph), h.z); const s = .35 + .08 * Math.sin(t * .6 + h.ph); h.s.scale.set(s, s * .8, 1); h.s.material.opacity = sm * .42; });
+    stinks.forEach((s, i) => { const f = fr01(t * .35 + s.ph); s.s.position.set(s.x, PH + H + .12 + f * .35, .05); s.s.scale.set(.07, .26, 1); s.s.material.opacity = sm * .85 * Math.sin(Math.PI * f); });
+    g.updateMatrixWorld(true); LINK[link] = { drinker: drk.localToWorld(V3(0, .008 + .044 * fill, 0)), floorY: g.localToWorld(LS.set(0, FLOOR, 0)).y }; };
+  return shadowed(g); }
+
+// pg_litter: droppings, a few grey feathers and spilt grain on the slab inside [x0,x1,z0,z1] (world, p.area); cleanK 0..1 sweeps them off
+//   (they slide away along +x/+z and fade). Flat floor dirt: the plan skips it in the clearance check.
+function pgLitter(p = {}) { const g = new THREE.Group(), r = rng(p.seed || 771), SD = p.area || [-.5, .5, .5, 1.2], litter = [];
+  const dropM = new THREE.MeshStandardMaterial({ color: col('#e9e6dc'), roughness: .9, transparent: true }), dropD = new THREE.MeshStandardMaterial({ color: col('#5e5545'), roughness: .9, transparent: true });
+  // ---- slab litter in front (droppings, a few feathers, spilt grain) swept off by cleanK
+  for (let i = 0; i < 40; i++) { const k = i % 4, m = k === 0 ? new THREE.Mesh(new THREE.PlaneGeometry(.014, .034), new THREE.MeshStandardMaterial({ map: pgFeatherTex('#c8ccd2', { sc: 6 }), roughness: .9, side: THREE.DoubleSide, transparent: true }))
+      : new THREE.Mesh(new THREE.SphereGeometry(1, 6, 4), k === 1 ? dropD : k === 2 ? dropM : new THREE.MeshStandardMaterial({ color: col(FEED_C[i % 5]), roughness: .6, transparent: true }));
+    if (k) { const sz = .004 + r() * .004; m.scale.set(sz, sz * .5, sz); } else { m.rotation.x = -Math.PI / 2; m.rotation.z = r() * 6; }
+    const x = lerp(SD[0], SD[1], r()), z = lerp(SD[2], SD[3], r()); m.position.set(x, .004, z); m.userData.home = [x, z]; g.add(m); litter.push(m); }
+  g.userData.tick = t => { const cl = clamp(kv(p.cleanK, t, 0));
+    litter.forEach((m, i) => { const [x, z] = m.userData.home, u = clamp(cl * 1.6 - (i % 10) * .06); m.position.set(x + u * .9, .004, z + u * .5); m.material.opacity = 1 - u; m.visible = u < .99; }); };
+  return g; }
+// pg_broom: a long-handled household broom (1.25 m pine handle, 30 cm stiff bristle head) held in both palms of a UAL person (LINK[carryBy].L/R).
+//   The handle runs through the midpoint of the palms down to the bristle head on the floor, fwd metres ahead of the feet, which sweeps
+//   side to side (stroke m, period s) while sweepK > 0. Hidden before show[0] and after show[1].
+function pgBroom(p = {}) { const g = new THREE.Group(), wood = std('#c8a070', { r: .6 }), handle = cyl(.013, .013, 1.25, wood, 10); g.add(handle);
+  const head = new THREE.Group(); g.add(head); const blk = box(.3, .04, .05, std('#3e6f5a', { r: .5 })); blk.position.y = .07; head.add(blk);
+  const bristle = new THREE.Mesh(new THREE.BoxGeometry(.29, .06, .045), new THREE.MeshStandardMaterial({ color: col('#c79c4a'), roughness: 1 })); bristle.position.y = .03; head.add(bristle);
+  const A = V3(0, 0, 0), B = V3(0, 0, 0), Y = V3(0, 1, 0), dir = V3(0, 0, 0);
+  g.userData.tick = t => { const Lk = LINK[p.carryBy || 'farmer'], on = Lk?.L && Lk?.R && t >= (p.show?.[0] ?? -1e9) && t < (p.show?.[1] ?? 1e9); g.visible = !!on; if (!on) return;
+    const yaw = Lk.yaw || 0, fx = Math.sin(yaw), fz = Math.cos(yaw), sw = clamp(kv(p.sweepK, t, 1)), ph = Math.sin(t * Math.PI * 2 / (p.period || 1.1)) * (p.stroke || .16) * sw;
+    const base = Lk.pos, fwd = p.fwd || .62; A.set(base.x + fx * fwd + fz * ph, .0, base.z + fz * fwd - fx * ph);       // bristles on the floor
+    B.copy(Lk.L).add(Lk.R).multiplyScalar(.5); dir.subVectors(B, A); const len = dir.length(); dir.normalize();
+    g.position.set(0, 0, 0); handle.position.copy(A).addScaledVector(dir, .06 + .625); handle.quaternion.setFromUnitVectors(Y, dir);
+    head.position.copy(A); head.rotation.set(0, yaw, 0); head.rotateX(-.25 + .1 * Math.sin(t * Math.PI * 2 / (p.period || 1.1))); g.userData.gap = len; };
+  return shadowed(g); }
+// pg_jug: a 2-litre plastic water jug (pale blue, handle) carried in a UAL person's palm (LINK[carryBy][hand]); pourK tips it towards
+//   LINK[target].drinker and a clear water stream arcs from the spout into the drinker (fillK on the coop rises with it).
+function pgJug(p = {}) { const g = new THREE.Group(), jug = new THREE.Group(); g.add(jug);
+  const pm = new THREE.MeshPhysicalMaterial({ color: col('#a8c8dc'), roughness: .35, transmission: .25, transparent: true, opacity: .92, clearcoat: .4 });
+  const pts = []; for (let i = 0; i <= 14; i++) { const u = i / 14; pts.push(new THREE.Vector2(u < .75 ? .055 : lerp(.055, .018, (u - .75) / .25), u * .22)); }
+  const body = new THREE.Mesh(new THREE.LatheGeometry(pts, 24), pm); jug.add(body); const cap = cyl(.019, .019, .02, std('#2f6fb0', { r: .4 }), 14); cap.position.y = .23; jug.add(cap);
+  const hdl = new THREE.Mesh(new THREE.TorusGeometry(.045, .008, 8, 16, Math.PI), pm); hdl.position.set(0, .13, -.055); hdl.rotation.y = Math.PI / 2; jug.add(hdl);
+  const wIn = new THREE.Mesh(new THREE.CylinderGeometry(.052, .052, .13, 20), new THREE.MeshStandardMaterial({ color: col('#cfe3ea'), transparent: true, opacity: .5, depthWrite: false })); wIn.position.y = .07; jug.add(wIn);
+  const spout = new THREE.Object3D(); spout.position.set(0, .24, 0); jug.add(spout);
+  const NSg = 14, stream = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([V3(0, 0, 0), V3(0, -.1, 0), V3(0, -.2, 0)]), NSg, .006, 6), new THREE.MeshPhysicalMaterial({ color: col('#dceef3'), roughness: .05, transmission: .4, transparent: true, opacity: .75 }));
+  stream.frustumCulled = false; g.add(stream); const sp = V3(0, 0, 0);
+  g.userData.tick = t => { const Lk = LINK[p.carryBy || 'farmer'], palm = Lk?.[p.hand || 'R'], on = palm && t >= (p.show?.[0] ?? -1e9) && t < (p.show?.[1] ?? 1e9); g.visible = !!on; if (!on) return;
+    const TL = LINK[p.target || 'coop'], tgt = TL?.drinker || (TL?.water != null ? V3((TL.x0 + TL.x1) / 2 + (p.aim?.[0] || 0), TL.water, (TL.z0 + TL.z1) / 2 + (p.aim?.[1] || 0)) : null), pk = sEase(kv(p.pourK, t, 0));   // a hung drinker or a pigeon_basin
+    jug.position.copy(palm).add(V3(0, -.13, 0)); const yaw = tgt ? Math.atan2(tgt.x - palm.x, tgt.z - palm.z) : (Lk.yaw || 0);
+    jug.rotation.set(0, 0, 0); jug.rotateY(yaw); jug.rotateX(pk * 1.75); wIn.scale.y = 1 - .45 * pk;
+    stream.visible = pk > .55 && !!tgt; if (!stream.visible) return; jug.updateMatrixWorld(true); spout.getWorldPosition(sp);
+    const mid = sp.clone().lerp(tgt, .5); mid.y = Math.max(sp.y, tgt.y) + .02; const wob = .004 * Math.sin(t * 30);
+    stream.geometry.dispose(); stream.geometry = new THREE.TubeGeometry(new THREE.QuadraticBezierCurve3(sp.clone().add(V3(wob, 0, 0)), mid, tgt.clone().add(V3(0, .005, 0))), NSg, .0055 * (pk > .7 ? 1 : (pk - .55) / .15), 6); };
+  return shadowed(g); }
+Object.assign(ASSETS, { card_box: cardBox, feed_heap: feedHeap, pg_coop: pgCoop, pg_litter: pgLitter, pg_broom: pgBroom, pg_jug: pgJug });
 
 // ================= apiary pack (plans/bee_hive_story.mjs, 2026-11-27) =================
 // Real sizes in metres. Langstroth hive: 2 deep boxes 41.3 (front, x) x 50.8 (deep, z) x 24.4 cm, white paint over pine, bottom board with a
