@@ -24,3 +24,4 @@ fetch_cat wind 8
 fetch_cat forest 8
 fetch_cat bird 8
 fetch_cat rain 8
+fetch_cat bubbles 8   # aquarium beds (goldfish video): idx 2 = 1321 "Deep water bubbles"

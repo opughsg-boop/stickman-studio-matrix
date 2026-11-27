@@ -6543,3 +6543,278 @@ Object.assign(RIG_POSES, { // water mill (Farmer 1.75 m): lever handle overhead 
   leverMid: { adL: 1.9, adR: 1.9, fL: 1.29, fR: 1.29, eL: .38, eR: .38, sp: -.2, hd: -.15 },     // handle half way (1.40 m): err .04 m
   pourHigh: { adL: 1.5, adR: 1.5, fL: 1.92, fR: 1.92, eL: .36, eR: .36, sp: .5, hd: .25, hold: 1 }, // basket over the hopper: palms mid (2.2, 1.61, 0) from (2.62, 0) facing -x, .26 m from the rim
   stickDip: { adR: 1.79, fR: 2.52, eR: 0, fL: .1, eL: .25, sp: .42, hd: .35 } });                  // R palm (.46, 1.72, -1.37): the stick tip goes into the chute water
+
+// ================= Goldfish pack (2026-11-27, plans/goldfish_care.mjs) =================
+// Common goldfish (Carassius auratus): deep orange-gold body with metallic scales, translucent orange fins, a forked caudal about a third of
+// the body, gold-ringed eyes; model length 1 (snout +.5, tail tip about -.6), scale .1-.15 for a 10-15 cm fish. Shares the tilapia lathe
+// body and the travelling body wave (tail beat, lagging caudal, pectoral flutter); adds gill covers that open over red gills (breathing
+// rate shows stress) and an x-ray mode (body goes clear, a straight gut with no stomach shows).
+function gfFishTex() { return SPR.gfFish ||= (() => { const r = rng(311); return canvasT(512, 256, (c, W, H) => {
+  const ramp = [[0, [176, 60, 10]], [.14, [222, 98, 18]], [.28, [244, 140, 36]], [.4, [250, 186, 96]], [.5, [252, 222, 176]]];
+  const rc = d => { for (let i = 0; i < ramp.length - 1; i++) if (d <= ramp[i + 1][0]) { const k = (d - ramp[i][0]) / (ramp[i + 1][0] - ramp[i][0]); return ramp[i][1].map((v, j) => Math.round(lerp(v, ramp[i + 1][1][j], k))); } return ramp[ramp.length - 1][1]; };
+  for (let x = 0; x < W; x++) { const [R, G, B] = rc(Math.abs(x / W - .5)); c.fillStyle = `rgb(${R},${G},${B})`; c.fillRect(x, 0, 1, H); }
+  for (let y = 0; y < H; y += 6) for (let x = (y / 6 % 2) * 3.5; x < W; x += 7) { c.strokeStyle = 'rgba(130,42,0,.18)'; c.beginPath(); c.arc(x, y, 4, .2, Math.PI - .2); c.stroke();
+    c.strokeStyle = 'rgba(255,240,196,.16)'; c.beginPath(); c.arc(x, y - 1, 3.4, .5, Math.PI - .5); c.stroke(); }            // scale rows
+  for (let i = 0; i < 420; i++) { c.fillStyle = `rgba(255,236,170,${.12 + r() * .25})`; c.fillRect(r() * W, r() * H, 2 + r() * 2, 1); }   // metallic glints
+  const X = u => u * W, Y = v => (1 - v) * H;
+  c.fillStyle = 'rgba(150,46,8,.4)'; c.fillRect(X(.08), Y(.776), X(.34), 2); c.fillRect(X(.58), Y(.776), X(.34), 2);         // gill-cover edge
+  c.fillStyle = 'rgba(160,50,10,.22)'; c.fillRect(X(.3), Y(1), X(.4), H * .14); }); })(); }                                   // darker head top
+function gfFinMat() { return SPR.gfFinM ||= new THREE.MeshStandardMaterial({ map: canvasT(128, 64, (c, W, H) => { const g2 = c.createLinearGradient(0, H, 0, 0);
+  g2.addColorStop(0, 'rgba(240,118,28,.88)'); g2.addColorStop(1, 'rgba(255,190,118,.42)'); c.fillStyle = g2; c.fillRect(0, 0, W, H);
+  for (let x = 3; x < W; x += 6) { c.fillStyle = 'rgba(196,74,8,.45)'; c.fillRect(x, 0, 1.2, H); } }), transparent: true, side: THREE.DoubleSide, roughness: .4, depthWrite: false }); }
+function gfTailGeo() { return SPR.gfTailG ||= ttFinStrip(16, u => { const k = Math.abs(2 * u - 1); return [.012, lerp(-.04, .04, u), -.13 - .15 * Math.pow(k, 1.3), lerp(-.17, .17, u)]; }); }
+function gfFish() { const g = new THREE.Group(); g.rotation.order = 'YZX';
+  const geo = ttFishGeo().clone(), B0 = geo.attributes.position.array.slice();
+  const bm = new THREE.MeshPhysicalMaterial({ map: gfFishTex(), roughness: .3, metalness: .12, clearcoat: .8, clearcoatRoughness: .15, sheen: .5, sheenColor: col('#ffe2a0'), sheenRoughness: .35 });
+  const body = new THREE.Mesh(geo, bm); g.add(body); const fm = gfFinMat();
+  const dg = ttFinGeo('d').clone(), ag = ttFinGeo('a').clone(), D0 = dg.attributes.position.array.slice(), A0 = ag.attributes.position.array.slice();
+  g.add(new THREE.Mesh(dg, fm), new THREE.Mesh(ag, fm));
+  const tail = new THREE.Group(); tail.position.x = -.32; g.add(tail); tail.add(new THREE.Mesh(gfTailGeo(), fm));
+  const pecs = [-1, 1].map(s => { const pg = new THREE.Group(); pg.position.set(.235, -.045, s * (.42 * ttFR(.235) - .004)); g.add(pg); pg.add(new THREE.Mesh(ttFinGeo('p'), fm)); return pg; });
+  const eyeM = SPR.ttEyeM ||= new THREE.MeshPhysicalMaterial({ map: ttEyeTex(), roughness: .2, clearcoat: 1, clearcoatRoughness: .05 });
+  [-1, 1].forEach(s => { const eg = new THREE.SphereGeometry(.024, 16, 12); eg.rotateX(s * Math.PI / 2); const e = new THREE.Mesh(eg, eyeM); e.position.set(.385, .036, s * .043); g.add(e); });
+  const mouth = sph(1, SPR.ttMouthM ||= std('#2a1e1a', { r: .7 })); mouth.scale.set(.012, .006, .02); mouth.position.set(.488, -.006, 0); g.add(mouth);
+  const lip = new THREE.Mesh(new THREE.TorusGeometry(.014, .0045, 6, 14), SPR.gfLipM ||= std('#e89a5a', { r: .45 })); lip.rotation.y = Math.PI / 2; lip.scale.set(1, .6, 1.25); lip.position.set(.49, -.006, 0); g.add(lip);
+  // gill covers (operculum) hinged at the front edge, red gills under them
+  const redM = SPR.gfGillR ||= new THREE.MeshStandardMaterial({ color: col('#b3202c'), roughness: .5, side: THREE.DoubleSide }), opM = SPR.gfOpM ||= new THREE.MeshPhysicalMaterial({ color: col('#ee8a2c'), roughness: .35, clearcoat: .6, side: THREE.DoubleSide });
+  const zf = .42 * ttFR(.3), gills = [-1, 1].map(s => { const red = new THREE.Mesh(new THREE.CircleGeometry(.045, 14, Math.PI / 2, Math.PI), redM); red.position.set(.335, -.005, s * (zf - .002)); g.add(red);
+    const hg = new THREE.Group(); hg.position.set(.335, -.005, s * (zf + .002)); g.add(hg); const op = new THREE.Mesh(new THREE.CircleGeometry(.047, 14, Math.PI / 2, Math.PI), opM); hg.add(op); return { hg, s }; });
+  const gut = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([V3(.42, -.01, 0), V3(.28, -.035, 0), V3(.12, -.03, 0), V3(-.04, -.05, 0), V3(-.18, -.04, 0), V3(-.27, -.055, 0)]), 30, .015, 8), std('#8c4a26', { r: .6 }));
+  gut.visible = false; g.add(gut);
+  const bend = (x, ph, a) => a * Math.pow(clamp((.42 - x) / .92), 1.6) * Math.sin(ph - (.5 - x) * 5.5);
+  const upd = (ph, a, gape = .15, tt = 0, gill = .2) => { const P = geo.attributes.position.array; for (let i = 0; i < P.length; i += 3) P[i + 2] = B0[i + 2] + bend(B0[i], ph, a); geo.attributes.position.needsUpdate = true;
+    for (const [G, Z0] of [[dg, D0], [ag, A0]]) { const Q = G.attributes.position.array; for (let i = 0; i < Q.length; i += 3) Q[i + 2] = Z0[i + 2] + bend(Z0[i], ph, a); G.attributes.position.needsUpdate = true; }
+    const zt = bend(-.32, ph, a), sl = (bend(-.30, ph, a) - zt) / .02; tail.position.z = zt; tail.rotation.y = -Math.atan(sl) + a * 2.2 * Math.sin(ph - 5.1);
+    pecs.forEach((pg, k) => { const s = k ? 1 : -1; pg.rotation.y = s * (.55 + .28 * Math.sin(tt * 7.5 + k)); });
+    gills.forEach(({ hg, s }) => { hg.rotation.y = s * gill; });
+    mouth.scale.y = .004 + .016 * gape; lip.scale.y = .6 + .9 * gape; };
+  let xr = -1; const setX = k => { const on = k > .02; if ((xr > .02) !== on) { bm.transparent = on; bm.depthWrite = !on; bm.needsUpdate = true; } xr = k; bm.opacity = 1 - .62 * k; gut.visible = k > .05; };
+  upd(0, 0); g.traverse(m => { if (m.isMesh) { m.castShadow = false; m.receiveShadow = false; } }); return { g, upd, bm, setX }; }
+// mode timeline helper: keys [[t, mode], ...] -> { a, b, u } (blend from mode a to mode b over bl seconds after the key)
+const gfMode = (keys, t, bl = 1) => { if (!keys || !keys.length) return { a: 'swim', b: 'swim', u: 1, tb: 0 }; let i = -1; for (let k = 0; k < keys.length; k++) if (t >= keys[k][0]) i = k;
+  if (i < 0) return { a: keys[0][1], b: keys[0][1], u: 1, tb: keys[0][0] }; const b = keys[i][1], a = i > 0 ? keys[i - 1][1] : b; return { a, b, u: sEase((t - keys[i][0]) / bl), tb: keys[i][0] }; };
+function gfWaterMat(op = .2) { return new THREE.MeshPhysicalMaterial({ color: col('#8fc3c9'), roughness: .05, metalness: 0, transparent: true, opacity: op, depthWrite: false, side: THREE.DoubleSide }); }
+function gfGlassMat(op = .18) { return new THREE.MeshPhysicalMaterial({ color: col('#bfdcd8'), roughness: .03, metalness: 0, clearcoat: .6, clearcoatRoughness: .03, transparent: true, opacity: op, side: THREE.DoubleSide, depthWrite: false }); }
+function gfRings(g, n = 8) { const m = new THREE.MeshBasicMaterial({ color: col('#ffffff'), transparent: true, opacity: .5, depthWrite: false }), R = Array.from({ length: n }, () => { const r = new THREE.Mesh(new THREE.RingGeometry(.9, 1, 28), m.clone()); r.rotation.x = -Math.PI / 2; r.visible = false; g.add(r); return r; });
+  let k = 0; return { reset: () => { for (; k < R.length; k++) R[k].visible = false; k = 0; }, put: (x, y, z, u, s = .03) => { if (k >= R.length) return; const r = R[k++]; r.visible = true; r.position.set(x, y + .001, z); r.scale.setScalar(.004 + s * u); r.material.opacity = .45 * (1 - u); } }; }
+function gfPuffs(g, n, color) { return Array.from({ length: n }, (_, i) => { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: softPuffTex(), color: col(color), transparent: true, opacity: 0, depthWrite: false })); s.userData.ph = i / n; g.add(s); return s; }); }
+// gf_bowl: a 25 cm round glass fishbowl (cut flat 10 cm below and above the centre: base and mouth 15 cm across) on a table top (y 0),
+//   gravel, water filled to waterK (0..1), one goldfish (size m). tap [dx, dz]: a chrome gooseneck standpipe whose spout is over the mouth,
+//   stream while tapK > 0. hazeK: chlorine haze; turbK: cloudy water; wasteK: waste flecks on the gravel; ammK: yellow ammonia haze at the
+//   bottom; o2K: fine air bubbles rising. bottle {by, hand, t0, t1, dropK}: a dechlorinator dropper bottle rides LINK[by][hand]; drops fall
+//   into the water while dropK > .5. Fish: fishIn (plunge time), modeK [[t, 'swim'|'surface'|'stress']], gillK (breathing rate 0..1).
+function gfBowl(p = {}) { const g = new THREE.Group(), R = p.r || .125, CUT = .1, CY = .1, rO = Math.sqrt(R * R - CUT * CUT), RI = R - .004;
+  const lvK = t => kv(p.waterK, t, 1), level = t => -CUT + .006 + (CUT + .068 - .006) * lvK(t);
+  const shell = new THREE.Mesh(new THREE.SphereGeometry(R, 56, 36, 0, Math.PI * 2, Math.acos(CUT / R), Math.PI - 2 * Math.acos(CUT / R)), gfGlassMat(.07)); shell.position.y = CY; shell.renderOrder = 3; g.add(shell);
+  const lipM = new THREE.MeshPhysicalMaterial({ color: col('#d4ebe4'), roughness: .05, clearcoat: 1, transparent: true, opacity: .6 });
+  const lip = new THREE.Mesh(new THREE.TorusGeometry(rO, .0045, 8, 56), lipM); lip.rotation.x = Math.PI / 2; lip.position.y = CY + CUT; g.add(lip);
+  const foot = new THREE.Mesh(new THREE.TorusGeometry(rO, .005, 8, 56), lipM); foot.rotation.x = Math.PI / 2; foot.position.y = .005; g.add(foot);
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(rO, rO, .008, 48), gfGlassMat(.35)); base.position.y = .004; g.add(base);
+  const r0 = rng(p.seed || 27), pc = ['#b9a48a', '#8d7c66', '#d8cbb6', '#a08a70', '#6f6458'];
+  for (let i = 0; i < 70; i++) { const a = r0() * 6.28, rr = Math.sqrt(r0()) * (rO - .012), s = sph(.006 + r0() * .005, std(pc[i % 5], { r: .7 })); s.scale.y = .6; s.position.set(Math.cos(a) * rr, .011 + r0() * .006, Math.sin(a) * rr); g.add(s); }
+  const cs = contactShadow(rO + .02, rO + .02, .35); cs.position.y = .002; g.add(cs);
+  // water volume (rebuilt when the level moves) and the rippled surface
+  const wM = gfWaterMat(.08), water = new THREE.Mesh(new THREE.BufferGeometry(), wM); water.position.y = CY; water.renderOrder = 2; g.add(water); let wl = null;
+  const sM = new THREE.MeshPhysicalMaterial({ color: col('#cfe8ee'), roughness: .04, metalness: .1, transparent: true, opacity: .22, depthWrite: false, normalMap: ttWaterNormal().clone(), side: THREE.DoubleSide });
+  sM.normalMap.repeat.set(1, 1); const surf = new THREE.Mesh(new THREE.CircleGeometry(1, 48), sM); surf.rotation.x = -Math.PI / 2; surf.renderOrder = 2; g.add(surf);
+  const clean = col('#8fc3c9'), murky = col('#9a9870'), amber = col('#d8c26a'), wc = new THREE.Color();
+  // tap
+  const steel = new THREE.MeshStandardMaterial({ color: col('#c9ced2'), metalness: .9, roughness: .18 }), SP = V3(0, CY + CUT + .17, 0);
+  let stream = null; if (p.tap) { const [dx, dz] = p.tap, tp = new THREE.Group(); g.add(tp);
+    const post = cyl(.013, .016, .36, steel, 14); post.position.set(dx, .18, dz); tp.add(post); const fl = cyl(.03, .03, .01, steel, 18); fl.position.set(dx, .005, dz); tp.add(fl);
+    const neck = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([V3(dx, .36, dz), V3(dx * .8, .43, dz * .8), V3(dx * .35, .45, dz * .35), V3(0, .42, 0), V3(SP.x, SP.y + .005, SP.z)]), 24, .011, 10), steel); tp.add(neck);
+    const tip = cyl(.012, .01, .02, steel, 12); tip.position.copy(SP); tp.add(tip); const hnd = box(.06, .01, .015, steel); hnd.position.set(dx, .37, dz + .02); tp.add(hnd); shadowed(tp);
+    stream = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 1, 10, 1, true), new THREE.MeshStandardMaterial({ map: ttStreamTex().clone(), color: col('#eef8fb'), transparent: true, opacity: .7, roughness: .05, depthWrite: false })); g.add(stream); }
+  // haze, ammonia, waste, fine bubbles
+  const haze = gfPuffs(g, 16, '#eaf5d6'), amm = gfPuffs(g, 12, '#d9c060');
+  const NW = 26, wst = new THREE.InstancedMesh(new THREE.CylinderGeometry(.0018, .0018, .012, 5), std('#4a3a22', { r: .9 }), NW); wst.frustumCulled = false; g.add(wst);
+  const WS = Array.from({ length: NW }, () => { const a = r0() * 6.28, rr = Math.sqrt(r0()) * (rO - .02); return { x: Math.cos(a) * rr, z: Math.sin(a) * rr, ry: r0() * 6.28 }; });
+  const NB = 14, bub = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 6, 4), new THREE.MeshStandardMaterial({ color: col('#ffffff'), roughness: .05, transparent: true, opacity: .55 }), NB); bub.frustumCulled = false; g.add(bub);
+  const BS = Array.from({ length: NB }, () => ({ a: r0() * 6.28, rr: .02 + r0() * .07, ph: r0(), s: .0012 + r0() * .0014 }));
+  const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), S1 = V3(1, 1, 1), Z0 = new THREE.Matrix4().makeScale(0, 0, 0), rings = gfRings(g);
+  // dechlorinator bottle
+  const bottle = new THREE.Group(); g.add(bottle); bottle.visible = false; { const b = cyl(.02, .02, .07, std('#f2f2ee', { r: .4 }), 16); b.position.y = .035; bottle.add(b);
+    const lab = cyl(.0205, .0205, .03, std('#2f7fc0', { r: .5 }), 16); lab.position.y = .035; bottle.add(lab); const nk = cyl(.008, .012, .015, std('#f2f2ee', { r: .4 }), 12); nk.position.y = .077; bottle.add(nk);
+    const tipD = new THREE.Mesh(new THREE.ConeGeometry(.006, .025, 10), std('#2f7fc0', { r: .4 })); tipD.position.y = .097; bottle.add(tipD); }
+  const drops = Array.from({ length: 4 }, () => { const d = sph(.0028, new THREE.MeshStandardMaterial({ color: col('#9fd6f0'), roughness: .05, transparent: true, opacity: .85 })); d.visible = false; g.add(d); return d; });
+  // fish
+  const F = gfFish(), sz = p.size || .1; F.g.scale.setScalar(sz); g.add(F.g); const modeKeys = p.modeK || [[0, 'swim']];
+  const posFor = (m, t, lv) => { const yb = -CUT + .03, yt = lv - .025, ym = (yb + yt) / 2, ay = Math.max(0, (yt - yb) / 2 - .01);
+    if (m === 'surface') return { P: V3(.012 * Math.sin(.6 * t), CY + lv - .024, .01 * Math.cos(.5 * t)), pitch: .5, yaw: .3 * Math.sin(.3 * t), lock: 1 };
+    if (m === 'stress') { const a = 1.9 * t + .8 * Math.sin(2.3 * t), r = .048 + .008 * Math.sin(5 * t); return { P: V3(Math.cos(a) * r, CY + ym + ay * Math.sin(3.1 * t), -Math.sin(a) * r), pitch: 0, lock: 0 }; }
+    const a = .95 * t; return { P: V3(Math.cos(a) * .045, CY + ym + ay * .6 * Math.sin(.7 * t), -Math.sin(a) * .045), pitch: 0, lock: 0 }; };
+  const fishAt = (t, lv) => { const m = gfMode(modeKeys, t), A = posFor(m.a, t, lv), B = posFor(m.b, t, lv); return { P: A.P.lerp(B.P, m.u), pitch: lerp(A.pitch, B.pitch, m.u), lock: lerp(A.lock, B.lock, m.u), yaw: B.yaw ?? A.yaw ?? 0, m }; };
+  let yawPrev = 0;
+  g.userData.tick = t => { const lv = level(t), wy = CY + lv, rr = Math.sqrt(Math.max(0, RI * RI - lv * lv)); rings.reset();
+    const key = Math.round(lv * 500); if (key !== wl) { wl = key; water.geometry.dispose(); water.geometry = new THREE.SphereGeometry(RI, 44, 24, 0, Math.PI * 2, Math.acos(clamp(lv / RI, -1, 1)), Math.PI - Math.acos(CUT / RI) - Math.acos(clamp(lv / RI, -1, 1))); }
+    water.visible = surf.visible = lvK(t) > .02; surf.position.y = wy; surf.scale.setScalar(rr); sM.normalMap.offset.set(t * .03, t * .02);
+    const tb = clamp(kv(p.turbK, t, 0)), am = clamp(kv(p.ammK, t, 0)), hz = clamp(kv(p.hazeK, t, 0));
+    wc.copy(clean).lerp(murky, tb).lerp(amber, am * .35); wM.color.copy(wc); wM.opacity = .08 + .4 * tb + .1 * am + .08 * hz; sM.color.copy(wc); sM.opacity = .22 + .3 * tb;
+    haze.forEach((s, i) => { const a = 6.28 * s.userData.ph + .15 * t, r = .02 + .05 * ((i * 37) % 10) / 10, y = -CUT + .03 + (lv + CUT - .05) * (((i * 53) % 10) / 10); s.position.set(Math.cos(a) * r, CY + y, Math.sin(a) * r); s.scale.setScalar(.06 + .02 * Math.sin(t + i)); s.material.opacity = .32 * hz * (lvK(t) > .2 ? 1 : 0); });
+    amm.forEach((s, i) => { const a = 6.28 * s.userData.ph + .1 * t, r = .015 + .045 * ((i * 41) % 10) / 10; s.position.set(Math.cos(a) * r, CY - CUT + .025 + .02 * ((i * 29) % 10) / 10 + .006 * Math.sin(t * .7 + i), Math.sin(a) * r); s.scale.setScalar(.05 + .015 * Math.sin(t * .8 + i)); s.material.opacity = .42 * am; });
+    const wk = clamp(kv(p.wasteK, t, 0)), nw = Math.round(wk * NW); WS.forEach((w, i) => wst.setMatrixAt(i, i < nw ? M.compose(V3(w.x, .021, w.z), Q.setFromEuler(new THREE.Euler(Math.PI / 2, 0, w.ry)), S1) : Z0)); wst.instanceMatrix.needsUpdate = true;
+    const ok = clamp(kv(p.o2K, t, 0)); BS.forEach((b, i) => { const u = (t * .35 + b.ph) % 1, y = -CUT + .02 + u * (lv + CUT - .03), lim = Math.sqrt(Math.max(0, (RI - .01) ** 2 - y * y)), r = Math.min(b.rr, lim);
+      bub.setMatrixAt(i, i < Math.round(ok * NB) ? M.compose(V3(Math.cos(b.a + u) * r, CY + y, Math.sin(b.a + u) * r), Q.identity(), S1.clone().setScalar(b.s)) : Z0); }); bub.instanceMatrix.needsUpdate = true;
+    if (stream) { const k = clamp(kv(p.tapK, t, 0)), top = SP.y - .01, bot = wy; stream.visible = k > .05; if (stream.visible) { stream.position.set(0, (top + bot) / 2, 0); stream.scale.set(.0045 * k, top - bot, .0045 * k); stream.material.map.offset.y = -t * 2.5; rings.put(0, wy, 0, (t * 2.2) % 1, .05); rings.put(0, wy, 0, (t * 2.2 + .5) % 1, .05); } }
+    // bottle in the hand, drops
+    const bt = p.bottle; bottle.visible = false; drops.forEach(d => d.visible = false);
+    if (bt && t > bt.t0 && t < bt.t1) { const Lk = LINK[bt.by], palm = Lk?.[bt.hand || 'R']; if (palm) { g.updateWorldMatrix(true, false); const P = g.worldToLocal(palm.clone()), dk = kv(bt.dropK, t, 0);
+      bottle.visible = true; bottle.position.copy(P); bottle.rotation.set(0, 0, Math.PI * sEase(clamp(dk * 1.4))); const tipP = P.clone().add(V3(0, -.1 * sEase(clamp(dk * 1.4)) + .1 * (1 - sEase(clamp(dk * 1.4))), 0));
+      bottle.position.y = P.y + .05 * sEase(clamp(dk * 1.4)); if (dk > .6) drops.forEach((d, i) => { const u = (t * 1.6 + i / drops.length) % 1, y = tipP.y + .05 - u * (tipP.y + .05 - wy); d.visible = y > wy; d.position.set(tipP.x, y, tipP.z); if (u > .85) rings.put(tipP.x, wy, tipP.z, (u - .85) / .15, .035); }); } }
+    // fish
+    const fi = p.fishIn ?? -1; let P, pitch = 0, lock = 0, yawK = 0, mode = 'swim';
+    if (t < fi) { F.g.visible = false; } else { F.g.visible = true; const u = fi >= 0 ? clamp((t - fi) / .9) : 1, A = fishAt(t, lv), B = fishAt(t + .05, lv); mode = A.m.b;
+      P = A.P; pitch = A.pitch; lock = A.lock; yawK = A.yaw;
+      if (u < 1) { const S0 = V3(0, CY + CUT + .12, 0); P = S0.lerp(A.P, sEase(u)); pitch = -1.0 * (1 - u); if (u > .3 && u < .9) rings.put(0, wy, 0, (u - .3) / .6, .06); }
+      F.g.position.copy(P); const v = B.P.clone().sub(A.P), yv = v.length() > .0004 ? Math.atan2(-v.z, v.x) : yawPrev, yaw = lerp(yv, yawK, lock); yawPrev = yaw;
+      F.g.rotation.set(.12 * Math.sin(t * .9), yaw, clamp(pitch + Math.atan2(v.y, Math.hypot(v.x, v.z) + 1e-4) * .5, -1.2, .8));
+      const stress = mode === 'stress' ? 1 : 0, gk = clamp(kv(p.gillK, t, 0)), sf = mode === 'surface' ? A.m.u : 0;
+      const gape = sf > .5 ? .55 + .45 * Math.sin(2 * Math.PI * 2.6 * t) : .15 + .1 * Math.sin(2 * Math.PI * 1.1 * t);
+      F.upd(2 * Math.PI * (1.7 + 1.6 * stress) * t, .05 + .06 * stress, gape, t, (.12 + .38 * gk) * (.5 + .5 * Math.sin(2 * Math.PI * (1 + 2.6 * gk) * t)));
+      if (sf > .5) { const hx = P.x + Math.cos(yaw) * .05, hz = P.z - Math.sin(yaw) * .05; rings.put(hx, wy, hz, (t * 1.4) % 1, .04); } }
+    if (p.link) { g.updateWorldMatrix(true, false); LINK[p.link] = { mouth: g.localToWorld(V3(0, CY + CUT, 0)), water: g.localToWorld(V3(0, wy, 0)).y, fish: F.g.visible ? g.localToWorld(F.g.position.clone()) : null }; } };
+  shell.castShadow = false; return g; }
+// gf_tank: a rimless-look glass aquarium L x D x H (default 1.2 x .4 x .45 m) with black trims on a walnut cabinet (stand m) on the floor
+//   (y 0); gravel, vallisneria and anubias plants that sway, a rock, an internal filter at the back right (filterK: outflow bubbles and
+//   ripples; bactK: green bacteria specks on it), an air pump on the floor with an airline to an air stone at the back left (airK: bubble
+//   column). Water level waterK (0..1); hazeK murky haze; ammK yellow ammonia haze. Fish: fishN (3), sizes [m], sizeK keys for fish 0,
+//   modes {i: [[t, 'swim'|'eat'|'float'|'bottom'|'hoops'|'face']]}, feedAt [x, z], floatAt [x, z], faceAt [x, y, z] (tank space, y from the
+//   tank floor), xrayK (fish 0). feeds [{t, n, eat, at:[x,z]}]: pellets fall from just over the rim, float, the first `eat` are eaten, the
+//   rest sink and lie on the gravel (rotK: brown with white mould), feedClear (time they are gone). hoops [[x, y, z, colour]] with hoopK.
+//   hose {by, hand, t0, t1, intake:[x,z], bucket:[x,z]}: siphon over the back rim at the palm into a floor bucket (bucketK fill).
+//   jug {by, hand, t0, t1, pourK}: a water jug rides the palm and pours into the tank. hose/jug take wins [[t0, t1], ...] for several uses.
+function gfTank(p = {}) { const g = new THREE.Group(), L = p.L || 1.2, D = p.D || .4, H = p.H || .45, S = p.stand ?? .55, T = .008, GV = .035, r0 = rng(p.seed || 41);
+  const Y0 = S, YG = Y0 + .01 + GV, lvK = t => kv(p.waterK, t, 1), level = t => YG + (H - .05 - GV) * lvK(t);   // world-ish y (tank space) of the water top
+  // cabinet
+  const wood = new THREE.MeshStandardMaterial({ color: col('#4b3527'), roughness: .55 }), dark = std('#1b1b1c', { r: .5 });
+  const cab = box(L + .04, S, D + .06, wood); cab.position.y = S / 2; g.add(cab);
+  for (const s of [-1, 1]) { const dr = box(L / 2 - .03, S - .08, .006, new THREE.MeshStandardMaterial({ color: col('#5a4030'), roughness: .5 })); dr.position.set(s * L / 4, S / 2, D / 2 + .033); g.add(dr);
+    const kn = cyl(.008, .008, .02, std('#b8a070', { r: .3, m: .7 }), 10); kn.rotation.x = Math.PI / 2; kn.position.set(s * .04, S / 2, D / 2 + .045); g.add(kn); }
+  // glass box + trims
+  const gl = gfGlassMat(.05), panes = [[L, H, T, 0, Y0 + H / 2, D / 2], [L, H, T, 0, Y0 + H / 2, -D / 2], [T, H, D, L / 2, Y0 + H / 2, 0], [T, H, D, -L / 2, Y0 + H / 2, 0], [L, .01, D, 0, Y0 + .005, 0]];
+  panes.forEach(([w, h, d, x, y, z]) => { const m = box(w, h, d, gl); m.position.set(x, y, z); m.renderOrder = 3; m.castShadow = false; g.add(m); });
+  for (const y of [Y0 + .008, Y0 + H - .006]) { for (const z of [-1, 1]) { const tr = box(L + .012, .016, .012, dark); tr.position.set(0, y, z * D / 2); g.add(tr); } for (const x of [-1, 1]) { const tr = box(.012, .016, D + .012, dark); tr.position.set(x * L / 2, y, 0); g.add(tr); } }
+  // gravel
+  const gvTex = canvasT(256, 256, (c, w, h) => { c.fillStyle = '#9a8a74'; c.fillRect(0, 0, w, h); const pc = ['#c9b89c', '#7d6c58', '#b5a284', '#5f5446', '#d9ccb5']; for (let i = 0; i < 1800; i++) { c.fillStyle = pc[i % 5]; c.beginPath(); c.ellipse(r0() * w, r0() * h, 2 + r0() * 3, 1.5 + r0() * 2.5, r0() * 3, 0, 6.3); c.fill(); } }, [4, 2]);
+  const grav = box(L - 2 * T, GV, D - 2 * T, new THREE.MeshStandardMaterial({ map: gvTex, roughness: .9 })); grav.position.y = Y0 + .01 + GV / 2; g.add(grav);
+  const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(.07, 1), std('#77736c', { r: .9 })); rock.scale.set(1.3, .7, .9); rock.position.set(-.18, YG + .03, -.06); g.add(rock);
+  const wood2 = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([V3(.08, YG, -.12), V3(.16, YG + .07, -.1), V3(.26, YG + .1, -.14), V3(.3, YG + .16, -.13)]), 16, .012, 6), std('#5b4330', { r: .9 })); g.add(wood2);
+  // plants: vallisneria straps (bent each frame) at the back, anubias at the front left
+  const leafM = [std('#4f8a35', { r: .6 }), std('#5f9a3c', { r: .6 }), std('#3f7a2e', { r: .6 })].map(m => (m.side = THREE.DoubleSide, m)), leaves = [];
+  [[-.48, -.13], [-.36, -.15], [-.05, -.15], [.12, -.14], [.33, -.12]].forEach(([x, z], ci) => { for (let k = 0; k < 7; k++) { const h = .22 + r0() * .11, geo = new THREE.PlaneGeometry(.011, h, 1, 8); geo.translate(0, h / 2, 0);
+    const m = new THREE.Mesh(geo, leafM[k % 3]); m.position.set(x + (r0() - .5) * .05, YG, z + (r0() - .5) * .03); m.rotation.y = r0() * 3; g.add(m); leaves.push({ geo, B: geo.attributes.position.array.slice(), h, ph: r0() * 6, lean: (r0() - .5) * .06 }); } });
+  const anM = std('#2f5e2a', { r: .45 }), anubias = new THREE.Group(); anubias.position.set(-.42, YG, .08); g.add(anubias);
+  for (let k = 0; k < 9; k++) { const a = k * 2.3, st = new THREE.Group(); st.rotation.set(.5 + r0() * .35, a, 0); anubias.add(st); const lf = sph(1, anM); lf.scale.set(.018, .003, .036); lf.position.set(0, .06 + r0() * .03, 0); st.add(lf); const sm = cyl(.002, .002, .06, std('#557a3a'), 5); sm.position.y = .03; st.add(sm); }
+  // filter (back right, inside) and bacteria
+  const FX = L / 2 - .07, FZ = -D / 2 + .04, FH = Math.min(.26, H - .05 - GV - .04);
+  const filt = new THREE.Group(); filt.position.set(FX, YG + .02, FZ); g.add(filt); { const bx = box(.075, FH, .05, dark); bx.position.y = FH / 2; filt.add(bx);
+    const gr = canvasT(64, 128, (c, w, h) => { c.fillStyle = '#2a2b2d'; c.fillRect(0, 0, w, h); c.fillStyle = '#0d0d0e'; for (let y = 6; y < h - 6; y += 8) c.fillRect(8, y, w - 16, 4); });
+    const fr = new THREE.Mesh(new THREE.PlaneGeometry(.06, FH - .04), new THREE.MeshStandardMaterial({ map: gr, roughness: .6 })); fr.position.set(0, FH / 2, .0255); filt.add(fr);
+    const nz = cyl(.008, .008, .04, dark, 10); nz.rotation.z = Math.PI / 2; nz.position.set(-.05, FH - .015, 0); filt.add(nz);
+    const cups = [-1, 1].map(s => { const c2 = cyl(.012, .012, .006, std('#e8eef0', { r: .3 }), 12); c2.rotation.x = Math.PI / 2; c2.position.set(s * .02, FH * .6, -.028); filt.add(c2); }); }
+  const NBa = 26, bact = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 6, 4), new THREE.MeshStandardMaterial({ color: col('#9dff8a'), emissive: col('#4fd24a'), emissiveIntensity: .9, roughness: .4 }), NBa); bact.frustumCulled = false; g.add(bact);
+  const BA = Array.from({ length: NBa }, () => [(r0() - .5) * .1, r0() * FH, .03 + r0() * .03, r0() * 6]);
+  const NOut = 16, outB = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 6, 4), new THREE.MeshStandardMaterial({ color: col('#ffffff'), roughness: .05, transparent: true, opacity: .55 }), NOut); outB.frustumCulled = false; g.add(outB);
+  // air pump, airline, air stone, bubble column
+  const PX = L / 2 + .16; const pump = new THREE.Group(); pump.position.set(PX, 0, -.02); g.add(pump); { const b = box(.13, .06, .08, std('#d9dcdc', { r: .4 })); b.position.y = .03; pump.add(b); const ld = sph(.005, new THREE.MeshBasicMaterial({ color: col('#4cff5a') })); ld.position.set(.04, .045, .041); pump.add(ld); }
+  const ASX = -L / 2 + .1, ASZ = -D / 2 + .05, lineM = new THREE.MeshStandardMaterial({ color: col('#dfeee6'), roughness: .2, transparent: true, opacity: .75 });
+  g.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([V3(PX - .05, .05, -.02), V3(L / 2 + .04, .1, -D / 2 - .02), V3(L / 2 + .02, Y0 + H + .03, -D / 2 - .01), V3(.2, Y0 + H + .025, -D / 2 + .012), V3(ASX + .05, Y0 + H + .02, ASZ), V3(ASX, Y0 + H - .04, ASZ), V3(ASX, YG + .02, ASZ)]), 80, .003, 5), lineM));
+  const stone = cyl(.012, .012, .035, std('#8f8c88', { r: .95 }), 10); stone.rotation.z = Math.PI / 2; stone.position.set(ASX, YG + .012, ASZ); g.add(stone);
+  const NAB = 46, airB = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 7, 5), new THREE.MeshStandardMaterial({ color: col('#ffffff'), roughness: .03, metalness: .1, transparent: true, opacity: .6 }), NAB); airB.frustumCulled = false; g.add(airB);
+  const AB = Array.from({ length: NAB }, () => ({ ph: r0(), s: .0025 + r0() * .0035, w: r0() * 6 }));
+  // water
+  const wM = gfWaterMat(.06), water = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), wM); water.renderOrder = 2; g.add(water);
+  const sM = new THREE.MeshPhysicalMaterial({ color: col('#cfe8ee'), roughness: .04, metalness: .1, transparent: true, opacity: .2, depthWrite: false, normalMap: ttWaterNormal().clone(), side: THREE.DoubleSide });
+  sM.normalMap.repeat.set(4, 1.4); const surf = new THREE.Mesh(new THREE.PlaneGeometry(L - 2 * T, D - 2 * T), sM); surf.rotation.x = -Math.PI / 2; surf.renderOrder = 2; g.add(surf);
+  const clean = col('#8fc3c9'), murky = col('#97946e'), amber = col('#d8c26a'), wc = new THREE.Color();
+  const haze = gfPuffs(g, 22, '#c9c19a'), amm = gfPuffs(g, 18, '#d9c060'), rings = gfRings(g, 14);
+  // pellets
+  const feeds = p.feeds || [], NP = feeds.reduce((s, f) => s + f.n, 0) || 1, pel = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 7, 5), new THREE.MeshStandardMaterial({ color: col('#ffffff'), roughness: .8 }), NP); pel.frustumCulled = false; g.add(pel);
+  const PL = []; feeds.forEach(f => { for (let j = 0; j < f.n; j++) PL.push({ f, j, jx: (r0() - .5) * .07, jz: (r0() - .5) * .05, bx: (r0() - .5) * .3, bz: (r0() - .5) * .2, c: r0() }); });
+  const mould = gfPuffs(g, Math.min(40, NP), '#f4f1e8'); const pc1 = col('#b0662a'), pc2 = col('#3b2a1a'), pcol = new THREE.Color();
+  // hoops
+  const hoops = (p.hoops || []).map(([x, y, z, c]) => { const hg = new THREE.Group(); hg.position.set(x, YG + y, z); g.add(hg); const tor = new THREE.Mesh(new THREE.TorusGeometry(.06, .0055, 8, 32), new THREE.MeshStandardMaterial({ color: col(c), roughness: .35 })); tor.rotation.y = Math.PI / 2; hg.add(tor);
+    const rod = cyl(.003, .003, y - .06, new THREE.MeshStandardMaterial({ color: col('#e8f0f0'), roughness: .2, transparent: true, opacity: .6 }), 6); rod.position.y = -(y - .06) / 2 - .06; hg.add(rod); const cup = cyl(.014, .016, .006, std('#e8f0f0', { r: .3 }), 12); cup.position.y = -y + .003; hg.add(cup); return hg; });
+  const hoopPath = hoops.length ? (() => { const xs = (p.hoops).map(h => h[0]), y = YG + p.hoops[0][1], z = p.hoops[0][2], x0 = Math.min(...xs) - .13, x1 = Math.max(...xs) + .13;
+    return new THREE.CatmullRomCurve3([V3(x0, y, z), ...p.hoops.map(h => V3(h[0], YG + h[1], h[2])), V3(x1, y, z), V3(x1 + .05, y + .02, z - .07), V3(x1 - .05, y + .03, z - .12), V3((x0 + x1) / 2, y + .04, z - .12), V3(x0 + .05, y + .03, z - .12), V3(x0 - .05, y + .02, z - .07)], true); })() : null;
+  // siphon hose, bucket, jug
+  const hoseM = new THREE.MeshStandardMaterial({ color: col('#cfe3dc'), roughness: .25, transparent: true, opacity: .8 }); let hose = null, hoseKey = '';
+  const bk = p.hose?.bucket || [L / 2 + .3, -D / 2 - .35], bucket = new THREE.Group(); bucket.position.set(bk[0], 0, bk[1]); g.add(bucket); bucket.visible = !!p.hose;
+  { const bm = new THREE.MeshStandardMaterial({ color: col('#3f78b5'), roughness: .5, side: THREE.DoubleSide }); const b = new THREE.Mesh(new THREE.CylinderGeometry(.14, .115, .28, 24, 1, true), bm); b.position.y = .14; bucket.add(b);
+    const bt = new THREE.Mesh(new THREE.CircleGeometry(.115, 24), bm); bt.rotation.x = -Math.PI / 2; bt.position.y = .003; bucket.add(bt); const rim = new THREE.Mesh(new THREE.TorusGeometry(.14, .006, 6, 28), bm); rim.rotation.x = Math.PI / 2; rim.position.y = .28; bucket.add(rim);
+    const hd = new THREE.Mesh(new THREE.TorusGeometry(.145, .003, 5, 24, Math.PI), std('#9aa0a4', { r: .4, m: .6 })); hd.position.y = .27; hd.rotation.y = Math.PI / 2; hd.rotation.x = -.5; bucket.add(hd); }
+  const bW = new THREE.Mesh(new THREE.CircleGeometry(.125, 24), new THREE.MeshStandardMaterial({ color: col('#9fb7b9'), roughness: .08, transparent: true, opacity: .85 })); bW.rotation.x = -Math.PI / 2; bucket.add(bW);
+  const coil = new THREE.Mesh(new THREE.TorusGeometry(.085, .007, 6, 28), hoseM); coil.rotation.x = Math.PI / 2; coil.position.y = .29; bucket.add(coil);
+  const hoseStream = new THREE.Mesh(new THREE.CylinderGeometry(.004, .004, 1, 8, 1, true), new THREE.MeshStandardMaterial({ map: ttStreamTex().clone(), color: col('#eef8fb'), transparent: true, opacity: .7, depthWrite: false })); hoseStream.visible = false; g.add(hoseStream);
+  const jug = new THREE.Group(), jugT = new THREE.Group(); jug.add(jugT); g.add(jug); jug.visible = false;
+  { const jm = new THREE.MeshPhysicalMaterial({ color: col('#f4f8fa'), roughness: .15, transparent: true, opacity: .45, side: THREE.DoubleSide, depthWrite: false }); const b = new THREE.Mesh(new THREE.CylinderGeometry(.055, .06, .17, 20, 1, true), jm); b.position.set(0, .0, .07); jugT.add(b);
+    const jw = new THREE.Mesh(new THREE.CylinderGeometry(.052, .057, .12, 20), new THREE.MeshStandardMaterial({ color: col('#bfe0e8'), roughness: .05, transparent: true, opacity: .55 })); jw.position.set(0, -.02, .07); jugT.add(jw);
+    const hd = new THREE.Mesh(new THREE.TorusGeometry(.045, .008, 6, 16, Math.PI), new THREE.MeshStandardMaterial({ color: col('#e8eef0'), roughness: .3 })); hd.rotation.set(0, Math.PI / 2, Math.PI / 2); hd.position.set(0, .0, .015); hd.rotation.order = 'YXZ'; jugT.add(hd);
+    const sp = new THREE.Mesh(new THREE.ConeGeometry(.02, .04, 10, 1, true), jm); sp.rotation.x = Math.PI / 2; sp.position.set(0, .07, .14); jugT.add(sp); }
+  const jugStream = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 1, 10, 1, true), new THREE.MeshStandardMaterial({ map: ttStreamTex().clone(), color: col('#eef8fb'), transparent: true, opacity: .7, depthWrite: false })); jugStream.visible = false; g.add(jugStream);
+  // fish
+  const NF = p.fishN || 3, sizes = p.sizes || [.12, .11, .1], FISH = Array.from({ length: NF }, (_, i) => { const f = gfFish(); g.add(f.g); return { ...f, r: Array.from({ length: 10 }, rng(500 + i * 13)) }; });
+  const sizeOf = (i, t) => i === 0 && p.sizeK ? kv(p.sizeK, t, sizes[0]) : sizes[i] || .1;
+  const bounds = (s, lv) => { const h = s / 2 + .025; return { x0: -L / 2 + T + h, x1: FX - .05 - h, z0: -D / 2 + T + h * .75, z1: D / 2 - T - h * .75, y0: YG + .02 + s * .2, y1: lv - .02 - s * .2 }; };
+  const fit = (P, B) => V3(clamp(P.x, B.x0, Math.max(B.x0, B.x1)), clamp(P.y, B.y0, Math.max(B.y0, B.y1)), clamp(P.z, B.z0, Math.max(B.z0, B.z1)));
+  const posFor = (i, m, t, lv) => { const f = FISH[i], r = f.r, s = sizeOf(i, t), B = bounds(s, lv), cx = (B.x0 + B.x1) / 2, ax = Math.max(0, (B.x1 - B.x0) / 2), cz = (B.z0 + B.z1) / 2, az = Math.max(0, (B.z1 - B.z0) / 2), cy = (B.y0 + B.y1) / 2, ay = Math.max(0, (B.y1 - B.y0) / 2);
+    const w1 = .16 + .1 * r[0], w2 = .37 + .2 * r[1];
+    if (m === 'eat') { const [fx, fz] = p.feedAt || [0, 0]; return { P: fit(V3(fx + .06 * Math.cos(1.6 * t + 2 * i), B.y1, fz + .05 * Math.sin(1.6 * t + 2 * i)), B), pitch: .35, eat: 1 }; }
+    if (m === 'float') { const [fx, fz] = p.floatAt || [0, 0]; return { P: fit(V3(fx + .015 * Math.sin(.3 * t), lv - .012, fz + .01 * Math.sin(.23 * t)), { ...B, y1: lv - .012 }), roll: 2.75, lock: 1, yaw: .4 + .05 * Math.sin(.2 * t), still: 1 }; }
+    if (m === 'bottom') return { P: fit(V3(cx + ax * (r[2] - .5) * 1.2, B.y0, cz + az * (r[3] - .5)), B), roll: .9 + .35 * Math.sin(5 * t + i), lock: 1, yaw: r[4] * 6, thrash: 1 };
+    if (m === 'face') { const [fx, fy, fz] = p.faceAt || [0, .2, D / 2 - .1]; return { P: fit(V3(fx + .01 * Math.sin(1.3 * t), YG + fy + .006 * Math.sin(.9 * t), fz), B), lock: 1, yaw: -Math.PI / 2 + .12 * Math.sin(.8 * t), gape: 1 }; }
+    if (m === 'hoops' && hoopPath) { const u = ((t * .1) / hoopPath.getLength() + r[5]) % 1; return { P: hoopPath.getPointAt(u) }; }
+    return { P: fit(V3(cx + ax * (.75 * Math.sin(w1 * t + 6.28 * r[2]) + .25 * Math.sin(w2 * 1.3 * t + 6.28 * r[3])), cy + ay * .8 * Math.sin((.2 + .15 * r[4]) * t + 6.28 * r[5]), cz + az * (.7 * Math.sin(w2 * t + 6.28 * r[6]) + .3 * Math.sin(w1 * 1.7 * t + 6.28 * r[7]))), B) }; };
+  const fishAt = (i, t, lv) => { const m = gfMode((p.modes || {})[i], t, 1.1), A = posFor(i, m.a, t, lv), Bq = posFor(i, m.b, t, lv), u = m.u, q = k => lerp(A[k] || 0, Bq[k] || 0, u);
+    return { P: A.P.clone().lerp(Bq.P, u), pitch: q('pitch'), roll: q('roll'), lock: q('lock'), yaw: Bq.yaw ?? A.yaw ?? 0, still: q('still'), thrash: q('thrash'), eat: q('eat'), gape: q('gape') }; };
+  const yawPrev = FISH.map(() => 0), M = new THREE.Matrix4(), Q = new THREE.Quaternion(), S1 = V3(1, 1, 1), Z0 = new THREE.Matrix4().makeScale(0, 0, 0);
+  g.userData.tick = t => { const lv = level(t), wf = lvK(t); rings.reset();
+    const wh = lv - (Y0 + .01); water.visible = surf.visible = wf > .01; water.scale.set(L - 2 * T - .002, Math.max(.001, wh), D - 2 * T - .002); water.position.y = Y0 + .01 + wh / 2; surf.position.y = lv; sM.normalMap.offset.set(t * .03, t * .015);
+    const hz = clamp(kv(p.hazeK, t, 0)), am = clamp(kv(p.ammK, t, 0)); wc.copy(clean).lerp(murky, hz).lerp(amber, am * .4); wM.color.copy(wc); wM.opacity = .06 + .3 * hz + .12 * am; sM.color.copy(wc);
+    haze.forEach((s, i) => { s.position.set(-L / 2 + .08 + (L - .3) * (((i * 37) % 22) / 22) + .03 * Math.sin(t * .2 + i), YG + .03 + (lv - YG - .06) * (((i * 53) % 11) / 11), -D / 2 + .06 + (D - .12) * (((i * 17) % 7) / 7)); s.scale.setScalar(.16 + .03 * Math.sin(t * .5 + i)); s.material.opacity = .35 * hz; });
+    amm.forEach((s, i) => { s.position.set(-L / 2 + .1 + (L - .3) * (((i * 41) % 18) / 18), YG + .03 + .05 * (((i * 29) % 5) / 5) + .01 * Math.sin(t * .6 + i), -D / 2 + .07 + (D - .14) * (((i * 13) % 6) / 6)); s.scale.setScalar(.13 + .03 * Math.sin(t * .7 + i)); s.material.opacity = .45 * am; });
+    leaves.forEach(l => { const P = l.geo.attributes.position.array, sw = .025 * Math.sin(t * 1.1 + l.ph) + .012 * Math.sin(t * 2.3 + l.ph * 2); for (let k = 0; k < P.length; k += 3) { const f = l.B[k + 1] / l.h; P[k + 2] = l.B[k + 2] + (sw + l.lean) * f * f * 1.6; P[k] = l.B[k] + .008 * f * Math.sin(t * 1.7 + l.ph); } l.geo.attributes.position.needsUpdate = true; });
+    anubias.rotation.y = .04 * Math.sin(t * .6);
+    // filter, bacteria, air
+    const fk = clamp(kv(p.filterK, t, 1)), bk2 = clamp(kv(p.bactK, t, 0)), ak = clamp(kv(p.airK, t, 1));
+    for (let i = 0; i < NOut; i++) { const u = (t * .9 + i / NOut) % 1, on = fk > .5 && lv > YG + FH; outB.setMatrixAt(i, on ? M.compose(V3(FX - .07 - u * .35, Math.min(lv - .01, YG + .02 + FH - .015) + .015 * u, FZ + .02 + .05 * Math.sin(i * 2.1) * u), Q.identity(), S1.clone().setScalar(.002 + .0015 * ((i * 7) % 3))) : Z0); }
+    outB.instanceMatrix.needsUpdate = true; if (fk > .5) for (let k = 0; k < 2; k++) rings.put(FX - .2 - .1 * k, lv, FZ + .05, (t * .8 + k * .5) % 1, .08);
+    BA.forEach(([x, y, z, ph], i) => bact.setMatrixAt(i, i < Math.round(bk2 * NBa) ? M.compose(V3(FX + x + .006 * Math.sin(t * 1.3 + ph), YG + .02 + y, FZ + z + .005 * Math.cos(t + ph)), Q.identity(), S1.clone().setScalar(.0035 * (.8 + .4 * Math.sin(t * 2 + ph)))) : Z0)); bact.instanceMatrix.needsUpdate = true;
+    AB.forEach((b, i) => { const u = (t * .55 + b.ph) % 1, y = YG + .02 + u * (lv - YG - .025); airB.setMatrixAt(i, ak > .5 && wf > .1 ? M.compose(V3(ASX + .012 * Math.sin(t * 6 + b.w) * u + .02 * u * Math.sin(b.w), y, ASZ + .01 * Math.cos(t * 5 + b.w) * u), Q.identity(), S1.clone().setScalar(b.s * (1 + .5 * u))) : Z0); });
+    airB.instanceMatrix.needsUpdate = true; if (ak > .5 && wf > .1) for (let k = 0; k < 3; k++) rings.put(ASX + .01, lv, ASZ + .01, (t * 1.3 + k / 3) % 1, .07);
+    // pellets
+    const rot = clamp(kv(p.rotK, t, 0)); let mi = 0;
+    PL.forEach((q, i) => { const f = q.f, [ax, az] = f.at || p.feedAt || [0, 0], t0 = f.t + q.j * .035, x = ax + q.jx, z = az + q.jz, top = Y0 + H + .06;
+      let P = null, onBot = false; if (t >= t0 && !(p.feedClear && t > p.feedClear && t0 < p.feedClear)) { const a = t - t0, fl = .28, flT = 1.4 + q.c * .8;
+        if (a < fl) P = V3(x, top - (top - lv) * (a / fl) ** 2, z);
+        else if (a < fl + flT) { P = V3(x + .01 * Math.sin(a + i), lv - .002, z); if (q.j < f.eat && a > fl + .4 + q.j * .12) P = null; }
+        else if (q.j >= f.eat) { const sk = clamp((a - fl - flT) / (3.5 + q.c)); P = V3(lerp(x, x + q.bx * .3, sk), lerp(lv - .004, YG + .004, sEase(sk)), lerp(z, z + q.bz * .3, sk)); onBot = sk >= 1; } }
+      if (P) { pcol.copy(pc1).lerp(pc2, onBot ? rot : 0); pel.setColorAt(i, pcol); pel.setMatrixAt(i, M.compose(P, Q.identity(), S1.clone().setScalar(.0035))); if (onBot && rot > .05 && mi < mould.length) { const s = mould[mi++]; s.visible = true; s.position.copy(P).add(V3(0, .004, 0)); s.scale.setScalar(.012 + .012 * rot); s.material.opacity = .55 * rot; } }
+      else pel.setMatrixAt(i, Z0); }); for (; mi < mould.length; mi++) mould[mi].visible = false; pel.instanceMatrix.needsUpdate = true; if (pel.instanceColor) pel.instanceColor.needsUpdate = true;
+    // hoops
+    const hk = kv(p.hoopK, t, 0); hoops.forEach(h => h.visible = hk > .5);
+    // siphon hose (over the back rim at the palm) into the bucket; bucket fill
+    hoseStream.visible = false; coil.visible = !!p.hose; bW.position.y = .02 + .22 * clamp(kv(p.bucketK, t, 0)); bW.visible = kv(p.bucketK, t, 0) > .02;
+    const hs = p.hose, inW = (o, t) => (o.wins || [[o.t0, o.t1]]).some(([a, b]) => t > a && t < b); if (hs && inW(hs, t)) { const palm = LINK[hs.by]?.[hs.hand || 'R']; if (palm) { g.updateWorldMatrix(true, false); const P = g.worldToLocal(palm.clone()), key = P.toArray().map(v => v.toFixed(3)).join() + Math.round(lv * 300);
+      coil.visible = false; if (key !== hoseKey) { hoseKey = key; if (hose) { g.remove(hose); hose.geometry.dispose(); } const [ix, iz] = hs.intake || [-.3, -.05], B = V3(bk[0], .3, bk[1]);
+        const pts = [V3(ix, YG + .03, iz), V3(ix + .02, (YG + lv) / 2, iz - .02), V3(lerp(ix, P.x, .7), lv + .02, lerp(iz, P.z, .6)), V3(P.x, P.y + .015, P.z + .02), V3(P.x, P.y + .02, P.z - .05), V3(lerp(P.x, B.x, .5), lerp(P.y, B.y, .5) + .05, lerp(P.z, B.z, .5)), V3(B.x, B.y + .05, B.z), V3(B.x + .02, B.y - .04, B.z)];
+        hose = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 60, .0075, 6), hoseM); g.add(hose); }
+      hose.visible = true; if (kv(p.waterK, t + .1, 1) < lvK(t) - .001) { hoseStream.visible = true; const y1 = bW.position.y + .01; hoseStream.position.set(bk[0] + .02, (y1 + .26) / 2, bk[1]); hoseStream.scale.set(1, .26 - y1, 1); hoseStream.material.map.offset.y = -t * 2; } } }
+    else if (hose) hose.visible = false;
+    // jug
+    const jg = p.jug; jug.visible = false; jugStream.visible = false; if (jg && inW(jg, t)) { const Lk = LINK[jg.by], palm = Lk?.[jg.hand || 'R']; if (palm) { g.updateWorldMatrix(true, false); const P = g.worldToLocal(palm.clone()), pk = clamp(kv(jg.pourK, t, 0));
+      jug.visible = true; jug.position.copy(P); jug.rotation.set(0, (Lk.yaw || 0), 0); jugT.rotation.x = 1.25 * sEase(pk); jug.updateMatrixWorld(true);
+      if (pk > .6) { const sp = g.worldToLocal(jugT.localToWorld(V3(0, .085, .16))), bot = lv; jugStream.visible = sp.y > bot; jugStream.position.set(sp.x, (sp.y + bot) / 2, sp.z); jugStream.scale.set(.006, Math.max(.001, sp.y - bot), .006); jugStream.material.map.offset.y = -t * 2.5;
+        rings.put(sp.x, lv, sp.z, (t * 2) % 1, .07); rings.put(sp.x, lv, sp.z, (t * 2 + .5) % 1, .07); } } }
+    // fish
+    const xk = clamp(kv(p.xrayK, t, 0));
+    FISH.forEach((f, i) => { const s = sizeOf(i, t), A = fishAt(i, t, lv), Bn = fishAt(i, t + .05, lv), v = Bn.P.clone().sub(A.P), sp = v.length() / .05;
+      f.g.position.copy(A.P); f.g.scale.setScalar(s); const yv = v.length() > .0005 ? Math.atan2(-v.z, v.x) : yawPrev[i], yaw = A.lock > .01 ? lerp(yv, A.yaw, A.lock) : yv; yawPrev[i] = yaw;
+      f.g.rotation.set(A.roll + .08 * Math.sin(t * .8 + i), yaw, clamp(A.pitch + Math.atan2(v.y, Math.hypot(v.x, v.z) + 1e-4) * .6, -.6, .6));
+      const amp = (.04 + .07 * clamp(sp / s / 1.5)) * (1 - .85 * A.still) + .1 * A.thrash, gape = A.eat > .5 || A.gape > .5 ? .5 + .5 * Math.sin(2 * Math.PI * 2.2 * t + i) : .15 + .1 * Math.sin(2 * Math.PI * 1.1 * t + i);
+      f.upd(2 * Math.PI * (1.8 + f.r[9] + 2 * A.thrash) * t, amp, gape * (1 - A.still), t, (.15 + .3 * A.thrash) * (.5 + .5 * Math.sin(2 * Math.PI * (1.1 + 2 * A.thrash) * t)) * (1 - A.still));
+      if (i === 0) f.setX(xk);
+      if (A.eat > .5) rings.put(A.P.x + Math.cos(yaw) * .5 * s, lv, A.P.z - Math.sin(yaw) * .5 * s, (t * 1.2 + i * .3) % 1, .05); });
+    if (p.link) { g.updateWorldMatrix(true, false); LINK[p.link] = { rim: g.localToWorld(V3(0, Y0 + H, 0)).y, water: g.localToWorld(V3(0, lv, 0)).y, fish0: g.localToWorld(FISH[0].g.position.clone()) }; } };
+  [cab, grav, rock, wood2, filt, pump, bucket, anubias].forEach(o => shadowed(o)); return g; }
+Object.assign(ASSETS, { gf_bowl: gfBowl, gf_tank: gfTank });
