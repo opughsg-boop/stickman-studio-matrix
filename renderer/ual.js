@@ -161,3 +161,15 @@ export function ualReach(o, w, r, age) {
   if (e < 1) for (const [b, q0] of save) { const q1 = b.quaternion.clone(); b.quaternion.copy(q0).slerp(q1, e); } // hips: already lowered by drop * e
   o.updateMatrixWorld(true);
 }
+
+// handoff (params.handoff): the previous beat's reach continues into the next beat instead of stopping at the switch.
+// cutAge = reach age at the switch, since = time into the new beat (same time scale). Released from where it was:
+// already releasing -> the same envelope runs to its end; still holding (or blending in) -> the release starts at the switch
+// (or as soon as the blend-in ends) and lasts max(.35 s, minOut), so the pose is continuous across the switch.
+export function ualReachHandoff(o, w, r, cutAge, since) {
+  const [t0, t1, t2p, t3] = r.t || [0, .15, .35, .5], out = Math.max(.35, r.minOut ?? .2);
+  if (cutAge >= t3) return;
+  const t2 = Math.max(t1, Math.min(t2p, t3 - (r.minOut ?? .2)));
+  const tt = cutAge >= t2 ? [t0, t1, t2p, t3] : [t0, t1, Math.max(t1, cutAge), Math.max(t1, cutAge) + out];
+  ualReach(o, w, { ...r, t: tt, minOut: cutAge >= t2 ? r.minOut : out }, cutAge + since);
+}
