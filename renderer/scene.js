@@ -4297,7 +4297,7 @@ function pigeonModel(seed = 1) { const g = new THREE.Group(), U = {};
   U.body = ell([.05, .052, .1], bodyM, [0, .118, -.005], [-.35, 0, 0]);
   ell([.046, .05, .05], bodyM, [0, .13, .048]);                                                                                  // full breast
   ell([.036, .03, .05], bodyM, [0, .09, -.07], [-.4, 0, 0]);                                                                       // vent / undertail
-  const irid = iridMat(); ell([.041, .038, .042], irid, [0, .148, .062]);                                                          // iridescent lower neck / crop
+  const irid = iridMat();                                                                                                         // iridescent neck (the separate green crop ball was removed: user review 2026-11-27)
   U.neck = new THREE.Mesh(new THREE.CylinderGeometry(.019, .03, 1, 18, 1, true), irid); g.add(U.neck);
   U.head = new THREE.Group(); U.head.position.set(0, .205, .092); g.add(U.head);
   ell([.021, .02, .025], headM, [0, 0, 0], [0, 0, 0], U.head);
