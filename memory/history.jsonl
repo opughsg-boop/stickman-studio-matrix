@@ -93,3 +93,4 @@
 {"run": "pigeon_v1", "time": "2026-11-27 02:10", "score": 87, "issues": 5, "codes": ["beat_too_long", "beat_too_short", "caption_flash", "caption_too_long"]}
 {"run": "pigeon_v2", "time": "2026-11-27 02:55", "score": 100, "issues": 0, "codes": []}
 {"run": "water_mill", "time": "2026-11-27 02:44", "score": 75, "issues": 5, "codes": ["dead_beat"]}
+{"run": "new_voice_nov27", "time": "2026-11-27 16:24", "score": 10, "issues": 24, "codes": ["beat_too_short", "caption_too_long", "dead_beat"]}
