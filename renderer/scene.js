@@ -7,7 +7,7 @@ import { clone as skClone } from 'three/addons/utils/SkeletonUtils.js';
 import { Sky } from 'three/addons/objects/Sky.js';
 import { mergeVertices, mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { bankH, CANAL, vnoise, rampK, wallowE } from './buffalo_ground.js';
-import { UAL, UAL_MODEL, loadUALMap, ualClip, ualHas, ualGroundLock, ualRestFeet, ualReach } from './ual.js';
+import { UAL, UAL_MODEL, loadUALMap, ualClip, ualHas, ualGroundLock, ualRestFeet, ualReach, ualReachHandoff } from './ual.js';
 import { makePost, buildHorizon, buildCover, upgradeWater, buildMotes, buildBirds, handheld, sharpenTextures, realismTick, resetRealism } from './realism.js';
 
 const R = { W: 540, H: 960 };
@@ -535,8 +535,9 @@ function updateObjects(t) {
     o.holder.scale.setScalar(Math.max(.001, s * o.base)); inner.position.y = (inner.userData.y0 ??= inner.position.y) + dy;
     o.holder.position.y = o.basePos.y + (o.tag === 'hive' ? liftAt(t) : 0);
     if (o.puff) { const pa = age - IMPACT_T; o.puff.visible = pa > 0 && pa < .7; if (o.puff.visible) o.puff.userData.tick(pa); }
-    let mode, prev, mstart = o.spawn; for (const [ts, m] of o.modeTimeline) if (t >= ts) { prev = mode; mode = m; mstart = ts; }
+    let mode, prev, mstart = o.spawn, pstart = o.spawn; for (const [ts, m] of o.modeTimeline) if (t >= ts) { prev = mode; mode = m; pstart = mstart; mstart = ts; }
     inner.userData.mode = mode; inner.userData.prevMode = prev; inner.userData.modeAge = t - mstart;
+    inner.userData.prevModeDur = mstart - pstart; // how long the previous mode ran before this one (UAL handoff: pose at the switch)
     inner.traverse(c => c.userData.tick && c.userData.tick(t, age));
   }
 }
@@ -1409,15 +1410,21 @@ ASSETS.glb = (p = {}) => {
     [].concat(p.ual).forEach(get); const first = [].concat(p.ual)[0];
     const anyC = Object.values(U).find(Boolean), feetRest = anyC ? ualRestFeet(o, anyC.getClip().userData.feet) : {};
     const at = (a, age) => { const c = a.getClip(), d = c.duration; return c.userData.loop ? ((age % d) + d) % d : Math.min(d - 1e-3, Math.max(0, age)); };
-    w.userData.tick = (t) => { const mo = w.userData.mode || {}, pm = w.userData.prevMode || {}, age = (w.userData.modeAge ?? t) * (mo.speed ?? p.speed ?? 1) + (p.offset || 0);
+    // params.handoff (opt-in): the fade starts from the pose the previous clip had reached at the beat switch (its clip time at the cut, frozen),
+    // not from its last frame, and the previous beat's reach keeps releasing into the new beat (ualReachHandoff). Stateless: the cut pose is
+    // re-evaluated from the previous mode's duration, so chunked/parallel rendering gives the same frames.
+    const spd = m => m.speed ?? p.speed ?? 1;
+    w.userData.tick = (t) => { const mo = w.userData.mode || {}, pm = w.userData.prevMode || {}, raw = w.userData.modeAge ?? t, age = raw * spd(mo) + (p.offset || 0);
       const cur = get(mo.ual || mo.clip || first), prev = get(pm.ual || pm.clip || first); if (!cur) return;
+      const ho = p.handoff && w.userData.prevMode, pAge = ho ? (w.userData.prevModeDur || 0) * spd(pm) + (p.offset || 0) : 0;
       mixer.stopAllAction(); const fade = w.userData.prevMode && prev && prev !== cur ? Math.min(1, age / .35) : 1, e = fade * fade * (3 - 2 * fade);
       cur.play(); cur.time = at(cur, age); cur.setEffectiveWeight(e);
-      if (e < 1) { prev.play(); prev.time = at(prev, prev.getClip().userData.loop ? age : 1e9); prev.setEffectiveWeight(1 - e); }
+      if (e < 1) { prev.play(); prev.time = ho ? at(prev, pAge) : at(prev, prev.getClip().userData.loop ? age : 1e9); prev.setEffectiveWeight(1 - e); }
       mixer.update(0);
       if (e < 1) ualGroundLock(o, feetRest, [[cur.getClip(), cur.time, e], [prev.getClip(), prev.time, 1 - e]]);
       if (mo.face != null) o.parent.rotation.y = mo.face;
-      if (mo.reach) ualReach(o, w, mo.reach, age); }; // hand placed on a surface (renderer/ual.js)
+      if (mo.reach) ualReach(o, w, mo.reach, age); // hand placed on a surface (renderer/ual.js)
+      else if (ho && pm.reach) ualReachHandoff(o, w, pm.reach, pAge, raw * spd(pm)); };
     return w; }
   let cur = null; const play = n => { if (!n || cur === n || !acts[n]) return; Object.values(acts).forEach(a => a.stop()); acts[n].play(); cur = n; };
   play(p.clip || (acts.Idle ? 'Idle' : Object.keys(acts)[0]));
