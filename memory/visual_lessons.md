@@ -312,3 +312,8 @@ Rule: when a preview or final video shows a mistake, add one entry here (what wa
 - **Mistake:** a 1.9 m close-up on the sore showed only a blank grey flank; the line-6 camera behind the farmer showed his back. **Fix:** 2.7 m at az .4 (saddle + sore in one frame); side camera az 1.15 for the farmer facing -z.
 - Works: Donkey glb at height 1.95 = 1.3 m at the withers (Torso3 bone ~1.06 m, back top ~1.27 m); a saddle anchored 0.2 m above the Torso2 bone sits on the back; sacks riding the palm mid point keep hand contact by construction; mean luma 112-130 on every beat (exposure lowered to 1.0 after 4 frames had 5-6 % above 205).
 - Source: runs/donkey_load/sheet_preview.jpg (first pass) plus a luma count on the preview frames. Fixes applied after the one preview, not re-checked by eye.
+
+## Bee hive story (preview 2026-11-27, plans/bee_hive_story.mjs)
+- **Mistake:** a solid "cut edge" box sized to the cutaway window covered the opening, so the honey and cluster shots showed a flat tan panel. **Fix:** a cut edge is four thin strips round the opening, never one solid box.
+- **Mistake:** side cameras at 1.0-1.4 m on a farmer kneeling in front of the entrance had him on the line of sight (legs and arms filled the frame). **Fix:** shoot from pure +x (az ~1.5) with the target at the entrance z, at 1.7-2.9 m, so he stays beside the line.
+- Source: runs/bee_hive_story/sheet_preview.jpg (first pass). Fixes applied after the one preview, not re-checked by eye.

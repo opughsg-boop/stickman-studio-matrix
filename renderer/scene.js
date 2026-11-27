@@ -6900,7 +6900,8 @@ function apiaryHive(p = {}) {
     for (const s of [-1, 1]) { const st = box(T, BH - .003, fz, paint); st.position.set(FW / 2 - T / 2, y0 + BH / 2, s * (DP / 2 - T - fz / 2)); par.add(st);
       const sy = box(T, fy, pz, paint); sy.position.set(FW / 2 - T / 2, y0 + BH / 2 + s * (BH / 2 - fy / 2 - .0015), 0); par.add(sy); }
     const pn = box(T, py, pz, paint); pn.position.set(FW / 2 - T / 2, y0 + BH / 2, 0); par.add(pn); winPanels.push(pn);
-    const lip = new THREE.Mesh(new THREE.BoxGeometry(T * 1.05, py + .006, pz + .006), std('#c99e66')); lip.position.copy(pn.position); lip.scale.set(.2, 1, 1); par.add(lip);
+    for (const s of [-1, 1]) { const ey = box(T * .3, .006, pz, std('#c99e66')); ey.position.set(FW / 2 - .002, y0 + BH / 2 + s * (py / 2 + .003), 0); par.add(ey);
+      const ez = box(T * .3, py, .006, std('#c99e66')); ez.position.set(FW / 2 - .002, y0 + BH / 2, s * (pz / 2 + .003)); par.add(ez); } // light cut edge round the window
     for (const s of [-1, 1]) { const hh = box(.11, .03, .006, std('#4a3a28')); hh.position.set(0, y0 + BH * .7, s * (DP / 2 + .001)); par.add(hh);
       if (s < 0) { const hx = box(.006, .03, .11, std('#4a3a28')); hx.position.set(-FW / 2 - .001, y0 + BH * .7, 0); par.add(hx); } }
     const seam = box(FW + .003, .004, DP + .003, std('#b9ad94')); seam.position.y = y0 + BH - .001; par.add(seam);

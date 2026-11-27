@@ -88,7 +88,7 @@ const pot = id => obj(id, 'clay_pot', POT, { stones: STONES, seed: 43 });
 // ---------- beats (continuous camera; one move each) ----------
 const beats = [
   // 1 hook: bees pour out of the slot into the morning sun
-  { t: 0, add: [farmer, tool, hive, bees, ...world], modes: { bees: HV() }, camera: { target: [0, .5, .25], dist: 1.6, elev: .14, az: .4, zoom: 'in' } },
+  { t: 0, add: [farmer, tool, hive, bees, ...world], modes: { bees: HV() }, camera: { target: [0, .5, .25], dist: 2.2, elev: .14, az: .4, zoom: 'in' } },
   //   ... ring on the hive
   { t: T.paper1, add: [stk('ring1', 'circle_ring', [0, .66, .05], .85, { delay: .15 })], camera: { target: [0, .62, .1], dist: 2.9, elev: .16, az: .6, zoom: 'out' } },
   // 2 wide: the hive in its corner, traffic far behind
@@ -123,16 +123,16 @@ const beats = [
   { t: L(5), remove: ['hg5', 'dry', 'treeS'], add: [glb('treeW', 'nature_pack/CommonTree_Dead_2', 2.6, -2.6, 4.4, { rotY: 1.1, params: { sway: .004 } })],
     modes: { bees: HV({ R: .25, H: .12, land: .7, sp: .5, board: [.03, .04], dur: 2 }) }, camera: { target: [-.3, .6, .6], dist: 3.4, elev: .2, az: -.6, zoom: 'out' } },
   //   ... kneels and fits it: a small notch only (check)
-  { t: T.reduce6, add: [stk('ok6', 'check', [0, 0, 0], .08, { delay: T.small6 - T.reduce6, ...fol('hive', 'plug', [0, .1, .04]) })], camera: { target: [0, .42, .45], dist: 1.35, elev: .14, az: 1.25, zoom: 'in' } },
+  { t: T.reduce6, add: [stk('ok6', 'check', [0, 0, 0], .08, { delay: T.small6 - T.reduce6, ...fol('hive', 'plug', [0, .1, .04]) })], camera: { target: [0, .45, .3], dist: 2.2, elev: .14, az: 1.57, zoom: 'in' } },
   //   ... the cold air curls away from the small notch
-  { t: T.air6, remove: ['ok6'], camera: { target: [0, .5, .7], dist: 2.0, elev: .2, az: 1.15, zoom: 'out' } },
+  { t: T.air6, remove: ['ok6'], camera: { target: [0, .5, .5], dist: 2.9, elev: .18, az: 1.5, zoom: 'out' } },
   //   ... a wasp darts at the entrance and is kept out (check)
   { t: T.insect6, add: [{ id: 'wasp', type: 'bees', pos: [0, 0, 0], anim: 'none', dust: false, params: { real: true, kind: 'wasp', count: 1, seed: 5 } },
     stk('ok6b', 'check', [.1, .6, .45], .07, { delay: T.enter6 - T.insect6 })], modes: { wasp: { m: 'hover', E: ENT, from: [.9, .9, 1.2], blocked: true } },
-    camera: { target: [.05, .47, .38], dist: 1.05, elev: .12, az: 1.0, zoom: 'in' } },
+    camera: { target: [.05, .47, .32], dist: 1.7, elev: .12, az: 1.52, zoom: 'in' } },
   // 7 the wide entrance in winter: he pulls the reducer out, the cold pours in (cross)
   { t: L(6), remove: ['wasp', 'ok6b'], add: [stk('x7', 'cross', [0, 0, 0], .09, { delay: T.big7 - L(6), pulse: true, ...fol('hive', 'ent', [0, .07, .04]) })],
-    camera: { target: [0, .45, .4], dist: 1.4, elev: .16, az: 1.2, zoom: 'out' } },
+    camera: { target: [0, .45, .3], dist: 2.0, elev: .16, az: 1.5, zoom: 'out' } },
   //   ... the hive cools: the cutaway shows the bees clustered and shivering; a warm glow as they burn energy
   { t: T.cold7 - .4, remove: ['x7'], add: [{ id: 'cl', type: 'bees', pos: [0, 0, 0], anim: 'none', dust: false, params: { real: true, count: 70, seed: 33 } }],
     modes: { cl: { m: 'cluster', C: [.1705, .556, -.02], r: .075, depth: .022 } }, camera: { target: [.2, .6, 0], dist: 1.25, elev: .1, az: 1.45, zoom: 'in' } },
@@ -150,7 +150,7 @@ const beats = [
     modes: { bees: { m: 'pour', E: [0, .95, 0], F: [-3, 4.5, -15], dur: 1.2 } }, camera: { target: [-1.2, 1.6, -4], dist: 8, elev: .16, az: .3 } },
   // 9 he pushes the box straight; calm bees come back; every few days (hourglass)
   { t: L(8), remove: ['ar8', 'x8'], add: [stk('hg9', 'hourglass', [0, 1.3, 0], .2, { delay: T.days9 - L(8) })], modes: { bees: HV({ R: .6, land: .35, dur: 3 }) },
-    camera: { target: [-.3, .75, .15], dist: 2.6, elev: .2, az: .4 } },
+    camera: { target: [-.3, .75, .15], dist: 3.4, elev: .2, az: .4 } },
   //   ... he watches quietly from a distance with the hive tool (eyes)
   { t: T.see9, remove: ['hg9'], add: [stk('eye9', 'eyes', [0, 0, 0], .2, { delay: T.state9 - T.see9, ...fol('farmer', 'beak', [0, .34, 0]) })],
     camera: { target: [-.85, .8, .8], dist: 6.5, elev: .15, az: .755 } },
