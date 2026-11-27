@@ -103,7 +103,7 @@ function buildSky3D(env = {}) {
       s.position.set((rnd() - .5) * w * 2, Math.abs(rnd() - .3) * 4, (rnd() - .5) * w); s.scale.y = .55; g.add(s); }
     g.position.set(cx, cy, cz); g.userData.x0 = cx; g.userData.speed = .4 + rnd() * .6; cl.add(g);
   }
-  fx.clouds = cl; scene.add(cl);
+  fx.clouds = cl; fx.cloudMat = cloudMat; scene.add(cl);
   // image-based light from the same sky, so the blue sky fills shadows naturally (like the HDRI mode)
   // the lighting sky must get the same gain as the visible sky, or the scene is lit by a far too bright sky (washed-out colours)
   const es = new THREE.Scene(), esky = new Sky(); esky.scale.setScalar(380); esky.material.uniforms = u; esky.material.fragmentShader = sky.material.fragmentShader; es.add(esky);
@@ -583,15 +583,20 @@ function updateCamera(t) {
 }
 
 // ---------- effects per beat ----------
+const _nightHemi = new THREE.Color(0x6f86c9), _moonCol = new THREE.Color(0x9fb8ff), _nightFog = new THREE.Color(0x46577a);
 function updateEffects(t, bi) {
   if (fx.clouds) fx.clouds.children.forEach((g, i) => { g.position.x = g.userData.x0 + Math.sin(t * .02 * g.userData.speed + i) * 3; });
   const fxs = new Set(plan.beats[bi].effects || []);
-  const night = fxs.has('night') ? 1 : 0, hot = fxs.has('heat') ? 1 : 0;
-  fx.nightK = lerp(fx.nightK ?? 0, night, .15); if (Math.abs(fx.nightK - night) < .02) fx.nightK = night;
+  // env.nightK [[t, 0..1], ...]: a smooth day -> moonlit night -> day time-lapse (water mill video) instead of the per-beat 'night' switch
+  const NK = plan.env?.nightK, night = NK ? kv(NK, t, 0) : fxs.has('night') ? 1 : 0, hot = fxs.has('heat') ? 1 : 0;
   fx.nightK = night; // deterministic (no smoothing state across chunks)
   lights.sun.intensity = 2.6 * (1 - .45 * fx.nightK) * style.exposure;
   lights.hemi.intensity = (lights.hemiBase ?? 1.25) * (1 + .1 * fx.nightK) * style.exposure;
-  lights.hemi.color.set(fx.nightK ? 0x6f86c9 : 0xcfe3ff);
+  lights.hemi.color.set(0xcfe3ff).lerp(_nightHemi, fx.nightK);
+  if (NK) { const k = fx.nightK; fx.sunCol0 ||= lights.sun.color.clone(); fx.fog0 ||= scene.fog?.color.clone(); lights.sun.color.copy(fx.sunCol0).lerp(_moonCol, k); lights.sun.intensity *= 1 - .45 * k; lights.hemi.intensity *= 1 - .45 * k; // moonlight: cool, softer
+    if (fx.sky) { const u = fx.sky.material.uniforms; fx.skyG0 ??= u.skyGain.value; u.skyGain.value = fx.skyG0 * (1 - .86 * k); u.skyTint.value.set(lerp(.8, .5, k), lerp(.93, .72, k), lerp(1.15, 1.45, k)); }
+    if (fx.cloudMat) { fx.cloudMat.emissiveIntensity = .35 * (1 - .85 * k); fx.cloudMat.color.setRGB(1 - .55 * k, 1 - .48 * k, 1 - .3 * k); }
+    if (fx.fog0) scene.fog.color.copy(fx.fog0).lerp(_nightFog, k); }
   if (!TEX.sky && plan.env?.sky !== 'sky3d') { scene.background.set(fx.nightK ? '#24427a' : (plan.env?.bg || '#3d7fd0')); scene.fog.color.copy(scene.background); }
   else scene.backgroundIntensity = scene.environmentIntensity = (plan.env?.envLight ?? .9) * (1 - .6 * fx.nightK);
   lights.heat.intensity = hot ? 40 + Math.sin(t * 5) * 8 : 0;
@@ -6313,3 +6318,205 @@ Object.assign(ASSETS, { donkey_pack: donkeyPack, dirt_track: dirtTrack });
 Object.assign(RIG_POSES, { // sack loading (Farmer 1.75 m): carry = palms ~.99 m high, .23 m forward, .42 m apart (sack ends between them)
   sackUp: { adL: 1.42, adR: 1.42, fL: .55, fR: .55, eL: 1.3, eR: 1.3, sp: -.05, hd: .05, hold: 1 },     // the sack raised to chest height over the saddle
   sackPress: { adL: 1.42, adR: 1.42, fL: .45, fR: .45, eL: .7, eR: .7, sp: .12, hd: .2, hold: 1 } });   // settling the sack on the side of the saddle
+
+// ================= water mill pack (plans/water_mill.mjs, 2026-11-27) =================
+// An Egyptian canal water mill at real size (one asset, local frame = world when placed at the origin, camera side +z):
+//   canal (ترعة) on a raised earth bank behind a mud-brick wall (z -2.5..-1.9, top 2.15 m), water 1.95 m (low 1.72 m), flowing along +x;
+//   sluice opening (فتحة) 0.5 x 0.39 m in the wall with a sliding plank gate in front, a lifting lug, and a first-class wooden lever on a
+//   forked post (fulcrum 1.67 m): pushing the handle down lifts the gate 0.37 m; a wooden chute carries the water out over the wheel;
+//   breastshot wheel (عجلة) 2.5 m across (rims 2.0 m, 16 flat paddles ريش 0.5 x 0.33 m) in the tail race, axle 0.18 m on two bearing posts,
+//   a pegged pit wheel (24 pegs) driving a lantern pinion (6 staves, 4:1) on a vertical spindle that turns the runner stone (حجر الرحى,
+//   0.96 m) over the bed stone in a wooden tun on a mud-brick plinth, a wooden hopper with a feed shoe, a flour spout and a jute sack.
+// Motion: the wheel has inertia (its speed eases toward the water flow with a 1.1 s lag, integrated from t = 0, so chunks agree), the
+//   runner turns 4x faster, grain streams from a tipped basket into the hopper and trickles down the shoe, flour pours in proportion to
+//   the runner speed and fills the sack; the falling sheet, chute and canal water scroll with the flow; splash, churn and flung drops.
+// Keys (absolute times): openK, levelK, grainK, pourK (basket tilt 0..1), lampK, nightK, grabK (handle in the farmer's palms),
+//   basket/sackB/stick place keys [[t, place, blend]] (place = [x, z, rotY] on the ground | 'H' palms mid | 'R' right palm).
+// LINK.mill = { wheel, impact, gate, handle, hopper, eye, spout, sackA, sackB, canal, stone, lamp, axle, basket, stick }
+function mudBrickTex() { return SPR.mudBrick ||= canvasT(512, 512, (c, w, h) => { const r = rng(601), PX = w / 1.2, bh = .1 * PX, bl = .3 * PX, j = .013 * PX;
+  c.fillStyle = '#7b5d41'; c.fillRect(0, 0, w, h);
+  for (let y = 0, row = 0; y < h - 1; y += bh, row++) for (let x = -(row % 2) * bl / 2; x < w; x += bl) { const v = .84 + r() * .26, d = r() < .12 ? .86 : 1;
+    c.fillStyle = `rgb(${160 * v * d | 0},${126 * v * d | 0},${90 * v * d | 0})`; c.beginPath(); c.roundRect(x + j, y + j, bl - 2 * j, bh - 2 * j, 3); c.fill(); }
+  for (let i = 0; i < 2600; i++) { const x = r() * w, y = r() * h, a = r() * 6.28, l = 2 + r() * 7; c.strokeStyle = `rgba(${215 + r() * 30 | 0},${190 + r() * 30 | 0},${120 + r() * 30 | 0},${.18 + r() * .25})`; c.lineWidth = .7;
+    c.beginPath(); c.moveTo(x, y); c.lineTo(x + Math.cos(a) * l, y + Math.sin(a) * l); c.stroke(); }                       // chopped straw in the mud
+  for (let i = 0; i < 5000; i++) { c.fillStyle = `rgba(${r() > .5 ? '205,175,135' : '70,50,32'},${r() * .14})`; c.fillRect(r() * w, r() * h, 1 + r() * 3, 1 + r() * 2); }
+  for (let i = 0; i < 22; i++) { const x = r() * w, y = r() * h, R = 10 + r() * 40, g = c.createRadialGradient(x, y, 0, x, y, R); g.addColorStop(0, 'rgba(88,64,42,.32)'); g.addColorStop(1, 'rgba(88,64,42,0)'); c.fillStyle = g; c.fillRect(x - R, y - R, 2 * R, 2 * R); } // weathered hollows
+  for (let i = 0; i < 9; i++) { const x = r() * w, g = c.createLinearGradient(0, 0, 0, h); g.addColorStop(0, 'rgba(60,44,30,0)'); g.addColorStop(1, `rgba(60,44,30,${.1 + r() * .12})`); c.fillStyle = g; c.fillRect(x, 0, 4 + r() * 10, h); } // rain streaks
+}, [1, 1]); }
+function millStoneTex(top) { return SPR['mstone' + (top ? 1 : 0)] ||= canvasT(256, 256, (c, w, h) => { const r = rng(top ? 611 : 613); c.fillStyle = '#9b958a'; c.fillRect(0, 0, w, h);
+  for (let i = 0; i < 9000; i++) { const v = r(); c.fillStyle = v < .33 ? `rgba(40,38,36,${.2 + r() * .4})` : v < .66 ? `rgba(235,230,220,${.2 + r() * .35})` : `rgba(150,110,80,${.15 + r() * .3})`; c.fillRect(r() * w, r() * h, 1 + r() * 2, 1 + r() * 2); } // granite grains
+  for (let i = 0; i < 260; i++) { const x = r() * w, y = r() * h; c.fillStyle = 'rgba(30,28,26,.35)'; c.beginPath(); c.arc(x, y, .8 + r() * 1.6, 0, 7); c.fill(); } // pecked dressing marks
+  if (top) { const g = c.createRadialGradient(w / 2, h / 2, w * .1, w / 2, h / 2, w * .5); g.addColorStop(0, 'rgba(250,248,240,.0)'); g.addColorStop(.75, 'rgba(250,248,240,.0)'); g.addColorStop(.92, 'rgba(250,248,240,.55)'); g.addColorStop(1, 'rgba(250,248,240,.2)'); c.fillStyle = g; c.fillRect(0, 0, w, h);
+    c.fillStyle = 'rgba(230,226,215,.5)'; for (let k = 0; k < 6; k++) { c.save(); c.translate(w / 2, h / 2); c.rotate(k * Math.PI / 3); c.fillRect(w * .1, -1.5, w * .34, 3); c.restore(); } } // flour dust ring + lifting-bar sockets
+}, [1, 1]); }
+function streakWaterTex() { return SPR.streakW ||= (() => { const t = canvasT(128, 256, (c, w, h) => { const r = rng(617); c.clearRect(0, 0, w, h); c.fillStyle = 'rgba(190,225,240,.55)'; c.fillRect(0, 0, w, h);
+  for (let i = 0; i < 160; i++) { const x = r() * w, y = r() * h, l = 20 + r() * 90; c.strokeStyle = `rgba(${r() > .35 ? '255,255,255' : '120,175,195'},${.25 + r() * .5})`; c.lineWidth = 1 + r() * 3; c.beginPath(); c.moveTo(x, y); c.lineTo(x + (r() - .5) * 3, y + l); c.stroke(); }
+  for (let i = 0; i < 40; i++) { c.fillStyle = `rgba(255,255,255,${.3 + r() * .4})`; c.beginPath(); c.ellipse(r() * w, r() * h, 2 + r() * 5, 4 + r() * 10, 0, 0, 7); c.fill(); } }, [1, 1]); t.wrapS = t.wrapT = THREE.RepeatWrapping; return t; })(); }
+function waterMill(p = {}) { const g = new THREE.Group(), r = rng(p.seed || 621);
+  const WC = V3(0, 1.45, 0), RT = 1.25, RR = 1.0, F = V3(1.18, 1.43, -1.70), LS = .75, LL = 1.62, LG = 1.25, A0 = .25, LUG = .38, SILL = 1.66, LV0 = 1.72, LV1 = 1.95, PX = 1.385, RAT = 4;
+  const brick = new THREE.MeshStandardMaterial({ map: mudBrickTex(), roughness: .95 }), earth = new THREE.MeshStandardMaterial({ map: dykeTex(), color: col('#b39a78'), roughness: .97 });
+  const wetMud = std('#4e3b2a', { r: .55 }), stoneM = new THREE.MeshStandardMaterial({ map: millStoneTex(0), roughness: .88 }), stoneTop = new THREE.MeshStandardMaterial({ map: millStoneTex(1), roughness: .88 });
+  const WT = '#8a6c4c', WT2 = '#7a5e42', WT3 = '#9a7b58', iron = std('#3d3a36', { m: .7, r: .45 });
+  const add = (m, x, y, z) => { m.position.set(x, y, z); g.add(m); return m; };
+  // --- wall with the sluice opening, canal bank, canal water, back slope
+  holedWall(g, 'x', -13, 13, 0, 2.15, -2.5, -1.9, [[-.25, .25, SILL, 2.05]], brick, 1.2);
+  wbox(g, -13, 13, 2.15, 2.2, -2.52, -1.88, brick, 1.2);                                                                  // capping course
+  wbox(g, -13, 13, 0, 1.5, -3.9, -2.5, wetMud); wbox(g, -13, 13, 0, 2.15, -4.5, -3.9, earth, 2);                          // canal bed, back bank
+  { const sl = box(26, .3, Math.hypot(2.3, 2.15), earth); sl.position.set(0, 1.05, -5.65); sl.rotation.x = -Math.atan2(2.15, 2.3); g.add(sl); }
+  const cTex = waterTex([8, 1], '#5b8d8e'), cM = new THREE.MeshStandardMaterial({ map: cTex, color: col('#9fbdb8'), roughness: .07, metalness: .2, transparent: true, opacity: .92 });
+  const canal = new THREE.Mesh(new THREE.PlaneGeometry(26, 1.4), cM); canal.rotation.x = -Math.PI / 2; add(canal, 0, LV1, -3.2);
+  const bandM = new THREE.MeshStandardMaterial({ color: col('#3e3022'), roughness: .35, metalness: .1 });                  // wet mud band left when the level drops
+  const band = new THREE.Mesh(new THREE.PlaneGeometry(26, 1), bandM); add(band, 0, 1.8, -2.505); band.rotation.y = Math.PI;
+  const band2 = band.clone(); band2.rotation.y = 0; add(band2, 0, 1.8, -3.895);
+  // --- tail race (mud-brick lined channel along z), water at .3 m
+  wbox(g, -.57, -.42, 0, .4, -1.65, 9.9, brick, 1.2); wbox(g, .42, .57, 0, .4, -1.65, 9.9, brick, 1.2); wbox(g, -.57, .57, 0, .4, -1.8, -1.65, brick, 1.2); wbox(g, -.42, .42, 0, .02, -1.65, 9.9, wetMud);
+  const rTex = waterTex([1, 10], '#5d8f93'), rM = new THREE.MeshStandardMaterial({ map: rTex, color: col('#a8c6c4'), roughness: .06, metalness: .2, transparent: true, opacity: .93 });
+  const race = new THREE.Mesh(new THREE.PlaneGeometry(.84, 11.55), rM); race.rotation.x = -Math.PI / 2; add(race, 0, .3, 4.125);
+  const fTex = foamTex(); fTex.wrapS = fTex.wrapT = THREE.RepeatWrapping; const foamM = new THREE.MeshBasicMaterial({ map: fTex, transparent: true, opacity: 0, depthWrite: false, color: '#f4fbff' });
+  const foam = new THREE.Mesh(new THREE.PlaneGeometry(.8, 2.4), foamM); foam.rotation.x = -Math.PI / 2; add(foam, 0, .305, .9);
+  // --- chute (wooden flume) from the opening out over the wheel
+  g.add(woodBox([.54, .04, .55], 2, WT2, [0, 1.62, -1.585])); g.add(woodBox([.03, .2, .55], 2, WT2, [-.255, 1.72, -1.585])); g.add(woodBox([.03, .2, .55], 2, WT2, [.255, 1.72, -1.585]));
+  g.add(woodBox([.48, .04, .62], 2, WT2, [0, 1.62, -2.2])); for (const x of [-.3, .3]) g.add(woodBox([.08, 1.6, .08], 1, WT, [x, .8, -1.5]));
+  const chTex = waterTex([1, 2], '#6aa0a8'), chM = new THREE.MeshStandardMaterial({ map: chTex, color: col('#bfe0e4'), roughness: .05, transparent: true, opacity: 0, depthWrite: false });
+  const chute = new THREE.Mesh(new THREE.PlaneGeometry(.48, 1.18), chM); chute.rotation.x = -Math.PI / 2; add(chute, 0, 1.69, -1.91);
+  // --- gate, grooves, lug, lever, fulcrum post
+  for (const x of [-.36, .36]) g.add(woodBox([.08, 2.6, .1], 1, WT, [x, 1.3, -1.86]));
+  const gate = new THREE.Group(); g.add(gate); gate.add(woodBox([.64, .56, .05], 0, WT3, [0, .28, -1.86])); for (const y of [.08, .3, .5]) gate.add(woodBox([.66, .05, .02], 0, '#4a3b2c', [0, y, -1.83]));
+  gate.add(woodBox([.05, LUG + .04, .03], 1, WT, [.3, -LUG / 2 + .02, -1.80])); gate.add(woodBox([.26, .06, .12], 0, WT, [.42, -LUG + .03, -1.78]));  // strap + lug (the lever's short end lifts it)
+  g.add(woodBox([.12, F.y - .05, .12], 1, WT, [F.x, (F.y - .05) / 2, -1.79])); for (const dz of [-.055, .055]) g.add(woodBox([.1, .16, .03], 1, WT, [F.x, F.y - .03, F.z + dz])); // forked post
+  const pin = cyl(.018, .018, .16, iron, 8); pin.rotation.x = Math.PI / 2; add(pin, F.x, F.y, F.z);
+  const lever = new THREE.Group(); lever.position.copy(F); g.add(lever); lever.add(woodBox([LS + LL, .07, .07], 0, '#8d6e4e', [(LL - LS) / 2, 0, 0]));
+  { const grip = cyl(.045, .045, .34, std('#6b5038', { r: .7 }), 10); grip.rotation.z = Math.PI / 2; grip.position.set(LG, 0, 0); lever.add(grip); }
+  // --- the wheel: rims of felloes, spokes, hub, 16 paddles; axle, bearing posts, pit wheel with pegs
+  const wheel = new THREE.Group(); wheel.position.copy(WC); g.add(wheel);
+  for (const x of [-.22, .22]) { for (let i = 0; i < 12; i++) { const a = (i + .5) / 12 * Math.PI * 2, L = 2 * RR * Math.sin(Math.PI / 12) + .03, f = woodBox([.06, .1, L], 2, WT2, [x, Math.sin(a) * (RR - .03), Math.cos(a) * (RR - .03)]); f.rotation.x = -a; wheel.add(f); }
+    for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2, s = woodBox([.05, .07, RR - .12], 2, WT, [x, Math.sin(a) * (RR / 2 + .03), Math.cos(a) * (RR / 2 + .03)]); s.rotation.x = -a; wheel.add(s); } }
+  { const hub = cyl(.15, .15, .62, new THREE.MeshStandardMaterial({ map: grainTex(), color: col(WT), roughness: .7 }), 16); hub.rotation.z = Math.PI / 2; wheel.add(hub);
+    for (const x of [-.25, .25]) { const b = cyl(.155, .155, .03, iron, 16); b.rotation.z = Math.PI / 2; b.position.x = x; wheel.add(b); } }
+  for (let i = 0; i < 16; i++) { const a = i / 16 * Math.PI * 2, rm = (RR - .08 + RT) / 2, pd = woodBox([.5, .33 + .08, .028], 1, i % 3 ? WT3 : WT, [0, Math.sin(a) * rm, Math.cos(a) * rm]); pd.rotation.x = Math.PI / 2 - a; wheel.add(pd); }
+  const axle = cyl(.09, .09, 1.95, new THREE.MeshStandardMaterial({ map: grainTex(), color: col('#7d6248'), roughness: .7 }), 14); axle.rotation.z = Math.PI / 2; axle.position.x = .35; wheel.add(axle);
+  for (const x of [-.55, .55]) { g.add(woodBox([.12, .96, .14], 1, WT, [x, .88, 0])); g.add(woodBox([.16, .1, .26], 0, '#6e543b', [x, 1.32, 0])); }
+  { const pit = cyl(.38, .38, .06, new THREE.MeshStandardMaterial({ map: grainTex(), color: col(WT3), roughness: .65 }), 28); pit.rotation.z = Math.PI / 2; pit.position.x = 1.22; wheel.add(pit);
+    const rimB = new THREE.Mesh(new THREE.TorusGeometry(.38, .012, 6, 40), iron); rimB.rotation.y = Math.PI / 2; rimB.position.x = 1.22; wheel.add(rimB);
+    const pm = std('#5e4630', { r: .7 }); for (let i = 0; i < 24; i++) { const a = i / 24 * Math.PI * 2, pg = cyl(.017, .017, .1, pm, 6); pg.rotation.z = Math.PI / 2; pg.position.set(1.3, Math.sin(a) * .34, Math.cos(a) * .34); wheel.add(pg); } }
+  // --- plinth, stones, tun, pinion + spindle, hopper on its frame, feed shoe, spout, sack A
+  wbox(g, PX - .6, PX + .6, 0, .66, -.6, .6, brick, 1.2);
+  const bed = cyl(.5, .5, .14, stoneM, 40); add(bed, PX, .73, 0);
+  const runner = new THREE.Group(); runner.position.set(PX, .87, 0); g.add(runner);
+  { const rs = new THREE.Mesh(new THREE.CylinderGeometry(.48, .48, .14, 44), [stoneM, stoneTop, stoneM]); runner.add(rs);
+    const eye = new THREE.Mesh(new THREE.CircleGeometry(.075, 20), std('#2a2622')); eye.rotation.x = -Math.PI / 2; eye.position.y = .071; runner.add(eye);
+    const rynd = box(.22, .025, .04, iron); rynd.position.y = .08; runner.add(rynd); }
+  { const tun = new THREE.Mesh(new THREE.CylinderGeometry(.56, .56, .22, 36, 1, true), new THREE.MeshStandardMaterial({ map: grainTex(), color: col(WT), roughness: .75, side: THREE.DoubleSide })); add(tun, PX, .77, 0);
+    for (const y of [.7, .86]) { const hb = new THREE.Mesh(new THREE.TorusGeometry(.565, .01, 5, 40), iron); hb.rotation.x = Math.PI / 2; add(hb, PX, y, 0); } }
+  const pinion = new THREE.Group(); pinion.position.set(PX, 1.03, 0); g.add(pinion);
+  { const dm = std('#6b5038', { r: .7 }); for (const y of [0, .17]) { const d = cyl(.1, .1, .02, dm, 18); d.position.y = y; pinion.add(d); }
+    for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2, s = cyl(.012, .012, .17, dm, 6); s.position.set(Math.cos(a) * .085, .085, Math.sin(a) * .085); pinion.add(s); }
+    const sp = cyl(.025, .025, .34, iron, 8); sp.position.y = .03; pinion.add(sp); }
+  const HX = 1.79, HB = 1.12, HT = 1.46;
+  { const hm = new THREE.MeshStandardMaterial({ map: grainTex(), color: col(WT3), roughness: .7, side: THREE.DoubleSide }), hop = new THREE.Mesh(new THREE.CylinderGeometry(.3, .07, HT - HB, 4, 1, true), hm);
+    hop.rotation.y = Math.PI / 4; add(hop, HX, (HB + HT) / 2, 0);
+    for (const z of [-.32, .32]) { g.add(woodBox([.08, 1.55, .08], 1, WT, [2.06, .775, z])); } g.add(woodBox([.08, .08, .74], 2, WT, [2.06, 1.42, 0]));
+    for (const z of [-.21, .21]) g.add(woodBox([.3, .05, .05], 0, WT, [1.93, 1.4, z]));
+    const shoe = woodBox([.36, .025, .12], 0, WT2, [(HX + PX + .09) / 2, (HB + .97) / 2, 0]); shoe.rotation.z = Math.atan2(HB - .97, HX - PX - .09); g.add(shoe);
+    const spout = woodBox([.12, .03, .42], 2, WT2, [PX, .67, .74]); spout.rotation.x = .26; g.add(spout); }
+  const fillTex = canvasT(64, 64, (c, w, h) => { const q = rng(631); c.fillStyle = '#c9a25a'; c.fillRect(0, 0, w, h); for (let i = 0; i < 700; i++) { c.fillStyle = `rgba(${q() > .5 ? '235,200,120' : '120,84,40'},${.3 + q() * .4})`; c.beginPath(); c.ellipse(q() * w, q() * h, 1.6, .9, q() * 3, 0, 7); c.fill(); } }, [2, 2]);
+  const hopFill = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshStandardMaterial({ map: fillTex, roughness: .9 })); hopFill.rotation.set(-Math.PI / 2, 0, Math.PI / 4); g.add(hopFill);
+  const sackMat = new THREE.MeshStandardMaterial({ map: burlapTex(), color: col('#c9b08a'), roughness: .96, side: THREE.DoubleSide });
+  const sackGeo = (h, tied) => { const pr = []; for (let i = 0; i <= 14; i++) { const u = i / 14, y = u * h, rr = tied ? (u < .8 ? .19 + .03 * Math.sin(u * Math.PI / .8) : lerp(.2, .05, (u - .8) / .2)) : .18 + .035 * Math.sin(u * Math.PI); pr.push(new THREE.Vector2(rr, y)); }
+    const geo = new THREE.LatheGeometry(pr, 20), pa = geo.attributes.position; for (let i = 0; i < pa.count; i++) { const x = pa.getX(i), y = pa.getY(i), z = pa.getZ(i), a = Math.atan2(z, x), k = 1 + .05 * Math.sin(a * 5 + y * 17) + .03 * Math.sin(a * 11 - y * 9); pa.setX(i, x * k); pa.setZ(i, z * k); } geo.computeVertexNormals(); return geo; };
+  const sackA = new THREE.Group(); sackA.position.set(PX, 0, 1.05); g.add(sackA); const sA = new THREE.Mesh(sackGeo(1, false), sackMat); sackA.add(sA);
+  const flourTop = new THREE.Mesh(new THREE.CircleGeometry(.19, 24), std('#f3efe4', { r: .95 })); flourTop.rotation.x = -Math.PI / 2; sackA.add(flourTop);
+  const sackB = new THREE.Group(); g.add(sackB); sackB.add(new THREE.Mesh(sackGeo(.55, true), sackMat)); { const tie = new THREE.Mesh(new THREE.TorusGeometry(.055, .012, 6, 16), std('#8a7350')); tie.rotation.x = Math.PI / 2; tie.position.y = .47; sackB.add(tie); }
+  { const dust = new THREE.Mesh(new THREE.CircleGeometry(.5, 24), new THREE.MeshBasicMaterial({ map: softDiscTex(), color: '#f4f0e6', transparent: true, opacity: .55, depthWrite: false })); dust.rotation.x = -Math.PI / 2; add(dust, PX, .015, 1.05); }
+  // --- basket (palm-leaf قفة) with grain, stick, lantern
+  const basket = new THREE.Group(); g.add(basket);
+  { const pr = [[.13, 0], [.15, .02], [.18, .1], [.2, .18], [.205, .19]].map(q => new THREE.Vector2(...q)); const bm = new THREE.MeshStandardMaterial({ map: burlapTex(), color: col('#d6b878'), roughness: .9, side: THREE.DoubleSide });
+    const b = new THREE.Mesh(new THREE.LatheGeometry(pr, 22), bm); basket.add(b); const bot = new THREE.Mesh(new THREE.CircleGeometry(.13, 20), bm); bot.rotation.x = -Math.PI / 2; bot.position.y = .005; basket.add(bot);
+    for (const s of [-1, 1]) { const hd = new THREE.Mesh(new THREE.TorusGeometry(.05, .01, 5, 12, Math.PI), std('#a88c58')); hd.position.set(s * .2, .19, 0); hd.rotation.y = Math.PI / 2; basket.add(hd); } }
+  const bGrain = new THREE.Mesh(new THREE.SphereGeometry(.19, 18, 8, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ map: fillTex, roughness: .9 })); bGrain.scale.y = .35; basket.add(bGrain);
+  const stick = new THREE.Group(); g.add(stick); const stDry = cyl(.016, .014, 1, std('#7d5f40', { r: .8 }), 8), stWet = cyl(.0165, .0165, 1, std('#3c2c1e', { r: .35 }), 8); stick.add(stDry); stick.add(stWet);
+  const lamp = new THREE.Group(); lamp.position.set(2.14, 1.2, .4); g.add(lamp);
+  const flameM = new THREE.MeshStandardMaterial({ color: col('#ffcf8a'), emissive: col('#ffb455'), emissiveIntensity: 0, transparent: true, opacity: .75, roughness: .2 });
+  { lamp.add(add(box(.11, .02, .11, iron), 0, 0, 0)); const gl = cyl(.045, .045, .12, flameM, 12); gl.position.y = .07; lamp.add(gl); const cap = new THREE.Mesh(new THREE.ConeGeometry(.065, .06, 12), iron); cap.position.y = .16; lamp.add(cap);
+    const bail = new THREE.Mesh(new THREE.TorusGeometry(.04, .004, 4, 12, Math.PI), iron); bail.position.y = .19; lamp.add(bail); g.add(woodBox([.12, .025, .025], 0, WT, [2.1, 1.43, .34])); }
+  const lampL = new THREE.PointLight(0xffb066, 0, 4.5, 2); lampL.position.set(0, .07, 0); lamp.add(lampL);
+  // --- moon, stars (night), particles
+  const sky = new THREE.Group(); g.add(sky);
+  const moonT = canvasT(128, 128, (c, w) => { const q = rng(641), gr = c.createRadialGradient(w / 2, w / 2, 0, w / 2, w / 2, w * .48); gr.addColorStop(0, '#fffbea'); gr.addColorStop(.9, '#efe8cf'); gr.addColorStop(1, 'rgba(239,232,207,0)'); c.fillStyle = gr; c.beginPath(); c.arc(w / 2, w / 2, w * .48, 0, 7); c.fill();
+    for (let i = 0; i < 14; i++) { c.fillStyle = `rgba(150,145,125,${.15 + q() * .2})`; c.beginPath(); c.arc(w * (.25 + q() * .5), w * (.25 + q() * .5), 3 + q() * 12, 0, 7); c.fill(); } });
+  const moon = new THREE.Sprite(new THREE.SpriteMaterial({ map: moonT, transparent: true, opacity: 0, fog: false, depthWrite: false, toneMapped: false })); moon.position.set(112, 22, -98); moon.scale.setScalar(6); sky.add(moon);
+  const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: softDiscTex(), color: '#b9cdf5', transparent: true, opacity: 0, fog: false, depthWrite: false })); halo.position.copy(moon.position); halo.scale.setScalar(26); sky.add(halo);
+  const NSt = 600, sp = new Float32Array(NSt * 3); for (let i = 0; i < NSt; i++) { const u = .12 + r() * .85, a = r() * 6.28, q = Math.sqrt(1 - u * u); sp.set([380 * q * Math.cos(a), 380 * u, 380 * q * Math.sin(a)], i * 3); }
+  const sg = new THREE.BufferGeometry(); sg.setAttribute('position', new THREE.BufferAttribute(sp, 3)); const starM = new THREE.PointsMaterial({ color: '#ffffff', size: 1.3, sizeAttenuation: true, fog: false, transparent: true, opacity: 0, depthWrite: false }); sky.add(new THREE.Points(sg, starM));
+  const puff = n => Array.from({ length: n }, () => { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: puffTex(), color: '#ffffff', transparent: true, depthWrite: false, opacity: 0 })); g.add(s); return { s, ph: r(), a: r(), b: r() }; });
+  const splash = puff(18), churn = puff(14), fdust = puff(6);
+  const drops = new THREE.InstancedMesh(new THREE.SphereGeometry(.012, 6, 4), new THREE.MeshStandardMaterial({ color: '#e6f4fa', roughness: .05, transparent: true, opacity: .85 }), 50); drops.frustumCulled = false; g.add(drops);
+  const grains = new THREE.InstancedMesh(new THREE.SphereGeometry(.009, 6, 4), new THREE.MeshStandardMaterial({ color: '#c99a4c', roughness: .7 }), 90); grains.frustumCulled = false; g.add(grains);
+  const flour = new THREE.InstancedMesh(new THREE.SphereGeometry(.008, 5, 4), new THREE.MeshStandardMaterial({ color: '#fbf8f0', roughness: .95, emissive: '#333028' }), 60); flour.frustumCulled = false; g.add(flour);
+  // --- falling water sheet: off the chute lip, a parabola onto the paddles, down round the wheel (between the paddles), into the race
+  const path = []; { let z = -1.3, y = 1.7, s = 0; while (Math.hypot(z, y - WC.y) > 1.17 && s < 1) { path.push(V3(0, y, z)); s += .01; z = -1.3 + 1.25 * s; y = 1.7 - 4.9 * s * s; }
+    const a0 = Math.atan2(y - WC.y, z) + Math.PI * 2 * (Math.atan2(y - WC.y, z) < 0 ? 1 : 0); for (let a = a0; a < Math.PI * 1.5 + .45; a += .06) path.push(V3(0, WC.y + Math.sin(a) * 1.13, Math.cos(a) * 1.13));
+    const last = path[path.length - 1]; for (let k = 1; k <= 6; k++) path.push(V3(0, lerp(last.y, .31, k / 6), last.z + k * .12)); }
+  const sheet = (() => { const pos = [], uv = [], idx = []; let L = 0; path.forEach((P, i) => { if (i) L += P.distanceTo(path[i - 1]); for (const s of [-.2, .2]) { pos.push(s, P.y, P.z); uv.push(s > 0 ? 1 : 0, L / .7); } });
+    for (let i = 0; i < path.length - 1; i++) { const a = i * 2; idx.push(a, a + 2, a + 1, a + 1, a + 2, a + 3); } const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); geo.setIndex(idx); geo.computeVertexNormals();
+    return new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: streakWaterTex(), color: '#eaf6ff', emissive: '#4a6a78', roughness: .12, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide })); })(); g.add(sheet);
+  const IMP = path.find(P => Math.hypot(P.z, P.y - WC.y) < 1.3) || path[0];
+  // --- dynamics, integrated once from t = 0 (deterministic for out-of-order chunk rendering)
+  const flowAt = t => kv(p.openK, t, 1) * clamp((lerp(LV0, LV1, kv(p.levelK, t, 1)) - SILL) / (LV1 - SILL));
+  const DT = 1 / 60, NS = 60 * 70, ANG = new Float32Array(NS + 1), OM = new Float32Array(NS + 1), FL = new Float32Array(NS + 1);
+  { let a = 0, w = 1.15 * flowAt(0), f = 0; for (let i = 0; i <= NS; i++) { const t = i * DT; ANG[i] = a; OM[i] = w; FL[i] = f; const tg = 1.15 * flowAt(t - .35); w += (tg - w) * DT / 1.1; a += w * DT; if (kv(p.grainK, t, 0) > .05) f += w * DT * (p.fillRate ?? .045); } }
+  const dyn = t => { const x = clamp(t / DT, 0, NS - 1), i = Math.floor(x), u = x - i; return { a: lerp(ANG[i], ANG[i + 1], u), w: lerp(OM[i], OM[i + 1], u), f: lerp(FL[i], FL[i + 1], u) }; };
+  const M4 = new THREE.Matrix4(), Q = new THREE.Quaternion(), S1 = V3(1, 1, 1), P0 = V3(0, 0, 0), YAX = V3(0, 1, 0);
+  const placeAt = (keys, t, home) => { if (!keys) return { P: V3(home[0], 0, home[1]), yaw: home[2] || 0, held: null };
+    let i = 0; while (i + 1 < keys.length && t >= keys[i + 1][0]) i++; const cur = keys[i], prev = keys[Math.max(0, i - 1)], blend = clamp((t - cur[0]) / (cur[2] || .35));
+    const at = pl => { if (Array.isArray(pl)) return { P: V3(pl[0], pl[3] || 0, pl[1]), yaw: pl[2] || 0, held: null }; const L = LINK[p.carryBy || 'farmer']; if (!L || !L.L) return { P: V3(home[0], 0, home[1]), yaw: 0, held: null };
+      const P = pl === 'R' ? L.R.clone() : L.L.clone().add(L.R).multiplyScalar(.5); return { P, yaw: L.yaw || 0, held: pl }; };
+    const A = at(cur[1]); if (i === 0 || blend >= 1) return A; const B = at(prev[1]); const e = sEase(blend); return { P: B.P.clone().lerp(A.P, e), yaw: lerp(B.yaw, A.yaw, e), held: A.held, e }; };
+  g.userData.tick = t => { const D = dyn(t), w = D.w, fl = flowAt(t), flD = flowAt(t - .15), nk = kv(p.nightK, t, 0), lk = kv(p.lampK, t, 0);
+    wheel.rotation.x = -D.a; pinion.rotation.y = D.a * RAT; runner.rotation.y = D.a * RAT;
+    // lever: in the farmer's palms while grabbed (follows their height on its arc), else set by openK; the gate rides the lever's short end
+    let al = lerp(A0, -A0, kv(p.openK, t, 1)); const gk = kv(p.grabK, t, 0), LF = LINK[p.leverBy || 'farmer'];
+    if (gk > 0 && LF?.L) { const m = LF.L.clone().add(LF.R).multiplyScalar(.5); const ap = clamp(Math.atan2(m.y - F.y, m.x - F.x), -A0 - .05, A0 + .05); al = lerp(al, ap, gk); }
+    lever.rotation.z = al; const endY = F.y - LS * Math.sin(al); gate.position.y = endY + LUG;
+    const lvl = lerp(LV0, LV1, kv(p.levelK, t, 1)); canal.position.y = lvl; band.position.y = band2.position.y = (lvl + LV1) / 2; band.scale.y = band2.scale.y = Math.max(.001, LV1 - lvl + .01);
+    cTex.offset.x = -t * .25; rTex.offset.y = t * .35 * (.3 + w); chTex.offset.y = t * 1.2; chM.opacity = .88 * clamp(fl * 3); chute.visible = fl > .01;
+    const sm = sheet.material; sm.opacity = .9 * clamp(flD * 1.6); sheet.visible = flD > .01; sm.map.offset.y = t * 2.2; sheet.scale.x = .55 + .45 * clamp(flD);
+    foamM.opacity = .55 * clamp(w / 1.15); fTex.offset.y = t * .5;
+    splash.forEach(o => { const u = (t * 1.6 + o.ph) % 1; o.s.position.set((o.a - .5) * .4, IMP.y + Math.sin(u * Math.PI) * .18 - u * .1, IMP.z - .05 + u * .25 * (o.b - .3)); o.s.scale.setScalar(.08 + u * .22); o.s.material.opacity = .55 * clamp(flD * 1.5) * (1 - u); });
+    churn.forEach(o => { const u = (t * .9 + o.ph) % 1; o.s.position.set((o.a - .5) * .5, .33 + Math.sin(u * Math.PI) * .12, -.4 + o.b * 1.1 + u * .5); o.s.scale.setScalar(.12 + u * .3); o.s.material.opacity = .5 * clamp(w / 1.15) * (1 - u); });
+    for (let i = 0; i < 50; i++) { const u = (t * 1.3 + hr(i, 1)) % 1, th = -Math.PI / 2 + .25 + hr(i, 2) * .7, v = w * RT * (.8 + .5 * hr(i, 3)), s = u * .45, on = w > .15 && hr(i, 4) < w / 1.15;
+      P0.set((hr(i, 5) - .5) * .45, WC.y + RT * Math.sin(th) + v * Math.cos(th) * s - 4.9 * s * s, RT * Math.cos(th) - v * Math.sin(th) * s); if (P0.y < .3) P0.y = -9; drops.setMatrixAt(i, M4.compose(on ? P0 : V3(0, -9, 0), Q.identity(), S1)); } drops.instanceMatrix.needsUpdate = true;
+    // grain: basket pour stream, hopper fill, shoe trickle
+    const gK = kv(p.grainK, t, 0); hopFill.visible = gK > .02; const hy = HB + .02 + (HT - HB - .06) * gK, side = lerp(.07, .3, (hy - HB) / (HT - HB)) * Math.SQRT2 * .97; hopFill.position.set(HX, hy, 0); hopFill.scale.set(side, side, 1);
+    const B = placeAt(p.basket, t, [2.75, .55]); basket.position.copy(B.P); if (B.held) basket.position.y -= .12; basket.rotation.set(0, B.yaw, 0); const pk = kv(p.pourK, t, 0); basket.rotateX(pk * 1.25); bGrain.visible = kv(p.basketGrain, t, 1) > .03; bGrain.scale.set(1, .35 * kv(p.basketGrain, t, 1) + .02, 1); bGrain.position.y = .12;
+    basket.updateWorldMatrix(true, false); const lip = basket.localToWorld(V3(0, .19, .2)); const pouring = pk > .5;
+    for (let i = 0; i < 90; i++) { let on = false; if (i < 60 && pouring) { const u = (t * 1.8 + i / 60) % 1; P0.copy(lip).lerp(V3(HX, hy, 0), u); P0.y -= .25 * u * (1 - u) * 0; P0.x += (hr(i, 1) - .5) * .05; P0.z += (hr(i, 2) - .5) * .05; on = true; }
+      else if (i >= 60 && gK > .05 && w > .1) { const u = (t * .8 * (.3 + w) + (i - 60) / 30) % 1; P0.set(lerp(HX - .02, PX + .1, u) + (hr(i, 3) - .5) * .02, lerp(HB - .005, .965, u) + .015, (hr(i, 4) - .5) * .08); on = true; }
+      Q.setFromAxisAngle(YAX, hr(i, 6) * 6); grains.setMatrixAt(i, M4.compose(on ? P0 : V3(0, -9, 0), Q, V3(1.5, .8, .8))); } grains.instanceMatrix.needsUpdate = true;
+    // flour: stream from the spout into sack A, its fill, dust
+    const rate = gK > .05 ? clamp(w / 1.15) : 0, fA = clamp(D.f), hA = lerp(.3, .52, fA); sA.scale.set(1, hA, 1); flourTop.position.y = hA - .02; flourTop.visible = fA > .02;
+    const S0 = V3(PX, .62, .93); for (let i = 0; i < 60; i++) { const u = (t * 1.5 + i / 60) % 1, on = hr(i, 7) < rate; P0.set(PX + (hr(i, 8) - .5) * .05 * (.4 + u), lerp(S0.y, hA, u), S0.z + .05 * u + (hr(i, 9) - .5) * .04); flour.setMatrixAt(i, M4.compose(on ? P0 : V3(0, -9, 0), Q.identity(), S1)); } flour.instanceMatrix.needsUpdate = true;
+    fdust.forEach(o => { const u = (t * .6 + o.ph) % 1; o.s.position.set(PX + (o.a - .5) * .25, hA + u * .25, 1.0 + (o.b - .5) * .2); o.s.scale.setScalar(.06 + u * .2); o.s.material.opacity = .35 * rate * (1 - u); o.s.material.color.set('#fffaf0'); });
+    // sack B, stick
+    const SB = placeAt(p.sackB, t, [2.4, .9]); sackB.position.copy(SB.P); if (SB.held) sackB.position.y -= .32; sackB.rotation.y = SB.yaw;
+    const sv = kv(p.stickK, t, 1) > .5; stick.visible = sv; if (sv) { const ST = placeAt(p.stick, t, [1.55, -1.82]); let a, b; if (ST.held) { const fw = V3(Math.sin(ST.yaw), 0, Math.cos(ST.yaw)), carried = ST.P.clone().addScaledVector(fw, .3).add(V3(0, -.75, 0));
+        const tip = carried.lerp(V3(...(p.stickAim || [.05, 1.68, -1.55])), kv(p.dipK, t, 0)), dir = tip.clone().sub(ST.P).normalize(); a = ST.P.clone().addScaledVector(dir, -.3); b = tip; if (ST.e != null && ST.e < 1) { const h0 = V3(1.55, 0, -1.8), h1 = V3(1.6, 1.2, -1.88); a.lerp(h1, 1 - ST.e); b.lerp(h0, 1 - ST.e); } }
+      else { a = V3(1.6, 1.2, -1.88); b = V3(1.55, 0, -1.8); } const d = b.clone().sub(a), L = d.length(); Q.setFromUnitVectors(YAX, d.clone().normalize());
+      stDry.position.copy(a).lerp(b, .5); stDry.quaternion.copy(Q); stDry.scale.set(1, L, 1); const wl = .12 * kv(p.wetK, t, 0); stWet.visible = wl > .005; stWet.position.copy(b).addScaledVector(d, -wl / 2 / L); stWet.quaternion.copy(Q); stWet.scale.set(1, Math.max(.001, wl), 1); }
+    // night: moon, stars, lamp
+    moon.material.opacity = nk; halo.material.opacity = .35 * nk; starM.opacity = .9 * clamp(nk * 1.4 - .3); moon.visible = halo.visible = nk > .01;
+    flameM.emissiveIntensity = 3.2 * lk * (1 + .06 * Math.sin(t * 13) + .04 * Math.sin(t * 29)); lampL.intensity = 5.5 * lk * (1 + .05 * Math.sin(t * 13));
+    g.updateWorldMatrix(true, false); const W = v => g.localToWorld(v.clone ? v.clone() : v);
+    const handle = lever.localToWorld(V3(LG, 0, 0));
+    LINK.mill = { wheel: W(V3(0, WC.y + RT, 0)), impact: W(IMP), gate: W(V3(0, gate.position.y + .56, -1.84)), handle, hopper: W(V3(HX, HT, 0)), hopRim: W(V3(HX + .21, HT, 0)), eye: W(V3(PX, .95, 0)), spout: W(V3(PX, .6, .95)),
+      sackA: W(V3(PX, hA, 1.05)), sackB: sackB.getWorldPosition(V3(0, 0, 0)).add(V3(0, .3, 0)), canal: W(V3(0, lvl, -3.2)), stone: W(V3(PX, .95, 0)), lamp: lamp.getWorldPosition(V3(0, 0, 0)), axle: W(V3(.85, WC.y, 0)),
+      basket: basket.getWorldPosition(V3(0, 0, 0)), stickTip: sv ? stick.children[0].localToWorld(V3(0, -.5, 0)) : null, flow: fl, w }; };
+  shadowed(g); [sheet, chute, canal, race, foam, band, band2, drops, grains, flour, hopFill].forEach(m => { m.castShadow = false; }); sky.traverse(m => { m.castShadow = m.receiveShadow = false; });
+  return g; }
+Object.assign(ASSETS, { water_mill: waterMill });
+Object.assign(RIG_POSES, { // water mill (Farmer 1.75 m): lever handle overhead and pulled down; basket pour over the hopper; stick dip (tuned with the palm probe)
+  leverUp: { adL: 1.51, adR: 1.51, fL: 2.44, fR: 2.44, eL: 0, eR: 0, sp: .5, hd: -.4 },          // palms mid on the raised handle (2.39, 1.74, -1.70) from (2.39, -1.35): err .04 m
+  leverDown: { adL: 1.82, adR: 1.82, fL: .75, fR: .75, eL: .18, eR: .18, sp: .01, hd: .05 },     // handle pushed down (1.12 m): err 0
+  leverMid: { adL: 1.9, adR: 1.9, fL: 1.29, fR: 1.29, eL: .38, eR: .38, sp: -.2, hd: -.15 },     // handle half way (1.40 m): err .04 m
+  pourHigh: { adL: 1.5, adR: 1.5, fL: 1.92, fR: 1.92, eL: .36, eR: .36, sp: .5, hd: .25, hold: 1 }, // basket over the hopper: palms mid (2.2, 1.61, 0) from (2.62, 0) facing -x, .26 m from the rim
+  stickDip: { adR: 1.79, fR: 2.52, eR: 0, fL: .1, eL: .25, sp: .42, hd: .35 } });                  // R palm (.46, 1.72, -1.37): the stick tip goes into the chute water
