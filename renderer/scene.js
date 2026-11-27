@@ -6592,8 +6592,8 @@ function gfFish() { const g = new THREE.Group(); g.rotation.order = 'YZX';
 // mode timeline helper: keys [[t, mode], ...] -> { a, b, u } (blend from mode a to mode b over bl seconds after the key)
 const gfMode = (keys, t, bl = 1) => { if (!keys || !keys.length) return { a: 'swim', b: 'swim', u: 1, tb: 0 }; let i = -1; for (let k = 0; k < keys.length; k++) if (t >= keys[k][0]) i = k;
   if (i < 0) return { a: keys[0][1], b: keys[0][1], u: 1, tb: keys[0][0] }; const b = keys[i][1], a = i > 0 ? keys[i - 1][1] : b; return { a, b, u: sEase((t - keys[i][0]) / bl), tb: keys[i][0] }; };
-function gfWaterMat(op = .2) { return new THREE.MeshPhysicalMaterial({ color: col('#d2ecef'), roughness: .05, metalness: 0, transparent: true, opacity: op, depthWrite: false, side: THREE.DoubleSide }); }
-function gfGlassMat(op = .18) { return new THREE.MeshPhysicalMaterial({ color: col('#eef8f6'), roughness: .03, metalness: 0, clearcoat: 1, clearcoatRoughness: .03, transparent: true, opacity: op, side: THREE.DoubleSide, depthWrite: false }); }
+function gfWaterMat(op = .2) { return new THREE.MeshPhysicalMaterial({ color: col('#8fc3c9'), roughness: .05, metalness: 0, transparent: true, opacity: op, depthWrite: false, side: THREE.DoubleSide }); }
+function gfGlassMat(op = .18) { return new THREE.MeshPhysicalMaterial({ color: col('#bfdcd8'), roughness: .03, metalness: 0, clearcoat: .6, clearcoatRoughness: .03, transparent: true, opacity: op, side: THREE.DoubleSide, depthWrite: false }); }
 function gfRings(g, n = 8) { const m = new THREE.MeshBasicMaterial({ color: col('#ffffff'), transparent: true, opacity: .5, depthWrite: false }), R = Array.from({ length: n }, () => { const r = new THREE.Mesh(new THREE.RingGeometry(.9, 1, 28), m.clone()); r.rotation.x = -Math.PI / 2; r.visible = false; g.add(r); return r; });
   let k = 0; return { reset: () => { for (; k < R.length; k++) R[k].visible = false; k = 0; }, put: (x, y, z, u, s = .03) => { if (k >= R.length) return; const r = R[k++]; r.visible = true; r.position.set(x, y + .001, z); r.scale.setScalar(.004 + s * u); r.material.opacity = .45 * (1 - u); } }; }
 function gfPuffs(g, n, color) { return Array.from({ length: n }, (_, i) => { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: softPuffTex(), color: col(color), transparent: true, opacity: 0, depthWrite: false })); s.userData.ph = i / n; g.add(s); return s; }); }
@@ -6604,7 +6604,7 @@ function gfPuffs(g, n, color) { return Array.from({ length: n }, (_, i) => { con
 //   into the water while dropK > .5. Fish: fishIn (plunge time), modeK [[t, 'swim'|'surface'|'stress']], gillK (breathing rate 0..1).
 function gfBowl(p = {}) { const g = new THREE.Group(), R = p.r || .125, CUT = .1, CY = .1, rO = Math.sqrt(R * R - CUT * CUT), RI = R - .004;
   const lvK = t => kv(p.waterK, t, 1), level = t => -CUT + .006 + (CUT + .068 - .006) * lvK(t);
-  const shell = new THREE.Mesh(new THREE.SphereGeometry(R, 56, 36, 0, Math.PI * 2, Math.acos(CUT / R), Math.PI - 2 * Math.acos(CUT / R)), gfGlassMat(.2)); shell.position.y = CY; shell.renderOrder = 3; g.add(shell);
+  const shell = new THREE.Mesh(new THREE.SphereGeometry(R, 56, 36, 0, Math.PI * 2, Math.acos(CUT / R), Math.PI - 2 * Math.acos(CUT / R)), gfGlassMat(.07)); shell.position.y = CY; shell.renderOrder = 3; g.add(shell);
   const lipM = new THREE.MeshPhysicalMaterial({ color: col('#d4ebe4'), roughness: .05, clearcoat: 1, transparent: true, opacity: .6 });
   const lip = new THREE.Mesh(new THREE.TorusGeometry(rO, .0045, 8, 56), lipM); lip.rotation.x = Math.PI / 2; lip.position.y = CY + CUT; g.add(lip);
   const foot = new THREE.Mesh(new THREE.TorusGeometry(rO, .005, 8, 56), lipM); foot.rotation.x = Math.PI / 2; foot.position.y = .005; g.add(foot);
@@ -6613,10 +6613,10 @@ function gfBowl(p = {}) { const g = new THREE.Group(), R = p.r || .125, CUT = .1
   for (let i = 0; i < 70; i++) { const a = r0() * 6.28, rr = Math.sqrt(r0()) * (rO - .012), s = sph(.006 + r0() * .005, std(pc[i % 5], { r: .7 })); s.scale.y = .6; s.position.set(Math.cos(a) * rr, .011 + r0() * .006, Math.sin(a) * rr); g.add(s); }
   const cs = contactShadow(rO + .02, rO + .02, .35); cs.position.y = .002; g.add(cs);
   // water volume (rebuilt when the level moves) and the rippled surface
-  const wM = gfWaterMat(.22), water = new THREE.Mesh(new THREE.BufferGeometry(), wM); water.position.y = CY; water.renderOrder = 2; g.add(water); let wl = null;
-  const sM = new THREE.MeshPhysicalMaterial({ color: col('#cfe8ee'), roughness: .04, metalness: .1, transparent: true, opacity: .42, depthWrite: false, normalMap: ttWaterNormal().clone(), side: THREE.DoubleSide });
+  const wM = gfWaterMat(.08), water = new THREE.Mesh(new THREE.BufferGeometry(), wM); water.position.y = CY; water.renderOrder = 2; g.add(water); let wl = null;
+  const sM = new THREE.MeshPhysicalMaterial({ color: col('#cfe8ee'), roughness: .04, metalness: .1, transparent: true, opacity: .22, depthWrite: false, normalMap: ttWaterNormal().clone(), side: THREE.DoubleSide });
   sM.normalMap.repeat.set(1, 1); const surf = new THREE.Mesh(new THREE.CircleGeometry(1, 48), sM); surf.rotation.x = -Math.PI / 2; surf.renderOrder = 2; g.add(surf);
-  const clean = col('#d2ecef'), murky = col('#b7b58f'), amber = col('#d8c26a'), wc = new THREE.Color();
+  const clean = col('#8fc3c9'), murky = col('#9a9870'), amber = col('#d8c26a'), wc = new THREE.Color();
   // tap
   const steel = new THREE.MeshStandardMaterial({ color: col('#c9ced2'), metalness: .9, roughness: .18 }), SP = V3(0, CY + CUT + .17, 0);
   let stream = null; if (p.tap) { const [dx, dz] = p.tap, tp = new THREE.Group(); g.add(tp);
@@ -6648,7 +6648,7 @@ function gfBowl(p = {}) { const g = new THREE.Group(), R = p.r || .125, CUT = .1
     const key = Math.round(lv * 500); if (key !== wl) { wl = key; water.geometry.dispose(); water.geometry = new THREE.SphereGeometry(RI, 44, 24, 0, Math.PI * 2, Math.acos(clamp(lv / RI, -1, 1)), Math.PI - Math.acos(CUT / RI) - Math.acos(clamp(lv / RI, -1, 1))); }
     water.visible = surf.visible = lvK(t) > .02; surf.position.y = wy; surf.scale.setScalar(rr); sM.normalMap.offset.set(t * .03, t * .02);
     const tb = clamp(kv(p.turbK, t, 0)), am = clamp(kv(p.ammK, t, 0)), hz = clamp(kv(p.hazeK, t, 0));
-    wc.copy(clean).lerp(murky, tb).lerp(amber, am * .35); wM.color.copy(wc); wM.opacity = .2 + .42 * tb + .1 * am + .08 * hz; sM.color.copy(wc); sM.opacity = .42 + .3 * tb;
+    wc.copy(clean).lerp(murky, tb).lerp(amber, am * .35); wM.color.copy(wc); wM.opacity = .08 + .4 * tb + .1 * am + .08 * hz; sM.color.copy(wc); sM.opacity = .22 + .3 * tb;
     haze.forEach((s, i) => { const a = 6.28 * s.userData.ph + .15 * t, r = .02 + .05 * ((i * 37) % 10) / 10, y = -CUT + .03 + (lv + CUT - .05) * (((i * 53) % 10) / 10); s.position.set(Math.cos(a) * r, CY + y, Math.sin(a) * r); s.scale.setScalar(.06 + .02 * Math.sin(t + i)); s.material.opacity = .32 * hz * (lvK(t) > .2 ? 1 : 0); });
     amm.forEach((s, i) => { const a = 6.28 * s.userData.ph + .1 * t, r = .015 + .045 * ((i * 41) % 10) / 10; s.position.set(Math.cos(a) * r, CY - CUT + .025 + .02 * ((i * 29) % 10) / 10 + .006 * Math.sin(t * .7 + i), Math.sin(a) * r); s.scale.setScalar(.05 + .015 * Math.sin(t * .8 + i)); s.material.opacity = .42 * am; });
     const wk = clamp(kv(p.wasteK, t, 0)), nw = Math.round(wk * NW); WS.forEach((w, i) => wst.setMatrixAt(i, i < nw ? M.compose(V3(w.x, .021, w.z), Q.setFromEuler(new THREE.Euler(Math.PI / 2, 0, w.ry)), S1) : Z0)); wst.instanceMatrix.needsUpdate = true;
@@ -6690,7 +6690,7 @@ function gfTank(p = {}) { const g = new THREE.Group(), L = p.L || 1.2, D = p.D |
   for (const s of [-1, 1]) { const dr = box(L / 2 - .03, S - .08, .006, new THREE.MeshStandardMaterial({ color: col('#5a4030'), roughness: .5 })); dr.position.set(s * L / 4, S / 2, D / 2 + .033); g.add(dr);
     const kn = cyl(.008, .008, .02, std('#b8a070', { r: .3, m: .7 }), 10); kn.rotation.x = Math.PI / 2; kn.position.set(s * .04, S / 2, D / 2 + .045); g.add(kn); }
   // glass box + trims
-  const gl = gfGlassMat(.13), panes = [[L, H, T, 0, Y0 + H / 2, D / 2], [L, H, T, 0, Y0 + H / 2, -D / 2], [T, H, D, L / 2, Y0 + H / 2, 0], [T, H, D, -L / 2, Y0 + H / 2, 0], [L, .01, D, 0, Y0 + .005, 0]];
+  const gl = gfGlassMat(.05), panes = [[L, H, T, 0, Y0 + H / 2, D / 2], [L, H, T, 0, Y0 + H / 2, -D / 2], [T, H, D, L / 2, Y0 + H / 2, 0], [T, H, D, -L / 2, Y0 + H / 2, 0], [L, .01, D, 0, Y0 + .005, 0]];
   panes.forEach(([w, h, d, x, y, z]) => { const m = box(w, h, d, gl); m.position.set(x, y, z); m.renderOrder = 3; m.castShadow = false; g.add(m); });
   for (const y of [Y0 + .008, Y0 + H - .006]) { for (const z of [-1, 1]) { const tr = box(L + .012, .016, .012, dark); tr.position.set(0, y, z * D / 2); g.add(tr); } for (const x of [-1, 1]) { const tr = box(.012, .016, D + .012, dark); tr.position.set(x * L / 2, y, 0); g.add(tr); } }
   // gravel
@@ -6722,10 +6722,10 @@ function gfTank(p = {}) { const g = new THREE.Group(), L = p.L || 1.2, D = p.D |
   const NAB = 46, airB = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 7, 5), new THREE.MeshStandardMaterial({ color: col('#ffffff'), roughness: .03, metalness: .1, transparent: true, opacity: .6 }), NAB); airB.frustumCulled = false; g.add(airB);
   const AB = Array.from({ length: NAB }, () => ({ ph: r0(), s: .0025 + r0() * .0035, w: r0() * 6 }));
   // water
-  const wM = gfWaterMat(.14), water = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), wM); water.renderOrder = 2; g.add(water);
-  const sM = new THREE.MeshPhysicalMaterial({ color: col('#cfe8ee'), roughness: .04, metalness: .1, transparent: true, opacity: .4, depthWrite: false, normalMap: ttWaterNormal().clone(), side: THREE.DoubleSide });
+  const wM = gfWaterMat(.06), water = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), wM); water.renderOrder = 2; g.add(water);
+  const sM = new THREE.MeshPhysicalMaterial({ color: col('#cfe8ee'), roughness: .04, metalness: .1, transparent: true, opacity: .2, depthWrite: false, normalMap: ttWaterNormal().clone(), side: THREE.DoubleSide });
   sM.normalMap.repeat.set(4, 1.4); const surf = new THREE.Mesh(new THREE.PlaneGeometry(L - 2 * T, D - 2 * T), sM); surf.rotation.x = -Math.PI / 2; surf.renderOrder = 2; g.add(surf);
-  const clean = col('#d2ecef'), murky = col('#a9a684'), amber = col('#d8c26a'), wc = new THREE.Color();
+  const clean = col('#8fc3c9'), murky = col('#97946e'), amber = col('#d8c26a'), wc = new THREE.Color();
   const haze = gfPuffs(g, 22, '#c9c19a'), amm = gfPuffs(g, 18, '#d9c060'), rings = gfRings(g, 14);
   // pellets
   const feeds = p.feeds || [], NP = feeds.reduce((s, f) => s + f.n, 0) || 1, pel = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 7, 5), new THREE.MeshStandardMaterial({ color: col('#ffffff'), roughness: .8 }), NP); pel.frustumCulled = false; g.add(pel);
@@ -6769,7 +6769,7 @@ function gfTank(p = {}) { const g = new THREE.Group(), L = p.L || 1.2, D = p.D |
   const yawPrev = FISH.map(() => 0), M = new THREE.Matrix4(), Q = new THREE.Quaternion(), S1 = V3(1, 1, 1), Z0 = new THREE.Matrix4().makeScale(0, 0, 0);
   g.userData.tick = t => { const lv = level(t), wf = lvK(t); rings.reset();
     const wh = lv - (Y0 + .01); water.visible = surf.visible = wf > .01; water.scale.set(L - 2 * T - .002, Math.max(.001, wh), D - 2 * T - .002); water.position.y = Y0 + .01 + wh / 2; surf.position.y = lv; sM.normalMap.offset.set(t * .03, t * .015);
-    const hz = clamp(kv(p.hazeK, t, 0)), am = clamp(kv(p.ammK, t, 0)); wc.copy(clean).lerp(murky, hz).lerp(amber, am * .4); wM.color.copy(wc); wM.opacity = .14 + .32 * hz + .12 * am; sM.color.copy(wc);
+    const hz = clamp(kv(p.hazeK, t, 0)), am = clamp(kv(p.ammK, t, 0)); wc.copy(clean).lerp(murky, hz).lerp(amber, am * .4); wM.color.copy(wc); wM.opacity = .06 + .3 * hz + .12 * am; sM.color.copy(wc);
     haze.forEach((s, i) => { s.position.set(-L / 2 + .08 + (L - .3) * (((i * 37) % 22) / 22) + .03 * Math.sin(t * .2 + i), YG + .03 + (lv - YG - .06) * (((i * 53) % 11) / 11), -D / 2 + .06 + (D - .12) * (((i * 17) % 7) / 7)); s.scale.setScalar(.16 + .03 * Math.sin(t * .5 + i)); s.material.opacity = .35 * hz; });
     amm.forEach((s, i) => { s.position.set(-L / 2 + .1 + (L - .3) * (((i * 41) % 18) / 18), YG + .03 + .05 * (((i * 29) % 5) / 5) + .01 * Math.sin(t * .6 + i), -D / 2 + .07 + (D - .14) * (((i * 13) % 6) / 6)); s.scale.setScalar(.13 + .03 * Math.sin(t * .7 + i)); s.material.opacity = .45 * am; });
     leaves.forEach(l => { const P = l.geo.attributes.position.array, sw = .025 * Math.sin(t * 1.1 + l.ph) + .012 * Math.sin(t * 2.3 + l.ph * 2); for (let k = 0; k < P.length; k += 3) { const f = l.B[k + 1] / l.h; P[k + 2] = l.B[k + 2] + (sw + l.lean) * f * f * 1.6; P[k] = l.B[k] + .008 * f * Math.sin(t * 1.7 + l.ph); } l.geo.attributes.position.needsUpdate = true; });

@@ -56,7 +56,7 @@ const FEED = [.85, -.64], PF = [FEED[0] + .11, FEED[1] - .40];   // feeding: pal
 const HOSE = [.6, -.69], PH = [HOSE[0] + .11, HOSE[1] - .40];    // siphon: palm on the hose at the back rim
 const JUG = [1.1, -.62], PJ = [JUG[0], JUG[1] - .34];            // jug held at 1.32 m, spout over the water
 const FACE = [1.1, .17];                                          // squatting at the front glass, facing -z
-const BUCKET = [.25, -1.0];
+const BUCKET = [.25, -1.0], REST_B = [-2.15, -1.35], REST_T = [2.05, -1.35];   // where the owner waits, out of the close shots
 
 const tap = { id: 'bowl', type: 'gf_bowl', pos: [BOWL[0], TABLE_Y, BOWL[1]], anim: 'none', dust: false, params: { link: 'bowl', size: .1, tap: [-.2, -.13], fishIn: T.put1 + .1,
   waterK: [[0, .6], [T.tap1 - .2, .6], [T.tap1 + 1.3, 1], [T.amm9, 1]], tapK: [[0, 0], [T.tap1 - .4, 0], [T.tap1 - .2, 1], [T.tap1 + 1.2, 1], [T.tap1 + 1.5, 0]],
@@ -96,10 +96,10 @@ tank.params.jug = { by: 'owner', hand: 'R', wins: [JUG1, JUG2], pourK: [[0, 0], 
 // owner track [t, x, y, z, yaw, pose, 'walk']
 const st = (t, [x, z], yaw = 0, pose = 'stand', walk) => walk ? [t, x, pose === 'squatReach' ? -.55 : 0, z, yaw, pose, 'walk'] : [t, x, pose === 'squatReach' ? -.55 : 0, z, yaw, pose];
 const owner = { id: 'owner', type: 'rig_person', pos: [0, 0, 0], anim: 'none', dust: false, params: { model: 'modular_men/Casual', height: 1.75, link: 'owner', seed: 4, track: [
-  st(0, PB), st(T.drops4 - 1.2, PB), st(T.drops4 - .7, PB, 0, 'pickReach'), st(T.safe4 + .4, PB, 0, 'pickReach'), st(T.safe4 + 1.0, PB),
-  st(L(9) + .3, PB), st(L(9) + 1.6, [-.1, -1.0], 0, 'stand', 1), st(T.filt10 - .2, PF, 0, 'stand', 1),
+  st(0, REST_B, .5), st(L(3) - .2, REST_B, .5), st(T.drops4 - 1.2, PB, 0, 'stand', 1), st(T.drops4 - .7, PB, 0, 'pickReach'), st(T.safe4 + .4, PB, 0, 'pickReach'), st(T.safe4 + 1.0, PB),
+  st(L(4) + 2.2, REST_B, .5, 'stand', 1), st(L(9) + .3, REST_B, .5), st(L(9) + 2.4, [-.1, -1.1], 0, 'stand', 1), st(T.food11 - 1.4, PF, 0, 'stand', 1),
   st(T.food11 - 1.0, PF), st(T.food11 - .6, PF, 0, 'pickReach'), st(T.food11 + 1.2, PF, 0, 'pickReach'), st(T.food11 + 1.8, PF),
-  st(T.pinch14 - .7, PF), st(T.pinch14 - .3, PF, 0, 'pickReach'), st(T.pinch14 + .6, PF, 0, 'pickReach'), st(T.pinch14 + 1.1, PF),
+  st(T.food11 + 3.4, REST_T, -.4, 'stand', 1), st(L(13) - 1.4, REST_T, -.4), st(T.pinch14 - .7, PF, 0, 'stand', 1), st(T.pinch14 - .3, PF, 0, 'pickReach'), st(T.pinch14 + .6, PF, 0, 'pickReach'), st(T.pinch14 + 1.1, PF),
   st(T.week15 + .2, PF), st(HOSE1[0] - .5, PH, 0, 'stand', 1), st(HOSE1[0] - .1, PH, 0, 'pickReach'), st(HOSE1[1] - .2, PH, 0, 'pickReach'),
   st(JUG1[0] - .2, PJ, 0, 'stand', 1), st(JUG1[0] + .2, PJ, 0, 'stakePushHi'), st(JUG1[1] - .2, PJ, 0, 'stakePushHi'), st(JUG1[1] + .3, PJ),
   st(HOSE2[0] - .5, PH, 0, 'stand', 1), st(HOSE2[0] - .1, PH, 0, 'pickReach'), st(HOSE2[1] - .2, PH, 0, 'pickReach'),
@@ -205,7 +205,7 @@ const plan = {
     sunElev: 50, sunAz: 25, clouds: 10,
     // sound library (this plan only, at or under the global bed .03 / calls .05)
     sfxBeds: [{ cat: 'bubbles', idx: 2, gain: .03 }, { cat: 'ambience', idx: 1, gain: .015 }] },
-  style: { camEase: .6, captionY: .78, exposure: 1.0, foreground: false, handheld: .5 },
+  style: { camEase: .6, captionY: .78, exposure: .8, foreground: false, handheld: .5 },
   beats: beats.map((b, i) => ({ start: b.t, end: i + 1 < beats.length ? beats[i + 1].t : D, text: '', remove: [], modes: {}, effects: [], add: [], ...b, kind: 'info', camera: { punch: false, ...b.camera } })),
 };
 plan.beats.forEach(b => { delete b.t; b.text = S.flatMap(s => s.words).filter(x => x.start >= b.start - .01 && x.start < b.end - .01).map(x => x.w).join(' '); });
