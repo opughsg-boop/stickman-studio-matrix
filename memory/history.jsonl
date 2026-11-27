@@ -95,3 +95,4 @@
 {"run": "water_mill", "time": "2026-11-27 02:44", "score": 75, "issues": 5, "codes": ["dead_beat"]}
 {"run": "new_voice_nov27", "time": "2026-11-27 16:24", "score": 10, "issues": 24, "codes": ["beat_too_short", "caption_too_long", "dead_beat"]}
 {"run": "pigeon_coop", "time": "2026-11-27 17:51", "score": 83, "issues": 4, "codes": ["beat_too_short", "dead_beat"]}
+{"run": "bee_hive_story", "time": "2026-11-27 17:28", "score": 76, "issues": 6, "codes": ["beat_too_short", "dead_beat"]}
