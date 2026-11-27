@@ -1,0 +1,6 @@
+{ "_note": "UAL (UE Mannequin) bone -> Quaternius modular Farmer bone (assets/lib/modular_men/Farmer.glb). Used to retarget UAL clips onto the Farmer.",
+  "pelvis": "Hips", "spine_01": "Abdomen", "spine_02": "Torso", "spine_03": "Chest", "neck_01": "Neck", "Head": "Head",
+  "clavicle_l": "Shoulder.L", "upperarm_l": "UpperArm.L", "lowerarm_l": "LowerArm.L", "hand_l": "Hand.L",
+  "clavicle_r": "Shoulder.R", "upperarm_r": "UpperArm.R", "lowerarm_r": "LowerArm.R", "hand_r": "Hand.R",
+  "thigh_l": "UpperLeg.L", "calf_l": "LowerLeg.L", "foot_l": "Foot.L", "ball_l": "Foot.L_end",
+  "thigh_r": "UpperLeg.R", "calf_r": "LowerLeg.R", "foot_r": "Foot.R", "ball_r": "Foot.R_end" }
