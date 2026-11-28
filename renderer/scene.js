@@ -8454,3 +8454,191 @@ function brHaze(p = {}) { const g = new THREE.Group(), [x0, x1, z0, z1] = p.area
     stinks.forEach(s => { const f = fr01(t * .35 + s.ph); s.s.position.set(s.x, y1 + .05 + f * .35, s.z); s.s.scale.set(.07, .26, 1); s.s.material.opacity = sm * .85 * Math.sin(Math.PI * f); }); };
   return g; }
 Object.assign(ASSETS, { br_flock: brFlock, br_pen: brPen, br_litter: brLitter, br_trough: brTrough, br_sack: brSack, br_heap: brHeap, br_scoop: brScoop, br_vent: brVent, br_haze: brHaze });
+
+// ================= Cabbage pack (2026-11-28, plans/cabbage_cold.mjs) =================
+// Real sizes (green cabbage, Brassica oleracea var. capitata): mature head 0.2-0.25 m across, wrapper leaves 0.3-0.4 m long and nearly as
+//   wide, blue-green with a waxy bloom, a thick pale midrib and pale branching veins, wavy margins; a short thick stem 3-4 cm; the rosette
+//   spreads 0.5-0.7 m. Transplant seedling: 4-6 true leaves 5-8 cm on a 3 cm stem in a soil plug. Field spacing 45-60 cm in the row.
+// cab_plant (local y 0 = soil/bed top): 12 rosette leaves (each a live deformable sheet: spine elevation + curl + gravity droop, a circular
+//   cup across, wavy margins, rolled edges in heat) + 4 wrapper leaves that blend from spread to hugging the head as headK grows; the head
+//   is two hemispheres with overlapping-leaf ridges that hinge open at the base (splitK) to show the layered cross-section inside.
+//   growK 0 seedling .. 1 mature, headK 0..1 heart forming, droopK heat (droop, curl, yellow), frostK (rime colour + ice crystals),
+//   dewK (water drops on the leaves and the head), roll {leaf, t0, t1}: one drop runs down a midrib and drips, cutT: the head and its
+//   wrapper leaves leave (a headOnly copy takes over), the cut stub shows; plantIn {t0, t1, by, hand}: carried in a rig palm, set in.
+//   headOnly + carry [[t, place, dur]]: place 'hide' | 'palm:<gard_hand link>' (gripDir) | 'mid:<rig link>' | [x,y,z] head centre (world).
+// cab_field: lite mature cabbages (instanced head + 9 leaves) on rows, skip [[x, z, r]]; frostK. cab_crate: a slatted field crate
+//   0.7 x 0.47 x 0.3 m with n heads in 3 x 2 slots (slot(i) in the plan). cab_tray: a black 4 x 8 seedling plug tray. cab_frost: rime sheets.
+const CAB_NU = 12, CAB_NV = 8;
+function cabLeafTex() { return SPR.cabLeaf ||= (() => { const r = rng(733); return canvasT(256, 320, (c, w, h) => {
+  const gr = c.createLinearGradient(0, h, 0, 0); gr.addColorStop(0, '#dde8c6'); gr.addColorStop(.22, '#b7d2a6'); gr.addColorStop(1, '#9cc096'); c.fillStyle = gr; c.fillRect(0, 0, w, h);
+  for (let i = 0; i < 160; i++) { c.fillStyle = r() < .5 ? `rgba(70,110,80,${.03 + r() * .05})` : `rgba(235,245,225,${.03 + r() * .06})`; c.beginPath(); c.arc(r() * w, r() * h, 3 + r() * 10, 0, 6.3); c.fill(); }
+  const vein = (x0, y0, sd, k) => { const ex = w / 2 + sd * w * .5, ey = y0 - h * .17, cx = w / 2 + sd * w * .2, cy = y0 - h * .025;
+    c.lineWidth = Math.max(1.4, 5.2 - k * .4); c.strokeStyle = 'rgba(238,246,222,.88)'; c.beginPath(); c.moveTo(x0, y0); c.quadraticCurveTo(cx, cy, ex, ey); c.stroke();
+    c.lineWidth = 1; c.strokeStyle = 'rgba(232,242,214,.55)'; for (let m = 1; m < 5; m++) { const u = m / 5, px = (1 - u) * (1 - u) * x0 + 2 * u * (1 - u) * cx + u * u * ex, py = (1 - u) * (1 - u) * y0 + 2 * u * (1 - u) * cy + u * u * ey;
+      c.beginPath(); c.moveTo(px, py); c.lineTo(px + sd * (8 + r() * 10), py - 10 - r() * 14); c.moveTo(px, py); c.lineTo(px + sd * (4 + r() * 6), py + 8 + r() * 8); c.stroke(); } };
+  for (let k = 0; k < 10; k++) { const y0 = h - 18 - k * (h - 40) / 10; vein(w / 2, y0, -1, k); vein(w / 2, y0, 1, k); }
+  c.fillStyle = '#f1f6e2'; c.beginPath(); c.moveTo(w / 2 - 13, h); c.lineTo(w / 2 - 1.5, 4); c.lineTo(w / 2 + 1.5, 4); c.lineTo(w / 2 + 13, h); c.fill();
+  c.strokeStyle = 'rgba(120,150,110,.35)'; c.lineWidth = 1.2; c.beginPath(); c.moveTo(w / 2 - 13, h); c.lineTo(w / 2 - 1.5, 4); c.moveTo(w / 2 + 13, h); c.lineTo(w / 2 + 1.5, 4); c.stroke(); }); })(); }
+function cabLeafBump() { return SPR.cabLeafB ||= canvasT(256, 320, (c, w, h) => { c.fillStyle = '#808080'; c.fillRect(0, 0, w, h); const r = rng(91);
+  for (let i = 0; i < 260; i++) { c.fillStyle = `rgba(255,255,255,${.05 + r() * .08})`; c.beginPath(); c.arc(r() * w, r() * h, 4 + r() * 9, 0, 6.3); c.fill(); }   // gentle blistering between the veins
+  c.strokeStyle = '#3c3c3c'; for (let k = 0; k < 10; k++) { const y0 = h - 18 - k * (h - 40) / 10; for (const sd of [-1, 1]) { c.lineWidth = Math.max(1.5, 5 - k * .35); c.beginPath(); c.moveTo(w / 2, y0); c.quadraticCurveTo(w / 2 + sd * w * .2, y0 - h * .025, w / 2 + sd * w * .5, y0 - h * .17); c.stroke(); } }
+  c.fillStyle = '#d8d8d8'; c.beginPath(); c.moveTo(w / 2 - 12, h); c.lineTo(w / 2 - 1.5, 4); c.lineTo(w / 2 + 1.5, 4); c.lineTo(w / 2 + 12, h); c.fill(); }); }
+const cabSaw = x => x - Math.floor(x);
+function cabHeadTex(bump) { const k = bump ? 'cabHeadB' : 'cabHead'; return SPR[k] ||= (() => { const r = rng(bump ? 57 : 58); return canvasT(512, 256, (c, w, h) => {
+  if (bump) { c.fillStyle = '#808080'; c.fillRect(0, 0, w, h); } else { const gr = c.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#eef5d2'); gr.addColorStop(.5, '#d7e8b2'); gr.addColorStop(1, '#c2d99c'); c.fillStyle = gr; c.fillRect(0, 0, w, h); }
+  // veins: fan up from the base (bottom row) toward the crown, a little curved
+  for (let i = 0; i < 46; i++) { const x0 = r() * w, bend = (r() - .5) * 60; c.lineWidth = bump ? 2.4 : 1.2 + r() * 1.8; c.strokeStyle = bump ? 'rgba(255,255,255,.55)' : `rgba(246,250,232,${.45 + r() * .3})`;
+    c.beginPath(); c.moveTo(x0, h); c.quadraticCurveTo(x0 + bend, h * .5, x0 + bend * 1.6, h * (.08 + r() * .2)); c.stroke(); }
+  // overlapping leaf edges: sawtooth ridges (same formula as the geometry), a raised pale edge and a shadow just after it
+  for (let row = 0; row < h; row += 2) { const th = row / h * Math.PI; for (let kk = 0; kk <= 3; kk++) { const xe = (kk * Math.PI / 3 - .35 * Math.sin(th * 2.2)) / Math.PI * w;
+      if (bump) { c.fillStyle = 'rgba(255,255,255,.7)'; c.fillRect(xe - 5, row, 5, 2); c.fillStyle = 'rgba(0,0,0,.45)'; c.fillRect(xe, row, 8, 2); }
+      else { c.fillStyle = 'rgba(250,252,238,.85)'; c.fillRect(xe - 4, row, 4, 2); c.fillStyle = 'rgba(70,95,50,.28)'; c.fillRect(xe, row, 12, 2); } } }
+  if (!bump) for (let i = 0; i < 900; i++) { c.fillStyle = `rgba(${r() < .5 ? '255,255,240' : '90,120,70'},${r() * .07})`; c.fillRect(r() * w, r() * h, 2, 2); } }, [1, 1]); })(); }
+function cabCutTex() { return SPR.cabCut ||= canvasT(256, 256, (c, w, h) => { const cx = w / 2, cy = h / 2; c.fillStyle = '#e9f1cf'; c.beginPath(); c.arc(cx, cy, w / 2, 0, 6.3); c.fill();
+  for (let k = 14; k >= 1; k--) { const rr = k / 14 * w * .49; c.strokeStyle = k % 2 ? 'rgba(150,185,105,.75)' : 'rgba(250,252,238,.9)'; c.lineWidth = 2.2; c.beginPath();
+    for (let a = 0; a <= 6.30; a += .08) { const q = rr * (1 + .05 * Math.sin(a * (3 + k % 4) + k)); a ? c.lineTo(cx + Math.cos(a) * q, cy + Math.sin(a) * q) : c.moveTo(cx + q, cy); } c.stroke(); }
+  c.fillStyle = '#f5f2d6'; c.beginPath(); c.moveTo(cx - 16, h); c.lineTo(cx - 6, cy - 18); c.lineTo(cx + 6, cy - 18); c.lineTo(cx + 16, h); c.fill(); }); }   // pale core from the stalk
+function cabLeafMat() { return new THREE.MeshStandardMaterial({ map: cabLeafTex(), bumpMap: cabLeafBump(), bumpScale: 1.1, vertexColors: true, side: THREE.DoubleSide, roughness: .62 }); }
+function cabHeadMat() { return new THREE.MeshPhysicalMaterial({ map: cabHeadTex(false), bumpMap: cabHeadTex(true), bumpScale: 1.6, roughness: .72, sheen: .1, sheenColor: col('#eef4ff'), sheenRoughness: .6, color: CAB_HEAD.clone() }); }
+function cabLeafGeo() { const g = new THREE.BufferGeometry(), n = (CAB_NU + 1) * (CAB_NV + 1), uv = new Float32Array(n * 2), idx = [];
+  for (let i = 0; i <= CAB_NU; i++) for (let j = 0; j <= CAB_NV; j++) { const k = i * (CAB_NV + 1) + j; uv[k * 2] = j / CAB_NV; uv[k * 2 + 1] = i / CAB_NU; }
+  for (let i = 0; i < CAB_NU; i++) for (let j = 0; j < CAB_NV; j++) { const a = i * (CAB_NV + 1) + j, b = a + CAB_NV + 1; idx.push(a, b, a + 1, a + 1, b, b + 1); }
+  g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(n * 3), 3)); g.setAttribute('uv', new THREE.BufferAttribute(uv, 2)); g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(n * 3).fill(1), 3)); g.setIndex(idx); return g; }
+const cabShape = s => Math.max(.06, Math.pow(Math.max(0, Math.sin(Math.PI * Math.pow(s, .8))), .55));
+// write a rosette leaf (spread pose) into P (Float32Array): q {az, L, W, el, curl, cup, droop, roll, wave, ph, r0, y0}
+function cabSpread(P, q) { const ox = Math.sin(q.az), oz = Math.cos(q.az), hx = Math.cos(q.az), hz = -Math.sin(q.az), ds = q.L / CAB_NU; let x = ox * q.r0, y = q.y0, z = oz * q.r0;
+  const TH = s => q.el + q.curl * s - q.droop * s * s * 1.6;
+  for (let i = 0; i <= CAB_NU; i++) { const s = i / CAB_NU; if (i) { const tm = TH(s - .5 / CAB_NU); x += ox * Math.cos(tm) * ds; z += oz * Math.cos(tm) * ds; y += Math.sin(tm) * ds; }
+    const th = TH(s), st = Math.sin(th), ct = Math.cos(th), nx = -st * ox, ny = ct, nz = -st * oz, hw = q.L * q.W * .5 * cabShape(s) + .005 * (1 - s);
+    for (let j = 0; j <= CAB_NV; j++) { const v = j / CAB_NV * 2 - 1, av = Math.abs(v), cu = q.cup, ph = v * cu, a = cu > .01 ? Math.sin(ph) / cu : v, b = cu > .01 ? (1 - Math.cos(ph)) / cu : 0;
+      const wv = q.wave * hw * Math.sin(s * 19 + v * 3 + q.ph) * av * av * av - q.roll * hw * .5 * Math.pow(av, 2.5), lat = a * hw, nr = b * hw + wv, k = (i * (CAB_NV + 1) + j) * 3;
+      P[k] = x + hx * lat + nx * nr; P[k + 1] = y + ny * nr; P[k + 2] = z + hz * lat + nz * nr; } } }
+// write a wrapper leaf hugging the head (centre Hc, radii rh, ry) into P
+function cabHug(P, q, Hc, rh, ry) { const thB = 2.45, thT = q.thT ?? 1.05, Lh = (thB - thT) * rh;
+  for (let i = 0; i <= CAB_NU; i++) { const s = i / CAB_NU, th = lerp(thB, thT, s), sn = Math.sin(th), hw = Lh * q.W * .5 * cabShape(s) + .004;
+    for (let j = 0; j <= CAB_NV; j++) { const v = j / CAB_NV * 2 - 1, av = Math.abs(v), a = q.az + clamp(v * hw / (rh * sn + .012), -1.3, 1.3), lift = 1.035 + .05 * av * av * av + .012 * Math.sin(s * 17 + v * 3 + q.ph) * av * av, k = (i * (CAB_NV + 1) + j) * 3;
+      P[k] = Hc.x + Math.sin(a) * sn * rh * lift; P[k + 1] = Hc.y + Math.cos(th) * ry * lift; P[k + 2] = Hc.z + Math.cos(a) * sn * rh * lift; } } }
+function cabHeadHalf(phi0) { const geo = new THREE.SphereGeometry(1, 30, 22, phi0, Math.PI), P = geo.attributes.position, uv = geo.attributes.uv;
+  for (let i = 0; i < P.count; i++) { const x = P.getX(i), y = P.getY(i), z = P.getZ(i), th = Math.acos(clamp(y, -1, 1)), ph = phi0 + uv.getX(i) * Math.PI, k = 1 + .022 * cabSaw((ph + .35 * Math.sin(th * 2.2)) / (Math.PI / 3)) * Math.sin(th);
+    P.setXYZ(i, x * k, y * (y > 0 ? 1 - .06 * y * y : 1), z * k); }
+  geo.computeVertexNormals(); return geo; }
+const CAB_HEAD = col('#98b676'), CAB_FROST = col('#d3dfe4'), CAB_YEL = col('#cdbf63'), CAB_BROWN = col('#a89a52');
+function cabPlant(p = {}) { const g = new THREE.Group(), body = new THREE.Group(); g.add(body); const R = rng(p.seed || 3), RH = p.R ?? .11, NO = p.nOuter ?? 12, LL = p.leafL ?? .36;
+  const OUT = Array.from({ length: NO }, (_, i) => { const f = i / (NO - 1); return { az: i * 2.4 + R() * .4, L: LL * lerp(1.02, .78, f) * (.92 + R() * .16), W: .86 + R() * .14, el: lerp(.2, .72, f) + (R() - .5) * .12,
+    curl: lerp(-.15, .75, f) + (R() - .5) * .15, cup: .45 + R() * .45, wave: .08 + R() * .06, ph: R() * 6.3, r0: .018, y0: lerp(.012, .06, f), sh: .9 + R() * .14, i }; });
+  const HUG = Array.from({ length: 4 }, (_, j) => ({ az: j * Math.PI / 2 + .5 + (R() - .5) * .3, L: LL * .62, W: .95, el: .95, curl: 1.0, cup: .9, wave: .05, ph: R() * 6.3, r0: .02, y0: .065, thT: [1.0, .78, 1.15, .9][j], sh: .95 + R() * .1 }));
+  if (p.clearAz != null) OUT.forEach(l => { const d = angTo(0, l.az - p.clearAz); if (Math.abs(d) < .7) l.az = p.clearAz + Math.sign(d || 1) * (.7 + R() * .2); });
+  const ho = p.headOnly, outer = new THREE.Color(p.tint || '#86ad86'), inner = new THREE.Color(p.tintIn || '#b3cd92'), C = new THREE.Color(), BC = new THREE.Color(), YNG = col('#8fbf78'), V = V3(0, 0, 0);
+  const mat = cabLeafMat(), mk = q => { const geo = cabLeafGeo(), m = new THREE.Mesh(geo, mat); m.castShadow = true; m.receiveShadow = true; m.frustumCulled = false; body.add(m); q.m = m; q.geo = geo; return q; };
+  if (!ho) OUT.forEach(mk); HUG.forEach(mk);
+  const stalkM = std('#c9d8a4', { r: .6 }), stalk = cyl(.016, .021, 1, stalkM, 12); stalk.castShadow = true; body.add(stalk);
+  const stub = new THREE.Mesh(new THREE.CircleGeometry(.0175, 16), std('#efeccd', { r: .7 })); stub.rotation.x = -Math.PI / 2; stub.visible = false; body.add(stub);
+  const headG = new THREE.Group(); body.add(headG); headG.rotation.y = p.splitAz ?? 0; const hm = cabHeadMat(), cutM = new THREE.MeshStandardMaterial({ map: cabCutTex(), roughness: .6 });
+  const halves = [0, Math.PI].map((ph0, k) => { const pv = new THREE.Group(); headG.add(pv); const hs = new THREE.Group(); pv.add(hs); const m = new THREE.Mesh(cabHeadHalf(ph0), hm); m.castShadow = true; m.receiveShadow = true; hs.add(m);
+    const d = new THREE.Mesh(new THREE.CircleGeometry(1, 36), cutM); if (k === 0) d.rotation.y = Math.PI; d.position.z = k ? -.002 : .002; hs.add(d); return { pv, hs, s: k ? -1 : 1 }; });
+  let hole = null; if (p.hole !== false && !ho) { hole = new THREE.Mesh(new THREE.CircleGeometry(.075, 20), new THREE.MeshStandardMaterial({ map: sbLoamTex(), color: col(p.holeCol || '#9c8a74'), roughness: .95, polygonOffset: true, polygonOffsetFactor: -2 })); hole.rotation.x = -Math.PI / 2; hole.position.y = .003; hole.receiveShadow = true; g.add(hole); }
+  let plug = null; if (p.plantIn) { plug = new THREE.Mesh(new THREE.CylinderGeometry(.021, .016, .04, 10), new THREE.MeshStandardMaterial({ map: sbLoamTex(), color: col('#7a6350'), roughness: 1 })); plug.position.y = -.02; body.add(plug); }
+  // dew drops and frost crystals ride the posed leaf sheets (grid vertex + normal) and the head
+  const DPL = p.dewK ? 7 : 0, HD = p.dewK ? 34 : 0, leavesAll = [...(ho ? [] : OUT), ...HUG], nDrop = leavesAll.length * DPL + HD + 1;
+  const dropM = new THREE.MeshPhysicalMaterial({ color: col('#f2f9ff'), roughness: .04, metalness: 0, clearcoat: 1, clearcoatRoughness: .03, transparent: true, opacity: .62, envMapIntensity: 2.6 });
+  const drops = p.dewK ? new THREE.InstancedMesh(new THREE.SphereGeometry(1, 10, 7), dropM, nDrop) : null; if (drops) { drops.frustumCulled = false; body.add(drops); }
+  const DR = []; leavesAll.forEach((q, li) => { for (let k = 0; k < DPL; k++) DR.push({ q, i: 3 + Math.floor(R() * (CAB_NU - 4)), j: 1 + Math.floor(R() * (CAB_NV - 1)), s: .0014 + R() * .0018 }); });
+  for (let k = 0; k < HD; k++) { const th = R() * 1.25, a = R() * 6.3; DR.push({ head: V3(Math.sin(th) * Math.sin(a), Math.cos(th), Math.sin(th) * Math.cos(a)), s: .0013 + R() * .0016 }); }
+  const FPL = p.frostK ? 16 : 0, HF = p.frostK ? 46 : 0, nFr = leavesAll.length * FPL + HF;
+  const frost = p.frostK ? new THREE.InstancedMesh(new THREE.OctahedronGeometry(1, 0), new THREE.MeshStandardMaterial({ color: col('#eef5f8'), roughness: .3, emissive: col('#b9cfdc'), emissiveIntensity: .08 }), nFr) : null; if (frost) { frost.frustumCulled = false; body.add(frost); }
+  const FR = []; leavesAll.forEach(q => { for (let k = 0; k < FPL; k++) { const edge = R() < .7; FR.push({ q, i: 2 + Math.floor(R() * (CAB_NU - 2)), j: edge ? (R() < .5 ? 0 : CAB_NV) : Math.floor(R() * (CAB_NV + 1)), s: .0012 + R() * .002, rq: new THREE.Quaternion().setFromEuler(new THREE.Euler(R() * 6, R() * 6, R() * 6)) }); } });
+  for (let k = 0; k < HF; k++) { const th = R() * 1.4, a = R() * 6.3; FR.push({ head: V3(Math.sin(th) * Math.sin(a), Math.cos(th), Math.sin(th) * Math.cos(a)), s: .0012 + R() * .0018, rq: new THREE.Quaternion().setFromEuler(new THREE.Euler(R() * 6, R() * 6, R() * 6)) }); }
+  const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), S = V3(1, 1, 1), Z = new THREE.Matrix4().makeScale(0, 0, 0), N = V3(0, 0, 0), Pp = V3(0, 0, 0), ph0 = (p.seed || 1) * .91;
+  const placeAt = (pl, Hl) => { if (!pl || pl === 'hide') return null; if (Array.isArray(pl)) return V3(...pl); const [kind, id] = pl.split(':'), Lk = LINK[id]; if (!Lk) return null;
+    if (kind === 'palm' && Lk.palm) { const gd = V3(...(p.gripDir || [0, 1, 0])).normalize(); return Lk.palm.clone().addScaledVector(gd, -RH * 1.0); }
+    if (kind === 'mid' && Lk.L && Lk.R) return Lk.L.clone().add(Lk.R).multiplyScalar(.5).add(V3(...(p.midOff || [0, 0, 0]))); return null; };
+  g.userData.tick = t => { const hid = kv(p.hideK, t, 0) > .5; g.visible = !hid; if (hid) return;
+    const gk = clamp(kv(p.growK, t, p.grow ?? 1)), hk0 = clamp(kv(p.headK, t, p.head ?? 1)), dr = clamp(kv(p.droopK, t, 0)), sp = clamp(kv(p.splitK, t, 0)), fr = clamp(kv(p.frostK, t, 0)), dw = clamp(kv(p.dewK, t, 0)), sw = p.sway ?? 1;
+    const cut = !ho && p.cutT != null && t >= p.cutT, hk = cut ? 0 : hk0, stTop = lerp(.03, .075, gk), rh = Math.max(.008, RH * Math.pow(hk, .7)) * (1 + .06 * sp), ry = rh * .9;
+    const settle = joltAt(p.settle, t) * .006, Hc = V3(0, stTop + ry - settle, 0);
+    // carried / planted
+    body.position.set(0, 0, 0); if (p.plantIn) { const pi = p.plantIn; if (t < pi.t0) { g.visible = false; return; } const Lk = LINK[pi.by || 'farmer'], palm = Lk?.[pi.hand || 'R'];
+      if (palm && t < pi.t1 + .35) { g.updateWorldMatrix(true, false); const loc = g.worldToLocal(palm.clone()).add(V3(0, -.035, 0)), k = sEase((t - pi.t1) / .35); body.position.copy(loc.lerp(V3(0, 0, 0), k)); }
+      plug.visible = t < pi.t1 + .3; if (hole) hole.visible = t > pi.t1 - .1; }
+    if (ho) { const K = p.carry || []; let i = -1; for (let k = 0; k < K.length; k++) if (t >= K[k][0]) i = k; const cur = i >= 0 ? placeAt(K[i][1]) : null; if (!cur) { g.visible = false; return; }
+      let W = cur; const du = K[i][2] ?? .35; if (i > 0 && du > 0 && t - K[i][0] < du) { const pr = placeAt(K[i - 1][1]); if (pr) W = pr.lerp(cur, sEase((t - K[i][0]) / du)); }
+      g.updateWorldMatrix(true, false); body.position.copy(g.worldToLocal(W.clone())).sub(Hc); }
+    body.rotation.set(.006 * sw * Math.sin(t * 1.2 + ph0), 0, .007 * sw * Math.sin(t * .95 + ph0 * 1.3));
+    stalk.visible = !ho; stalk.scale.y = stTop; stalk.position.y = stTop / 2; stub.visible = cut; stub.position.y = stTop - .025; if (cut) { stalk.scale.y = stTop - .025; stalk.position.y = (stTop - .025) / 2; }
+    // head
+    const hv = hk > .03 && !cut; headG.visible = hv; if (hv) { headG.position.copy(Hc); halves.forEach(h => { h.pv.position.set(0, -ry, 0); h.pv.rotation.x = h.s * .34 * sp; h.hs.position.set(0, ry, h.s * .012 * sp); h.hs.scale.set(rh, ry, rh); });
+      hm.color.copy(CAB_HEAD).lerp(CAB_YEL, .35 * sp + .15 * dr).lerp(CAB_FROST, .25 * fr); hm.roughness = .72 + .2 * fr; cutM.color.copy(CAB_HEAD).lerp(CAB_FROST, .3); }
+    // leaves
+    const nv = lerp(4, NO, gk), relax = cut ? 1 : 0;
+    const poseColour = (q, base, yel, edgeFrost) => { const Cc = q.geo.attributes.color.array; for (let i = 0; i <= CAB_NU; i++) { const s = i / CAB_NU; for (let j = 0; j <= CAB_NV; j++) { const av = Math.abs(j / CAB_NV * 2 - 1), k = (i * (CAB_NV + 1) + j) * 3;
+          C.copy(base).multiplyScalar(q.sh * (1.04 - .1 * s)); if (yel > 0) C.lerp(s > .7 && av > .6 ? CAB_BROWN : CAB_YEL, yel * clamp(.35 + .9 * s * s + .3 * av)); if (edgeFrost > 0) C.lerp(CAB_FROST, edgeFrost * clamp(.3 + .7 * av * av + .25 * s));
+          Cc[k] = C.r; Cc[k + 1] = C.g; Cc[k + 2] = C.b; } } q.geo.attributes.color.needsUpdate = true; };
+    const pushOut = P => { if (!hv) return; for (let k = 0; k < P.length; k += 3) { const dx = (P[k] - Hc.x) / rh, dy = (P[k + 1] - Hc.y) / ry, dz = (P[k + 2] - Hc.z) / rh, L = Math.hypot(dx, dy, dz); if (L < 1.05 && L > 1e-4) { const f = 1.05 / L; P[k] = Hc.x + dx * f * rh; P[k + 1] = Hc.y + dy * f * ry; P[k + 2] = Hc.z + dz * f * rh; } } };
+    if (!ho) OUT.forEach((q, i) => { const vis = clamp(nv - i); q.m.visible = vis > 0; if (!q.m.visible) return; const gs = lerp(.2, 1, gk) * (.5 + .5 * vis), yng = 1 - gk;
+      const P = q.geo.attributes.position.array, wob = .022 * sw * Math.sin(t * 1.7 + q.ph) + .012 * sw * Math.sin(t * 2.9 + q.ph * 2);
+      cabSpread(P, { ...q, L: q.L * gs, el: q.el + yng * .55 - dr * .62 + wob + relax * -.08, curl: q.curl * (1 - .6 * dr) * (1 - .3 * relax), droop: dr * .95 + settle * 8, roll: dr * .95, cup: q.cup * (1 - .5 * dr), y0: q.y0 * lerp(.4, 1, gk), r0: q.r0 * lerp(.6, 1, gk) });
+      pushOut(P); q.geo.attributes.position.needsUpdate = true; q.geo.computeVertexNormals(); poseColour(q, BC.copy(outer).lerp(YNG, yng * .6), dr * .6, fr * .3); });
+    HUG.forEach((q, j) => { q.m.visible = !cut && (ho || gk > .05); if (!q.m.visible) return; const P = q.geo.attributes.position.array, gs = lerp(.25, 1, gk), hb = clamp(hk * 1.35) * (1 - .55 * sp);
+      cabSpread(P, { ...q, L: q.L * gs, el: q.el + .03 * sw * Math.sin(t * 1.5 + q.ph) - dr * .3, droop: dr * .5, roll: dr * .5, y0: Math.min(q.y0, stTop) });
+      if (hb > .001) { const A = q.tmp ||= new Float32Array(P.length); cabHug(A, q, Hc, rh, ry); for (let k = 0; k < P.length; k++) P[k] = lerp(P[k], A[k], hb); }
+      q.geo.attributes.position.needsUpdate = true; q.geo.computeVertexNormals(); poseColour(q, BC.copy(inner).lerp(outer, .35), dr * .5 + sp * .3, fr * .28); });
+    mat.roughness = .5 + .35 * fr;
+    // dew + the rolling drop
+    if (drops) { drops.visible = dw > .02; if (drops.visible) { let n = 0; const sc = dw;
+      for (const d of DR) { if (d.head) { if (!hv) { drops.setMatrixAt(n++, Z); continue; } N.copy(d.head); Pp.set(Hc.x + N.x * rh * 1.012, Hc.y + N.y * ry * 1.012, Hc.z + N.z * rh * 1.012); }
+        else { if (!d.q.m.visible) { drops.setMatrixAt(n++, Z); continue; } const k = (d.i * (CAB_NV + 1) + d.j) * 3, P = d.q.geo.attributes.position.array, Nn = d.q.geo.attributes.normal.array; N.set(Nn[k], Nn[k + 1], Nn[k + 2]); if (N.y < 0) N.negate(); Pp.set(P[k], P[k + 1], P[k + 2]).addScaledVector(N, d.s * .5); }
+        Q.setFromUnitVectors(Y_UP, N); M.compose(Pp, Q, S.set(d.s * sc, d.s * .6 * sc, d.s * sc)); drops.setMatrixAt(n++, M); }
+      const rl = p.roll; let rv = false; if (rl && t >= rl.t0 && t < rl.t1 + .4) { const q = leavesAll[rl.leaf] || leavesAll[0], P = q.geo.attributes.position.array, u = clamp((t - rl.t0) / (rl.t1 - rl.t0)), s = lerp(rl.s0 ?? .32, rl.s1 ?? 1, u * u * (3 - 2 * u)), fi = s * CAB_NU, i0 = Math.min(CAB_NU - 1, Math.floor(fi)), f = fi - i0, jc = CAB_NV / 2;
+        const a = (i0 * (CAB_NV + 1) + jc) * 3, b = ((i0 + 1) * (CAB_NV + 1) + jc) * 3; Pp.set(lerp(P[a], P[b], f), lerp(P[a + 1], P[b + 1], f) + .003, lerp(P[a + 2], P[b + 2], f)); if (t > rl.t1) Pp.y -= 4.9 * (t - rl.t1) ** 2;
+        const st = t < rl.t1 ? 1 + .4 * u : 1.2; M.compose(Pp, Q.identity(), S.set(.0034, .0034 * (t > rl.t1 ? 1.5 : .62) * st, .0034)); drops.setMatrixAt(n++, M); rv = true; }
+      if (!rv) drops.setMatrixAt(n++, Z); drops.count = n; drops.instanceMatrix.needsUpdate = true; } }
+    if (frost) { frost.visible = fr > .02; if (frost.visible) { let n = 0;
+      for (const d of FR) { if (d.head) { if (!hv) { frost.setMatrixAt(n++, Z); continue; } Pp.set(Hc.x + d.head.x * rh * 1.008, Hc.y + d.head.y * ry * 1.008, Hc.z + d.head.z * rh * 1.008); }
+        else { if (!d.q.m.visible) { frost.setMatrixAt(n++, Z); continue; } const k = (d.i * (CAB_NV + 1) + d.j) * 3, P = d.q.geo.attributes.position.array; Pp.set(P[k], P[k + 1] + .0008, P[k + 2]); }
+        M.compose(Pp, d.rq, S.setScalar(d.s * fr)); frost.setMatrixAt(n++, M); } frost.instanceMatrix.needsUpdate = true; } } };
+  return g; }
+
+// lite field cabbages: one baked leaf sheet in 3 elevations (instanced), an instanced head; frostK tints the shared materials
+function cabField(p = {}) { const g = new THREE.Group(), R = rng(p.seed || 17), y0 = p.y ?? .15, P = [], skip = p.skip || [];
+  for (const [rx, z0, z1, sp] of p.rows || []) { for (let z = z1; z >= z0; z -= sp) { const x = rx + (R() - .5) * .03, zz = z + (R() - .5) * .04; if (skip.some(([sx, sz, sr]) => Math.hypot(sx - x, sz - zz) < (sr ?? .4))) continue; P.push({ x, z: zz, a0: R() * 6.3, s: .88 + R() * .2, h: .85 + R() * .25 }); } }
+  const lm = cabLeafMat(), hmat = cabHeadMat(), L = p.leafL ?? .3, mk = (geo, mat, n) => { const im = new THREE.InstancedMesh(geo, mat, Math.max(1, n)); im.frustumCulled = false; im.castShadow = true; im.receiveShadow = true; g.add(im); return im; };
+  const bake = (el, curl) => { const geo = cabLeafGeo(); cabSpread(geo.attributes.position.array, { az: 0, L, W: .9, el, curl, cup: .7, droop: 0, roll: 0, wave: .1, ph: el * 7, r0: .02, y0: .03 });
+    const Cc = geo.attributes.color.array; for (let i = 0; i <= CAB_NU; i++) for (let j = 0; j <= CAB_NV; j++) { const k = (i * (CAB_NV + 1) + j) * 3, c2 = col('#86ad86').multiplyScalar(1.04 - .1 * i / CAB_NU); Cc[k] = c2.r; Cc[k + 1] = c2.g; Cc[k + 2] = c2.b; }
+    geo.computeVertexNormals(); return geo; };
+  const VAR = [[.22, -.1, 4], [.45, .3, 3], [.75, .7, 2]], ims = VAR.map(([el, cu, n]) => ({ im: mk(bake(el, cu), lm, P.length * n), n }));
+  const headIM = mk(mergeGeometries([cabHeadHalf(0), cabHeadHalf(Math.PI)]), hmat, P.length);
+  const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), S = V3(1, 1, 1), E = new THREE.Euler(), C = new THREE.Color();
+  P.forEach((q, j) => { const rh = .1 * q.h; headIM.setMatrixAt(j, M.compose(V3(q.x, y0 + .07 + rh * .9, q.z), Q.setFromAxisAngle(Y_UP, q.a0), S.set(rh, rh * .9, rh))); headIM.setColorAt(j, C.set('#ffffff').multiplyScalar(.95 + .08 * hr(j, 3))); });
+  const pose = t => { ims.forEach(({ im, n }, vi) => { let k = 0; P.forEach((q, j) => { for (let m = 0; m < n; m++) { const az = q.a0 + (vi * 4 + m) * 2.4 + .05 * Math.sin(t * 1.4 + j + m), tilt = .02 * Math.sin(t * 1.9 + j * 1.3 + m);
+        E.set(-tilt, az, 0, 'YXZ'); Q.setFromEuler(E); im.setMatrixAt(k++, M.compose(V3(q.x, y0, q.z), Q, S.setScalar(q.s * (vi === 2 ? .85 : 1)))); } }); im.instanceMatrix.needsUpdate = true; }); };
+  pose(0); g.userData.tick = t => { pose(t); const fr = clamp(kv(p.frostK, t, 0)); lm.color.set('#ffffff').lerp(CAB_FROST, .25 * fr); hmat.color.copy(CAB_HEAD).lerp(CAB_FROST, .22 * fr); lm.roughness = .5 + .35 * fr; };
+  return g; }
+
+function cabCrate(p = {}) { const g = new THREE.Group(), W = .7, D = .47, H = .3, tint = '#b88e5c', th = .014;
+  const add = m => { m.castShadow = true; m.receiveShadow = true; g.add(m); };
+  for (const x of [-W / 2 + .02, W / 2 - .02]) for (const z of [-D / 2 + .02, D / 2 - .02]) add(woodBox([.04, H, .04], 1, '#a07a4c', [x, H / 2, z]));
+  for (const k of [0, 1, 2]) { const y = .045 + k * .1; for (const z of [-D / 2 + th / 2, D / 2 - th / 2]) add(woodBox([W, .07, th], 0, tint, [0, y, z])); for (const x of [-W / 2 + th / 2, W / 2 - th / 2]) add(woodBox([th, .07, D - .02], 2, tint, [x, y, 0])); }
+  for (const k of [-2, -1, 0, 1, 2]) add(woodBox([.12, .012, D - .03], 2, '#a9834f', [k * .14, .012, 0]));
+  const hmat = cabHeadMat(), hg = mergeGeometries([cabHeadHalf(0), cabHeadHalf(Math.PI)]), n = p.n ?? 5, im = new THREE.InstancedMesh(hg, hmat, Math.max(1, n)); im.castShadow = true; g.add(im);
+  const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), S = V3(1, 1, 1); const slots = [[-.215, -.1075], [.215, -.1075], [-.215, .1075], [0, .1075], [.215, .1075], [0, -.1075]];
+  for (let i = 0; i < n; i++) { const [x, z] = slots[i], rh = .098 + .006 * hr(i, 2); im.setMatrixAt(i, M.compose(V3(x, .02 + rh * .9, z), Q.setFromEuler(new THREE.Euler(.3 * (hr(i, 4) - .5), i * 1.9, .3 * (hr(i, 5) - .5))), S.set(rh, rh * .9, rh))); }
+  const cs = contactShadow(.42, .3, .45); cs.position.y = .005; g.add(cs); return g; }
+
+function cabTray(p = {}) { const g = new THREE.Group(), W = .27, L = .53, H = .05, blk = std('#26282a', { r: .55 });
+  const base = box(W, .006, L, blk); base.position.y = .003; g.add(base); for (const sd of [-1, 1]) { const s = box(.006, H, L, blk); s.position.set(sd * W / 2, H / 2, 0); g.add(s); const e = box(W, H, .006, blk); e.position.set(0, H / 2, sd * L / 2); g.add(e); }
+  const soil = box(W - .012, .006, L - .012, new THREE.MeshStandardMaterial({ map: sbLoamTex(), color: col('#8a7360'), roughness: 1 })); soil.position.y = H - .006; g.add(soil);
+  const n = p.n ?? 22, geo = cabLeafGeo(); cabSpread(geo.attributes.position.array, { az: 0, L: .06, W: .8, el: .8, curl: .3, cup: .5, droop: 0, roll: 0, wave: .05, ph: 1, r0: .003, y0: .02 }); geo.computeVertexNormals();
+  const im = new THREE.InstancedMesh(geo, cabLeafMat(), n * 4), M = new THREE.Matrix4(), Q = new THREE.Quaternion(); im.castShadow = true; g.add(im); let k = 0;
+  for (let i = 0; i < 32 && k < n * 4; i++) { if (hr(i, 7) < .3) continue; const x = ((i % 4) - 1.5) * .062, z = (Math.floor(i / 4) - 3.5) * .062; for (let m = 0; m < 4; m++) im.setMatrixAt(k++, M.compose(V3(x, H - .02, z), Q.setFromAxisAngle(Y_UP, m * 1.6 + i), V3(1, 1, 1))); }
+  for (; k < n * 4; k++) im.setMatrixAt(k, M.makeScale(0, 0, 0)); return shadowed(g); }
+
+function cabFrostTex() { return SPR.cabFrost ||= (() => { const r = rng(404); return canvasT(256, 256, (c, w, h) => { c.clearRect(0, 0, w, h);
+  for (let i = 0; i < 2600; i++) { c.fillStyle = `rgba(240,247,252,${.25 + r() * .6})`; const x = r() * w, y = r() * h, s = .6 + r() * 1.8; c.fillRect(x, y, s, s); }
+  c.strokeStyle = 'rgba(236,244,250,.55)'; c.lineWidth = .8; for (let i = 0; i < 160; i++) { const x = r() * w, y = r() * h, a = r() * 6.3; c.beginPath(); c.moveTo(x, y); c.lineTo(x + Math.cos(a) * 5, y + Math.sin(a) * 5); c.stroke(); } }, [1, 1]); })(); }
+function cabFrost(p = {}) { const g = new THREE.Group(), list = (p.rects || []).map(([x, z, w, d, y]) => { const t = cabFrostTex().clone(); t.needsUpdate = true; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(w / .5, d / .5);
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(w, d), new THREE.MeshStandardMaterial({ map: t, transparent: true, depthWrite: false, roughness: .4, opacity: 0, polygonOffset: true, polygonOffsetFactor: -3 })); m.rotation.x = -Math.PI / 2; m.position.set(x, (y ?? 0) + .004, z); m.receiveShadow = true; g.add(m); return m; });
+  g.userData.tick = t => { const k = clamp(kv(p.frostK, t, 0)); list.forEach(m => { m.visible = k > .02; m.material.opacity = .5 * k; }); }; return g; }
+Object.assign(ASSETS, { cab_plant: cabPlant, cab_field: cabField, cab_crate: cabCrate, cab_tray: cabTray, cab_frost: cabFrost });
+Object.assign(RIG_POSES, { // cabbage harvest (Farmer 1.75 m, facing +z at yaw 0; tuned with the palm probe for plans/cabbage_cold.mjs)
+  cabHold: { adL: 1.62, adR: 1.62, fL: .26, fR: .26, eL: .64, eR: .64, sp: .05, hd: -.1, hold: 1 },                                         // standing: palms (+-.123, 1.064, .292) hold a 0.22 m head
+  cabLower: { adL: 1.56, adR: 1.56, fL: .3, fR: .23, eL: .49, eR: .59, sp: .45, hd: -.35, kL: 2.3, kR: 2.3, hL: 1.0, hR: 1.0, hold: 1 } }); // squat (track y -.55): palms (+-.124, .46, .36)
