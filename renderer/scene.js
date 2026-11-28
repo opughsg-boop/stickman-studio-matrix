@@ -7989,3 +7989,234 @@ function silkBasket(p = {}) { const g = new THREE.Group(), inner = new THREE.Gro
     if (p.link) { g.updateWorldMatrix(true, false); body.updateMatrixWorld(true); LINK['basket:' + p.link] = { mouth: body.localToWorld(V3(0, Hb, 0)), grip: inner.localToWorld(V3(0, 0, 0)), held: pl.held }; } };
   return g; }
 ASSETS.silk_basket = silkBasket;
+
+// ===== Broiler pack (broiler_project 2026-11-28): a village broiler house with a crowded pen and a spacious pen =====
+// br_flock  : N white broilers (Ross/Cobb type, ~0.42 m standing, 0.23 x 0.34 m body) as ONE object. Birds are packed by a two-circle
+//             relaxation inside area [x0,x1,z0,z1] (world), optional area2 + spreadK (they walk to a second layout, staggered from the gate
+//             side), wanderK (amplitude of a slow stateless stroll with stride-synced legs), modeK [[t,'idle'|'peck'|'tired']], sick [idx] +
+//             sickK, eatAt [x,z] (pecking birds turn to it), heightK (growth), avoid [[x0,x1,z0,z1]] (troughs).
+// br_pen    : timber-framed chicken-wire partition (h 0.55 m): sides 'nswe' (n = -z), gate 'e' hinged at the back corner, gateK swings it out.
+// br_litter : wood-shavings bedding (w x d at pos): dirtK caked wet patches + droppings, freshK a fresh layer spread from the front (+z).
+// br_trough : galvanised trough on low stands (feed pellets or water), fillK level; LINK[link].drinker = surface point (pg_jug / br_scoop aim).
+// br_sack   : 25 kg woven feed sack, rolled open, pellets at the mouth (no print). br_heap: a feed heap (kind pellet|soy|maize|premix),
+//             growK / sizeK, dirt:true mixes in dirt, droppings and a damp ring. br_scoop: a galvanised 5 l scoop-bucket in a UAL palm, pourK
+//             tips it toward aim [x,y,z] and a stream of pellets falls. br_vent: plank shutter on the wall window (shutK) + fresh-air wisps (airK).
+// br_haze   : stale yellow-green haze and stink lines over an area (smellK). All stateless functions of t.
+const BR_SPH = new THREE.SphereGeometry(1, 16, 12), BR_CONE = new THREE.ConeGeometry(1, 1, 10);
+function brMats() { return SPR.brMats ||= (() => { const ft = featherTex('#dcd6ca', '#efebe3').clone(); ft.repeat.set(2, 2); ft.needsUpdate = true;
+  const wt = featherTex('#d2ccbf', '#e9e5dc').clone(); wt.repeat.set(1.2, 1.4); wt.needsUpdate = true;
+  return { body: new THREE.MeshStandardMaterial({ map: ft, bumpMap: ft, bumpScale: .5, roughness: .9 }), wing: new THREE.MeshStandardMaterial({ map: wt, bumpMap: wt, bumpScale: .5, roughness: .9 }),
+    red: std('#c8312a', { r: .6 }), beak: std('#e2b65a', { r: .5 }), leg: std('#e3b04a', { r: .6 }), eye: std('#1d140e', { r: .25 }), lid: std('#d9d2c4', { r: .9 }) }; })(); }
+function brBird() { const M = brMats(), root = new THREE.Group(), legs = [];
+  [-1, 1].forEach(s => { const L = new THREE.Group(); L.position.set(s * .045, .115, .005); root.add(L);
+    const sh = cyl(.012, .01, .1, M.leg, 8); sh.position.y = -.05; L.add(sh); const ft = new THREE.Group(); ft.position.y = -.1; L.add(ft);
+    [-.5, 0, .5].forEach(a => { const tt = box(.009, .006, .045, M.leg); tt.position.set(Math.sin(a) * .02, .003, Math.cos(a) * .02); tt.rotation.y = a; ft.add(tt); });
+    const hk = box(.008, .006, .02, M.leg); hk.position.set(0, .003, -.012); ft.add(hk); legs.push(L); });
+  const bodyG = new THREE.Group(); bodyG.position.set(0, .115, 0); root.add(bodyG);                    // pitch / drop pivot at the hips
+  const add = (m, x, y, z) => { m.position.set(x, y - .115, z); bodyG.add(m); return m; };
+  const body = add(new THREE.Mesh(BR_SPH, M.body), 0, .205, -.01); body.scale.set(.118, .1, .165);
+  const breast = add(new THREE.Mesh(BR_SPH, M.body), 0, .19, .1); breast.scale.set(.108, .098, .095);      // the broiler's heavy breast
+  const wings = [-1, 1].map(s => { const w = add(new THREE.Mesh(BR_SPH, M.wing), s * .1, .215, -.02); w.scale.set(.035, .07, .13); w.rotation.z = -s * .12; return { m: w, s }; });
+  const tail = add(new THREE.Mesh(BR_SPH, M.wing), 0, .262, -.15); tail.scale.set(.055, .042, .06); tail.rotation.x = -.6;   // short upturned tail
+  const nk = add(new THREE.Group(), 0, .27, .11);                                                         // neck pivot in the shoulders
+  const neck = new THREE.Mesh(BR_SPH, M.body); neck.scale.set(.05, .075, .05); neck.position.set(0, .055, .015); neck.rotation.x = .25; nk.add(neck);
+  const head = new THREE.Group(); head.position.set(0, .115, .035); nk.add(head);
+  const hd = new THREE.Mesh(BR_SPH, M.body); hd.scale.set(.04, .042, .048); head.add(hd);
+  const face = new THREE.Mesh(BR_SPH, M.red); face.scale.set(.031, .024, .03); face.position.set(0, -.004, .022); head.add(face);   // bare red face skin
+  for (let i = 0; i < 4; i++) { const cb = new THREE.Mesh(BR_SPH, M.red); cb.scale.set(.006, .011 + .004 * Math.sin(i * 1.3 + 1), .01); cb.position.set(0, .04 + .002 * (i % 2), .024 - i * .013); head.add(cb); } // small single comb
+  [-1, 1].forEach(s => { const wt = new THREE.Mesh(BR_SPH, M.red); wt.scale.set(.007, .012, .008); wt.position.set(s * .006, -.032, .045); head.add(wt); });
+  const beak = new THREE.Mesh(BR_CONE, M.beak); beak.scale.set(.011, .028, .009); beak.rotation.x = Math.PI / 2 + .25; beak.position.set(0, -.004, .058); head.add(beak);
+  const eyes = [-1, 1].map(s => { const e = new THREE.Mesh(BR_SPH, M.eye); e.scale.setScalar(.0075); e.position.set(s * .033, .008, .022); head.add(e); return e; });
+  const lids = [-1, 1].map(s => { const e = new THREE.Mesh(BR_SPH, M.lid); e.scale.setScalar(.0088); e.position.set(s * .033, .009, .022); e.visible = false; head.add(e); return e; });
+  const sh = contactShadow(.13, .19, .42); root.add(sh); sh.position.y = .006;
+  root.traverse(m => { if (m.isMesh && m !== sh) { m.castShadow = true; m.receiveShadow = true; } });
+  return { root, legs, bodyG, body, wings, tail, nk, head, eyes, lids }; }
+// two-circle packing: each bird = two discs of radius R, HL ahead of and behind its centre along its heading
+function brLayout(n, A, seed, o = {}) { const r = rng(seed), m = o.margin ?? .15, x0 = A[0] + m, x1 = A[1] - m, z0 = A[2] + m, z1 = A[3] - m, R = o.r ?? .1, HL = .07, av = o.avoid || [];
+  const P = Array.from({ length: n }, () => ({ x: lerp(x0, x1, r()), z: lerp(z0, z1, r()), y: (o.yaw ?? 0) + (r() - .5) * (o.spread ?? 3) }));
+  const circ = q => [[q.x + Math.sin(q.y) * HL, q.z + Math.cos(q.y) * HL], [q.x - Math.sin(q.y) * HL, q.z - Math.cos(q.y) * HL]];
+  for (let it = 0; it < 320; it++) {
+    for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) { const a = P[i], b = P[j]; for (const ca of circ(a)) for (const cb of circ(b)) {
+      const dx = cb[0] - ca[0], dz = cb[1] - ca[1], d = Math.hypot(dx, dz) || 1e-4; if (d < 2 * R) { const k = (2 * R - d) / d * .25; a.x -= dx * k; a.z -= dz * k; b.x += dx * k; b.z += dz * k; } } }
+    for (const q of P) { for (const [ax0, ax1, az0, az1] of av) { const m2 = .17; if (q.x > ax0 - m2 && q.x < ax1 + m2 && q.z > az0 - m2 && q.z < az1 + m2) {
+        const d = [q.x - (ax0 - m2), ax1 + m2 - q.x, q.z - (az0 - m2), az1 + m2 - q.z], k = d.indexOf(Math.min(...d)); if (k === 0) q.x = ax0 - m2; else if (k === 1) q.x = ax1 + m2; else if (k === 2) q.z = az0 - m2; else q.z = az1 + m2; } }
+      q.x = clamp(q.x, x0, x1); q.z = clamp(q.z, z0, z1); } }
+  return P; }
+const brStep = (keys, t, d) => { let v = d, at = -1e9, pv = d; for (const [tk, x] of keys || []) if (t >= tk) { pv = v; v = x; at = tk; } return { v, at, pv }; };
+function brFlock(p = {}) { const g = new THREE.Group(), n = p.n || 12, A = p.area || [-.5, .5, -.5, .5], sd = p.seed || 901;
+  const LA = brLayout(n, A, sd, { avoid: p.avoid, yaw: p.yaw, spread: p.spread, r: p.r, margin: p.margin });
+  let LB = null; if (p.area2) { const B = brLayout(n, p.area2, sd + 7, { avoid: p.avoid2 || p.avoid, yaw: p.yaw, spread: p.spread, r: p.r2 ?? .1, margin: p.margin });
+    const gx = p.gateX ?? A[1], used = new Set(); LB = [];
+    const order = LA.map((q, i) => i).sort((i, j) => Math.abs(LA[i].x - gx) - Math.abs(LA[j].x - gx));       // nearest the gate goes first and farthest
+    const rank = []; order.forEach((i, k) => { rank[i] = k; });
+    const tgt = B.map((q, i) => i).sort((i, j) => B[j].x - B[i].x);
+    order.forEach((i, k) => { let best = -1, bd = 1e9; for (const j of tgt) { if (used.has(j)) continue; const d = Math.hypot(B[j].x - LA[i].x, B[j].z - LA[i].z) - (k < n / 2 ? B[j].x * .6 : 0); if (d < bd) { bd = d; best = j; } }
+      used.add(best); LB[i] = { ...B[best], rank: rank[i] }; }); }
+  const birds = LA.map((q, i) => { const b = brBird(); g.add(b.root); return { ...b, i, A: q, B: LB?.[i], per: 2.2 + hr(i, sd) * 1.6, ph: hr(i, sd + 3) * 7, pk: 1.05 + hr(i, sd + 5) * .5 }; });
+  const ax = p.area2 ? [Math.min(A[0], p.area2[0]), Math.max(A[1], p.area2[1]), Math.min(A[2], p.area2[2]), Math.max(A[3], p.area2[3])] : A, mg = p.margin ?? .17;
+  const home = (b, t) => { if (!b.B) return [b.A.x, b.A.z, 0]; const s = clamp(kv(p.spreadK, t, 0)), st = .45, u = clamp((s * (1 + st) - st * b.B.rank / Math.max(1, n - 1))), e = trapE(u, .25);
+    return [lerp(b.A.x, b.B.x, e), lerp(b.A.z, b.B.z, e), Math.hypot(b.B.x - b.A.x, b.B.z - b.A.z) * e]; };
+  const wp = (b, k) => { const amp = kv(p.wanderK, k * b.per - b.ph, 0); return [(hr(b.i * 13 + k, sd) - .5) * 2 * amp, (hr(b.i * 17 + k, sd + 1) - .5) * 2 * amp]; };
+  const dirOf = (a, c, def) => (Math.hypot(c[0] - a[0], c[1] - a[1]) > .015 ? Math.atan2(c[0] - a[0], c[1] - a[1]) : def);
+  const wander = (b, t, y0) => { const tt = t + b.ph, k = Math.floor(tt / b.per), f = tt / b.per - k; let dist = 0, prev = [0, 0], yawPrev = y0;
+    for (let j = 0; j < k; j++) { const a = wp(b, j), c = wp(b, j + 1); dist += Math.hypot(c[0] - a[0], c[1] - a[1]); yawPrev = dirOf(a, c, yawPrev); }
+    const a = wp(b, k), c = wp(b, k + 1), yawN = dirOf(a, c, yawPrev);
+    if (f < .55) return { x: a[0], z: a[1], dist, yaw: yawPrev, sp: 0 };
+    const u = (f - .55) / .45, e = trapE(u, .25), L = Math.hypot(c[0] - a[0], c[1] - a[1]);
+    return { x: lerp(a[0], c[0], e), z: lerp(a[1], c[1], e), dist: dist + L * e, yaw: lerp(yawPrev, angTo(yawPrev, yawN), sEase(u / .3)), sp: L / (b.per * .45) * trapV(u, .25) }; };
+  const pose = (mode, t, b) => { const o = { nk: 0, pitch: 0, drop: 0, leg: 1, hry: 0, lid: 0, wing: 0, br: 0 };
+    if (mode === 'idle' || mode === 'peck') { const per = .8, k = Math.floor((t + b.ph) / per), f = fr01((t + b.ph) / per);
+      o.hry = lerp((hr(k, b.i) - .5) * 1.3, (hr(k + 1, b.i) - .5) * 1.3, clamp((f - .8) / .12)); o.nk = lerp((hr(k, b.i + 9) - .5) * .3, (hr(k + 1, b.i + 9) - .5) * .3, clamp((f - .8) / .12)); }
+    if (mode === 'peck' || mode === 'idle') { const per = b.pk * (mode === 'idle' ? 2.6 : 1), ph = (t + b.ph * .7) / per, kk = Math.floor(ph), f = fr01(ph), on = mode === 'peck' || kk % 3 === 1;
+      const sk = !on ? 0 : f < .14 ? sEase(f / .14) : f < .26 ? 1 : f < .5 ? 1 - sEase((f - .26) / .24) : 0; o.nk += 1.9 * sk; o.pitch = .42 * sk; o.hry *= 1 - sk; }
+    if (mode === 'tired') { o.drop = .072; o.leg = .15; o.nk = .55 + .04 * Math.sin(t * 1.1 + b.ph); o.pitch = .05; o.lid = 1; o.wing = 1; o.br = .035 * Math.sin(t * 9 + b.ph); }
+    return o; };
+  g.userData.tick = t => { const H = kv(p.heightK, t, p.height || .42), sc = H / .42, md = brStep(p.modeK, t, 'idle'), sick = kv(p.sickK, t, 0) > .5;
+    for (const b of birds) { const [hx, hz, hd] = home(b, t), w = wander(b, t, b.A.y);
+      const sickB = sick && (p.sick || []).includes(b.i), tS = p.sickK?.find(k => k[1] > .5)?.[0] ?? -9, cur = sickB ? 'tired' : md.v, prv = sickB ? md.v : md.pv;
+      const kb = sickB ? easeIO((t - tS) / .5) : easeIO((t - md.at) / .4), P0 = pose(prv, t, b), P1 = pose(cur, t, b), P = {};
+      for (const k in P1) P[k] = lerp(P0[k], P1[k], kb);
+      const still = clamp(P.drop / .072);
+      let x = hx + w.x * (1 - still), z = hz + w.z * (1 - still); x = clamp(x, ax[0] + mg, ax[1] - mg); z = clamp(z, ax[2] + mg, ax[3] - mg);
+      // heading: walking toward the second layout while spreading, else the stroll; pecking birds turn to eatAt
+      const [px, pz] = home(b, t - .12); const spd = Math.hypot(hx - px, hz - pz) / .12;
+      let yaw = spd > .05 ? Math.atan2(hx - px, hz - pz) : w.yaw;
+      if (p.eatAt && (cur === 'peck') && spd < .05) { const ye = Math.atan2(p.eatAt[0] - x, p.eatAt[1] - z); yaw = lerp(yaw, angTo(yaw, ye), kb); }
+      const sp = Math.max(spd, w.sp * (1 - still)), mv = clamp(sp / .15), dist = (hd + w.dist) / (.11 * sc), ph = dist * Math.PI;
+      b.root.position.set(x, 0, z); b.root.rotation.y = yaw; b.root.scale.setScalar(sc);
+      b.legs[0].rotation.x = Math.sin(ph) * .6 * mv; b.legs[1].rotation.x = -Math.sin(ph) * .6 * mv; b.legs.forEach(l => { l.scale.y = Math.max(.15, P.leg); });
+      b.bodyG.position.y = .115 - P.drop + Math.abs(Math.sin(ph)) * .006 * mv; b.bodyG.rotation.set(P.pitch + .06 * mv, 0, Math.sin(ph) * .06 * mv);   // waddle
+      b.body.scale.set(.118 * (1 + P.br), .1 * (1 + P.br), .165);
+      b.nk.rotation.set(P.nk, 0, 0); b.head.rotation.set(-P.nk * .35, P.hry, 0, 'YXZ'); b.head.position.set(0, .115 + .025 * clamp(P.nk / 1.9) - .03 * P.lid, .035 + .02 * clamp(P.nk / 1.9));
+      b.eyes.forEach(e => { e.visible = P.lid < .5; }); b.lids.forEach(e => { e.visible = P.lid >= .5; });
+      b.wings.forEach(w2 => { w2.m.rotation.z = -w2.s * (.12 + .25 * P.wing); });
+      b.tail.rotation.x = -.6 + .3 * P.wing; }
+    if (p.link) LINK[p.link] = { birds: birds.map(b => b.root.position.clone()) }; };
+  return g; }
+// chicken wire (2-inch hex netting) tile: 2 hex columns x 2 rows, tileable
+function brWireTex() { return SPR.brWire ||= (() => { const w = 128, h = 111, t = canvasT(w, h, (c) => { c.clearRect(0, 0, w, h); c.strokeStyle = 'rgba(214,218,220,1)'; c.lineWidth = 4.2; const R = 36.95;
+    for (let j = -1; j <= 2; j++) for (let i = -1; i <= 2; i++) { const cx = i * 64 + (j % 2 ? 32 : 0), cy = j * 55.4; c.beginPath(); for (let k = 0; k <= 6; k++) { const a = Math.PI / 6 + k * Math.PI / 3; c.lineTo(cx + R * Math.cos(a), cy + R * Math.sin(a)); } c.stroke(); } });
+  t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; return t; })(); }
+function brPen(p = {}) { const g = new THREE.Group(), [x0, x1, z0, z1] = p.area || [-.5, .5, -.5, .5], H = p.h || .55, sides = p.sides ?? 'nswe', TN = ['#b08a5e', '#a37f55', '#bb946a'];
+  const wireM = (len) => { const t = brWireTex().clone(); t.needsUpdate = true; t.repeat.set(len / .1, (H - .14) / .087); return new THREE.MeshStandardMaterial({ map: t, alphaTest: .45, side: THREE.DoubleSide, metalness: .45, roughness: .45, color: col('#d8dcde') }); };
+  const panel = (len) => { const q = new THREE.Group(), n = Math.max(1, Math.ceil(len / .9));
+    for (let i = 0; i <= n; i++) q.add(woodBox([.04, H, .04], 1, TN[i % 3], [i * len / n, H / 2, 0]));
+    q.add(woodBox([len + .02, .035, .045], 0, TN[1], [len / 2, H - .018, 0]), woodBox([len, .12, .02], 0, TN[2], [len / 2, .06, .012]));
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(len, H - .14), wireM(len)); m.position.set(len / 2, .12 + (H - .14) / 2, -.004); q.add(m); return q; };
+  const seg = (ax, az, bx, bz) => { const q = panel(Math.hypot(bx - ax, bz - az)); q.position.set(ax, 0, az); q.rotation.y = Math.atan2(-(bz - az), bx - ax); g.add(q); return q; };
+  if (sides.includes('n')) seg(x0, z0, x1, z0); if (sides.includes('s')) seg(x0, z1, x1, z1); if (sides.includes('w')) seg(x0, z0, x0, z1);
+  let gate = null; if (sides.includes('e')) { if (p.gate === 'e') { gate = new THREE.Group(); gate.position.set(x1, 0, z0); g.add(gate); const q = panel(z1 - z0); q.rotation.y = -Math.PI / 2; gate.add(q); } else seg(x1, z0, x1, z1); }
+  if (gate) g.userData.tick = t => { gate.rotation.y = Math.PI / 2 * sEase(kv(p.gateK, t, 0)); };
+  return shadowed(g); }
+function brShavTex(seed = 881) { return SPR['shav' + seed] ||= canvasT(512, 512, (c, w, h) => { const r = rng(seed); c.fillStyle = '#d3b07a'; c.fillRect(0, 0, w, h);
+  for (let i = 0; i < 2600; i++) { const x = r() * w, y = r() * h, a = r() * 6.28, l = 6 + r() * 16, v = r(); c.strokeStyle = v > .6 ? `rgba(246,228,186,${.5 + r() * .4})` : v > .25 ? `rgba(196,158,102,${.4 + r() * .4})` : `rgba(146,108,64,${.35 + r() * .3})`;
+    c.lineWidth = 1.5 + r() * 2.5; c.beginPath(); c.arc(x, y, l * .5, a, a + 1.4 + r() * 1.6); c.stroke(); }
+  for (let i = 0; i < 900; i++) { c.fillStyle = `rgba(${r() > .5 ? '250,238,206' : '120,88,52'},${r() * .35})`; c.fillRect(r() * w, r() * h, 2 + r() * 4, 1 + r() * 2); } }, [1, 1]); }
+function brDirtTex(seed = 883) { return SPR['brdirt' + seed] ||= canvasT(512, 512, (c, w, h) => { const r = rng(seed); c.clearRect(0, 0, w, h);
+  for (let i = 0; i < 26; i++) { const x = r() * w, y = r() * h, R = 20 + r() * 50, g2 = c.createRadialGradient(x, y, 0, x, y, R); g2.addColorStop(0, 'rgba(76,60,38,.78)'); g2.addColorStop(.7, 'rgba(92,74,48,.45)'); g2.addColorStop(1, 'rgba(92,74,48,0)');
+    c.fillStyle = g2; c.beginPath(); c.ellipse(x, y, R, R * .7, r() * 3, 0, 6.3); c.fill(); }
+  for (let i = 0; i < 240; i++) { const x = r() * w, y = r() * h, s = 2 + r() * 3.5; c.fillStyle = 'rgba(70,56,36,.92)'; c.beginPath(); c.ellipse(x, y, s, s * .7, r() * 3, 0, 6.3); c.fill(); c.fillStyle = 'rgba(240,236,224,.92)'; c.beginPath(); c.arc(x + s * .3, y - s * .2, s * .45, 0, 6.3); c.fill(); }
+  for (let i = 0; i < 40; i++) { c.strokeStyle = 'rgba(238,234,224,.85)'; c.lineWidth = 2; const x = r() * w, y = r() * h, a = r() * 6; c.beginPath(); c.arc(x, y, 7, a, a + 1.3); c.stroke(); } }, [1, 1]); }
+function brLitter(p = {}) { const g = new THREE.Group(), W = p.w || 2, D = p.d || 1.5, y = p.y ?? .014, rep = p.rep ?? .9;
+  const mk = (tex, op, yy, of) => { const t = tex.clone(); t.needsUpdate = true; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(W * rep, D * rep);
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshStandardMaterial({ map: t, roughness: .97, transparent: true, opacity: op, depthWrite: false, polygonOffset: true, polygonOffsetFactor: of }));
+    m.rotation.x = -Math.PI / 2; m.position.y = yy; m.scale.set(W, D, 1); m.receiveShadow = true; m.renderOrder = 1; g.add(m); return m; };
+  const base = p.base === false ? null : mk(brShavTex(), 1, y, -2), dirt = mk(brDirtTex(p.seed || 883), 0, y + .002, -3), fresh = p.freshK ? mk(brShavTex(887), 0, y + .004, -4) : null;
+  if (base && p.tint) base.material.color.set(p.tint);
+  g.userData.tick = t => { const dk = clamp(kv(p.dirtK, t, 0)); dirt.material.opacity = .95 * dk; dirt.visible = dk > .01; if (base) base.material.color.set(p.tint || '#ffffff').multiplyScalar(1 - .18 * dk);
+    if (fresh) { const f = clamp(kv(p.freshK, t, 0)); fresh.visible = f > .01; fresh.material.opacity = 1; fresh.material.color.set('#fff6e6'); fresh.scale.set(W, Math.max(.001, D * f), 1); fresh.position.z = D / 2 - D * f / 2; fresh.material.map.repeat.set(W * rep, D * f * rep);
+      dirt.material.opacity *= 1; } };
+  return g; }
+const BR_FEED = ['#b98c55', '#a97b46', '#c69c63', '#9d7241', '#b38450'];
+function brPellets(n, seed, place, colors = BR_FEED, size = [.0035, .0035, .007]) { const r = rng(seed), im = new THREE.InstancedMesh(new THREE.CylinderGeometry(1, 1, 1, 6), new THREE.MeshStandardMaterial({ color: col('#ffffff'), roughness: .8 }), n);
+  const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), c = new THREE.Color(), data = [];
+  for (let i = 0; i < n; i++) { const [x, y, z] = place(r, i), k = .7 + r() * .6; e.set(r() * 6, r() * 6, r() * 6); q.setFromEuler(e); data.push([x, y, z, q.clone(), k]);
+    m4.compose(V3(x, y, z), q, V3(size[0] * k, size[2] * k, size[1] * k)); im.setMatrixAt(i, m4); im.setColorAt(i, c.set(colors[i % colors.length])); }
+  im.castShadow = true; im.receiveShadow = true; im.userData.data = data; im.userData.size = size; return im; }
+function brTrough(p = {}) { const g = new THREE.Group(), L = p.len || .9, W = p.w || .12, H = p.h || .075, y0 = .035, water = !!p.water;
+  const zn = new THREE.MeshStandardMaterial({ map: zincTex(891), color: col('#ffffff'), metalness: .55, roughness: .4, side: THREE.DoubleSide });
+  [-1, 1].forEach(s => { const m = new THREE.Mesh(new THREE.PlaneGeometry(L, H), zn); m.position.set(0, y0 + H / 2, s * (W / 2 - .008)); m.rotation.x = s * .18; g.add(m);
+    const lip = cyl(.005, .005, L, zn, 8); lip.rotation.z = Math.PI / 2; lip.position.set(0, y0 + H, s * W / 2); g.add(lip); });
+  [-1, 1].forEach(s => { const e = new THREE.Mesh(new THREE.PlaneGeometry(W, H), zn); e.position.set(s * L / 2, y0 + H / 2, 0); e.rotation.y = Math.PI / 2; g.add(e);
+    const st = box(.012, y0, W + .04, std('#8d9295', { m: .6, r: .45 })); st.position.set(s * (L / 2 - .06), y0 / 2, 0); g.add(st); });
+  const bot = box(L, .004, W - .03, zn); bot.position.y = y0 + .002; g.add(bot);
+  if (!water) { const bar = cyl(.011, .011, L - .02, std('#b58a5a', { r: .7 }), 10); bar.rotation.z = Math.PI / 2; bar.position.y = y0 + H + .05; g.add(bar);   // anti-waste spinner bar
+    [-1, 1].forEach(s => { const br = box(.006, .06, .006, std('#8d9295', { m: .6, r: .45 })); br.position.set(s * (L / 2 - .005), y0 + H + .025, 0); g.add(br); }); }
+  const fillM = water ? new THREE.MeshPhysicalMaterial({ color: col('#a9c8cc'), roughness: .05, transmission: .2, transparent: true, opacity: .85, clearcoat: 1 }) : new THREE.MeshStandardMaterial({ color: col('#b08550'), roughness: .9 });
+  const top = new THREE.Mesh(new THREE.PlaneGeometry(L - .02, W - .02), fillM); top.rotation.x = -Math.PI / 2; g.add(top);
+  const pel = water ? null : brPellets(380, 893, r => [(r() - .5) * (L - .04), 0, (r() - .5) * (W - .035)]); if (pel) g.add(pel);
+  const m4 = new THREE.Matrix4(), LS = V3(0, 0, 0);
+  g.userData.tick = t => { const f = clamp(kv(p.fillK, t, .5)), lvl = y0 + .006 + (H - .012) * f; top.position.y = lvl - .002; top.visible = f > .02; top.scale.set(1, .75 + .25 * f, 1);
+    if (pel) { const d = pel.userData.data, s = pel.userData.size; d.forEach(([x, , z, q, k], i) => { m4.compose(V3(x, lvl - .001 + hr(i, 3) * .003, z * (.75 + .25 * f)), q, f > .02 ? V3(s[0] * k, s[2] * k, s[1] * k) : V3(0, 0, 0)); pel.setMatrixAt(i, m4); }); pel.instanceMatrix.needsUpdate = true; }
+    if (p.link) { g.updateMatrixWorld(true); LINK[p.link] = { drinker: g.localToWorld(LS.set(p.aim?.[0] || 0, lvl, p.aim?.[1] || 0)).clone() }; } };
+  return shadowed(g); }
+function brWeaveTex() { return SPR.brWeave ||= canvasT(256, 256, (c, w, h) => { const r = rng(895); c.fillStyle = '#e6e1d4'; c.fillRect(0, 0, w, h);
+  for (let y = 0; y < h; y += 2) { c.fillStyle = `rgba(${r() > .5 ? '255,255,250' : '170,165,150'},${.12 + r() * .1})`; c.fillRect(0, y, w, 1); }
+  for (let x = 0; x < w; x += 2) { c.fillStyle = `rgba(150,145,130,${.06 + r() * .08})`; c.fillRect(x, 0, 1, h); }
+  c.fillStyle = 'rgba(46,122,72,.88)'; c.fillRect(0, h * .56, w, h * .1); c.fillStyle = 'rgba(40,90,160,.8)'; c.fillRect(0, h * .69, w, h * .025);   // green band + blue stripe, no print
+  for (let i = 0; i < 300; i++) { c.fillStyle = `rgba(120,100,70,${r() * .1})`; c.fillRect(r() * w, r() * h, 3, 2); } }, [3, 1]); }
+function brSack(p = {}) { const g = new THREE.Group(), W = p.w || .44, D = p.d || .26, H = p.h || .62;
+  const geo = new THREE.CylinderGeometry(1, 1, 1, 28, 8, true), P = geo.attributes.position;
+  for (let i = 0; i < P.count; i++) { const y = P.getY(i) + .5, a = Math.atan2(P.getZ(i), P.getX(i)), b = 1 + .12 * Math.sin(Math.PI * y) - .06 * (y > .9 ? (y - .9) * 10 : 0);
+    P.setXYZ(i, Math.cos(a) * W / 2 * b * (1 + .03 * Math.sin(a * 5 + y * 7)), y * H, Math.sin(a) * D / 2 * b); }
+  geo.computeVertexNormals(); const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: brWeaveTex(), roughness: .85, side: THREE.DoubleSide })); g.add(m);
+  const bt = new THREE.Mesh(new THREE.CircleGeometry(1, 28), m.material); bt.scale.set(W / 2, D / 2, 1); bt.rotation.x = Math.PI / 2; bt.position.y = .002; g.add(bt);
+  const roll = new THREE.Mesh(new THREE.TorusGeometry(1, .07, 8, 28), m.material); roll.rotation.x = Math.PI / 2; roll.scale.set(W / 2 * 1.03, D / 2 * 1.03, .2); roll.position.y = H; g.add(roll);   // rolled-down mouth
+  const fill = new THREE.Mesh(new THREE.CircleGeometry(1, 28), new THREE.MeshStandardMaterial({ color: col('#a97c48'), roughness: .9 })); fill.scale.set(W / 2 * .96, D / 2 * .96, 1); fill.rotation.x = -Math.PI / 2; fill.position.y = H - .04; g.add(fill);
+  const pel = brPellets(260, 897, r => { const a = r() * 6.28, d = Math.sqrt(r()); return [Math.cos(a) * d * W / 2 * .9, H - .035 + (1 - d * d) * .025 + r() * .004, Math.sin(a) * d * D / 2 * .9]; }); g.add(pel);
+  g.add(contactShadow(W * .62, D * .7, .45)); return shadowed(g); }
+const BR_KIND = { pellet: BR_FEED, soy: ['#c9a873', '#d6b882', '#b89660', '#dcc296'], maize: ['#e9b23a', '#f1c552', '#d99c2a', '#f3cf6a'], premix: ['#e8e2cf', '#c94b6a', '#7fae4a', '#f0d24a', '#dcd5c0'] };
+function brHeap(p = {}) { const g = new THREE.Group(), R = p.r || .15, Hh = p.h || .07, n = p.n || 520, kind = p.kind || 'pellet';
+  const sz = kind === 'pellet' ? [.0035, .0035, .007] : kind === 'maize' ? [.004, .0028, .0045] : kind === 'soy' ? [.004, .0012, .005] : [.0022, .0022, .0022];
+  const pel = brPellets(n, p.seed || 899, r => { const a = r() * 6.28, d = R * Math.sqrt(r()); return [Math.cos(a) * d, Hh * Math.max(0, 1 - (d / R) ** 1.5) * (.55 + .45 * r()) + .002, Math.sin(a) * d * .85]; }, BR_KIND[kind], sz);
+  g.add(pel); const sh = contactShadow(R * 1.15, R * 1.05, .35); g.add(sh);
+  let dirt = null, ring = null; if (p.dirt) { dirt = brPellets(220, 901, r => { const a = r() * 6.28, d = R * 1.25 * Math.sqrt(r()); return [Math.cos(a) * d, Hh * .8 * Math.max(0, 1 - (d / R / 1.2) ** 1.5) * r() + .002, Math.sin(a) * d * .85]; }, ['#4d3d2a', '#5a4834', '#3e3122', '#ece8dc', '#6b5a44'], [.003, .003, .004]); g.add(dirt);
+    ring = new THREE.Mesh(new THREE.CircleGeometry(1, 32), new THREE.MeshStandardMaterial({ color: col('#4f3f2c'), roughness: .5, transparent: true, opacity: .5, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -5 })); ring.rotation.x = -Math.PI / 2; ring.position.y = .016; ring.scale.set(R * 1.5, R * 1.3, 1); g.add(ring); }
+  g.userData.tick = t => { const k = clamp(kv(p.growK, t, 1)) * clamp(kv(p.sizeK, t, 1)), s = Math.max(.001, k); [pel, dirt].forEach(m => { if (m) { m.scale.set(.3 + .7 * s, s, .3 + .7 * s); m.visible = k > .01; } }); sh.visible = k > .01;
+    if (ring) { ring.visible = k > .01; ring.material.opacity = .5 * s; } };
+  return g; }
+function brScoop(p = {}) { const g = new THREE.Group(), sc = new THREE.Group(); g.add(sc); const R1 = .1, R0 = .085, H = .17;
+  const zn = new THREE.MeshStandardMaterial({ map: zincTex(903), color: col('#ffffff'), metalness: .6, roughness: .38, side: THREE.DoubleSide });
+  const wall = new THREE.Mesh(new THREE.CylinderGeometry(R1, R0, H, 24, 1, true), zn); wall.position.y = -H / 2; sc.add(wall);
+  const bt = new THREE.Mesh(new THREE.CircleGeometry(R0, 24), zn); bt.rotation.x = Math.PI / 2; bt.position.y = -H; sc.add(bt);
+  const rim = new THREE.Mesh(new THREE.TorusGeometry(R1, .005, 6, 24), zn); rim.rotation.x = Math.PI / 2; sc.add(rim);
+  const fill = new THREE.Mesh(new THREE.CircleGeometry(R1 * .95, 24), new THREE.MeshStandardMaterial({ color: col('#ad8150'), roughness: .9 })); fill.rotation.x = -Math.PI / 2; sc.add(fill);
+  const lip = new THREE.Object3D(); lip.position.set(0, 0, R1); sc.add(lip);
+  const NP = 90, stream = brPellets(NP, 905, () => [0, 0, 0]); stream.frustumCulled = false; g.add(stream);
+  const m4 = new THREE.Matrix4(), tp = V3(0, 0, 0), Z = V3(0, 0, 0);
+  g.userData.tick = t => { if (g.parent) g.position.copy(g.parent.getWorldPosition(V3(0, 0, 0))).negate();
+    const Lk = LINK[p.carryBy || 'farmer'], palm = Lk?.[p.hand || 'R'], on = palm && t >= (p.show?.[0] ?? -1e9) && t < (p.show?.[1] ?? 1e9);
+    const hide = () => { for (let i = 0; i < NP; i++) { m4.compose(Z, new THREE.Quaternion(), Z); stream.setMatrixAt(i, m4); } stream.instanceMatrix.needsUpdate = true; };
+    const full = clamp(kv(p.fullK, t, 1));
+    if (!on) { hide(); const ra = p.restAt; sc.visible = !!ra; if (ra) { sc.position.set(ra[0], ra[1] + H, ra[2]); sc.rotation.set(0, ra[3] || 0, 0); fill.position.y = -H + .01 + (H - .03) * full; } return; }
+    sc.visible = true; const pk = sEase(kv(p.pourK, t, 0)), aim = V3(...(p.aim || [0, 0, 0])), yaw = Math.atan2(aim.x - palm.x, aim.z - palm.z);
+    sc.position.copy(palm).add(V3(0, -.03, 0)); sc.rotation.set(0, 0, 0); sc.rotateY(yaw); sc.translateZ(-.07); sc.rotateX(pk * (p.tilt ?? 1.9));
+    fill.position.y = -H + .01 + (H - .03) * full; fill.visible = full > .03;
+    sc.updateMatrixWorld(true); lip.getWorldPosition(tp);
+    if (pk < .5 || full < .02) { hide(); return; }
+    const q = new THREE.Quaternion(), s = stream.userData.size;
+    for (let i = 0; i < NP; i++) { const u = fr01(t * 2.2 + i / NP), d = stream.userData.data[i], jx = (hr(i, 1) - .5) * .05, jz = (hr(i, 2) - .5) * .05;
+      const x = lerp(tp.x, aim.x + jx * u, u), z = lerp(tp.z, aim.z + jz * u, u), y = lerp(tp.y, aim.y, u * u) + .03 * Math.sin(Math.PI * u) * (1 - u);
+      m4.compose(V3(x, y, z), d[3], V3(s[0] * d[4], s[2] * d[4], s[1] * d[4])); stream.setMatrixAt(i, m4); }
+    stream.instanceMatrix.needsUpdate = true; };
+  return shadowed(g); }
+function brVent(p = {}) { const g = new THREE.Group(), W = p.w || .62, H = p.h || .5;   // origin = window centre on the inner wall face; +x = into the room
+  const hinge = new THREE.Group(); hinge.position.set(.015, H / 2 + .03, 0); g.add(hinge);
+  for (let i = 0; i < 4; i++) hinge.add(woodBox([.02, H + .06, (W + .06) / 4 - .004], 1, ['#8a6c4c', '#7d6145', '#93745a', '#806446'][i], [0, -(H + .06) / 2, -W / 2 - .03 + (i + .5) * (W + .06) / 4]));
+  hinge.add(woodBox([.03, .07, W + .06], 2, '#6d5236', [.012, -.12, 0]), woodBox([.03, .07, W + .06], 2, '#6d5236', [.012, -(H - .06), 0]));
+  const prop = woodBox([.025, .5, .025], 1, '#7a5c3c', [0, 0, 0]); g.add(prop);
+  const spr = (c, op) => { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: pgWispTex(), color: col(c), transparent: true, depthWrite: false, opacity: op })); g.add(s); return s; };
+  const wisps = Array.from({ length: 8 }, (_, i) => ({ s: spr('#ffffff', 0), ph: i / 8, y: (hr(i, 3) - .5) * H * .6, z: (hr(i, 4) - .5) * W * .7 }));
+  g.userData.tick = t => { const sk = sEase(kv(p.shutK, t, 0)), air = clamp(kv(p.airK, t, 1)), ang = lerp(1.3, 0, sk);
+    hinge.rotation.z = ang; prop.visible = sk < .05; prop.position.set(.26, -.04, W / 2 - .06); prop.rotation.z = .5;
+    wisps.forEach((w, i) => { const f = fr01(t * .5 + w.ph); w.s.position.set(.05 + f * .9, w.y - f * .35, w.z); w.s.scale.set(.26, .06, 1); w.s.material.opacity = air * (1 - sk) * .8 * Math.sin(Math.PI * f); }); };
+  return shadowed(g); }
+function brHaze(p = {}) { const g = new THREE.Group(), [x0, x1, z0, z1] = p.area || [-.5, .5, -.5, .5], y0 = p.y0 ?? .2, y1 = p.y1 ?? .9, r = rng(p.seed || 907);
+  const spr = (tex, c) => { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, color: col(c), transparent: true, depthWrite: false, opacity: 0 })); g.add(s); return s; };
+  const puffs = Array.from({ length: p.n || 12 }, () => ({ s: spr(pgPuffTex(), p.color || '#bdb468'), x: lerp(x0, x1, r()), y: lerp(y0, y1, r()), z: lerp(z0, z1, r()), ph: r() * 6 }));
+  const stinks = Array.from({ length: 5 }, (_, i) => ({ s: spr(pgStinkTex(), '#97a04a'), x: lerp(x0 + .1, x1 - .1, i / 4), z: lerp(z0, z1, .3 + .4 * r()), ph: i * .37 }));
+  g.userData.tick = t => { const sm = clamp(kv(p.smellK, t, 0));
+    puffs.forEach(h => { h.s.position.set(h.x + .05 * Math.sin(t * .5 + h.ph), h.y + .04 * Math.sin(t * .7 + h.ph), h.z); const s = (p.size || .45) + .08 * Math.sin(t * .6 + h.ph); h.s.scale.set(s, s * .8, 1); h.s.material.opacity = sm * (p.opacity ?? .4); });
+    stinks.forEach(s => { const f = fr01(t * .35 + s.ph); s.s.position.set(s.x, y1 + .05 + f * .35, s.z); s.s.scale.set(.07, .26, 1); s.s.material.opacity = sm * .85 * Math.sin(Math.PI * f); }); };
+  return g; }
+Object.assign(ASSETS, { br_flock: brFlock, br_pen: brPen, br_litter: brLitter, br_trough: brTrough, br_sack: brSack, br_heap: brHeap, br_scoop: brScoop, br_vent: brVent, br_haze: brHaze });
