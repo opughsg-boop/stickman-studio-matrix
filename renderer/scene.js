@@ -3914,7 +3914,8 @@ const HPOSE = { open: { f: [[.15, .15, .1], [.12, .15, .1], [.15, .18, .1], [.2,
   cup: { f: [[.32, .42, .28], [.36, .46, .3], [.4, .5, .32], [.46, .52, .34]], th: 'rest' },          // palm up, fingers round an egg
   slide: { f: [[.06, .05, .03], [.05, .05, .03], [.07, .06, .04], [.1, .08, .05]], th: 'rest' },     // flat, slid under a hen
   grip: { f: [[1.05, 1.2, .8], [1.1, 1.25, .85], [1.15, 1.3, .85], [1.15, 1.25, .8]], th: 'wrap' },  // a looser fist round a 3 cm roll
-  flat: { f: [[.02, .02, .01], [.02, .02, .01], [.03, .02, .01], [.05, .03, .02]], th: 'rest' } };   // palm flat on a surface
+  flat: { f: [[.02, .02, .01], [.02, .02, .01], [.03, .02, .01], [.05, .03, .02]], th: 'rest' },
+  pinchT: { f: [[.55, .8, .5], [.95, 1.15, .7], [1.05, 1.2, .75], [1.15, 1.25, .8]], th: 'tight' } };   // index and thumb pads closed on a 1-3 mm flower stalk   // palm flat on a surface
 function fabricTex() { return SPR.oFab ||= (() => { const r = rng(415); return canvasT(128, 128, (c, w, h) => { c.fillStyle = '#58697a'; c.fillRect(0, 0, w, h);
   for (let i = -h; i < w; i += 3) { c.strokeStyle = `rgba(${r() > .5 ? '120,140,160' : '40,50,62'},.35)`; c.lineWidth = 1; c.beginPath(); c.moveTo(i, 0); c.lineTo(i + h, h); c.stroke(); }
   for (let i = 0; i < 900; i++) { c.fillStyle = `rgba(230,235,240,${r() * .12})`; c.fillRect(r() * w, r() * h, 1, 1); } }, [4, 6]); })(); }
@@ -3984,9 +3985,22 @@ function gardHand(p = {}) { const g = new THREE.Group(), inner = new THREE.Group
   const tdust = new THREE.Mesh(new THREE.SphereGeometry(.0075, 10, 8), std('#e6bf3c', { r: .8 })); tdust.scale.set(1.2, .9, .9); tdust.position.set(-.092 * sx, -.026, .074); brush.add(tdust);
   const brushO = new THREE.Object3D(); brushO.position.set(-.1 * sx, -.026, .074); brush.add(brushO);
   const pinchDust = new THREE.Mesh(new THREE.SphereGeometry(.0068, 10, 8), std('#e8c547', { r: .85 })); pinchDust.scale.set(1.3, .8, 1.1); inner.add(pinchDust);
+  // bypass pruning snips (strawberry runners, 2026-11-28): red grips across the curled fingers, a forged pivot out of the thumb side, a
+  //   fixed hooked anvil jaw and a curved upper blade that opens about the pivot (snipOpenK 0..1 = 0..32 deg); anchor = the jaw middle
+  const snips = new THREE.Group(); inner.add(snips); snips.visible = false; let snipTop, jawO;
+  { const grip = std('#b3261e', { r: .45 }), stl = new THREE.MeshStandardMaterial({ color: col('#c9ced2'), metalness: .9, roughness: .25 }), dark = std('#3a3d40', { m: .6, r: .4 });
+    const hg = cyl(.0105, .0115, .11, grip, 14); hg.rotation.z = Math.PI / 2; hg.position.set(.006 * sx, -.026, .074); snips.add(hg);
+    const hg2 = cyl(.008, .009, .1, grip, 12); hg2.rotation.z = Math.PI / 2; hg2.position.set(.01 * sx, -.043, .07); snips.add(hg2);
+    const piv = cyl(.0085, .0085, .016, dark, 16); piv.position.set(-.066 * sx, -.032, .074); snips.add(piv);
+    const jaw = (len, w, curl) => { const gg = new THREE.BoxGeometry(len, .003, w, 6, 1, 1), P = gg.attributes.position;
+      for (let i = 0; i < P.count; i++) { const u = .5 - P.getX(i) / len * sx; P.setZ(i, P.getZ(i) * (1 - .75 * u) + curl * u * u); } gg.translate(-len / 2 * sx, 0, 0); gg.computeVertexNormals(); return gg; };
+    const anv = new THREE.Mesh(jaw(.048, .011, -.006), dark); anv.position.set(-.066 * sx, -.036, .074); snips.add(anv);
+    snipTop = new THREE.Group(); snipTop.position.set(-.066 * sx, -.029, .074); snips.add(snipTop);
+    const bl = new THREE.Mesh(jaw(.052, .013, .007), stl); bl.castShadow = true; snipTop.add(bl);
+    jawO = new THREE.Object3D(); jawO.position.set(-.09 * sx, -.032, .074); snips.add(jawO); }
   const TRK = keyTrack(p.track || [[0, 0, -5, 0, 0, 0, 1, 0, 1, 0, 'open']], decHand), tmpq = new THREE.Quaternion();
   const loc = o => inner.worldToLocal(o.getWorldPosition(new THREE.Vector3()));
-  const thumbTarget = (mode, ip) => mode === 'pinch' ? ip.clone().add(V3(.001 * sx, -.0105, -.002)) : mode === 'tuck' ? loc(fingers[1].segs[1]).add(V3(-.004 * sx, -.014, .002))
+  const thumbTarget = (mode, ip) => mode === 'pinch' ? ip.clone().add(V3(.001 * sx, -.0105, -.002)) : mode === 'tight' ? ip.clone().add(V3(.0005 * sx, -.0035, -.001)) : mode === 'tuck' ? loc(fingers[1].segs[1]).add(V3(-.004 * sx, -.014, .002))
     : mode === 'wrap' ? loc(fingers[0].segs[1]).add(V3(-.002 * sx, -.004, -.012)) : V3(-.06 * sx, -.022, .058);
   const pose = (A, B, u) => { const a = HPOSE[A] || HPOSE.open, b = HPOSE[B] || HPOSE.open;
     fingers.forEach((f, i) => f.segs.forEach((j, k) => { const fl = lerp(a.f[i][k], b.f[i][k], u); j.rotation.set(fl, k === 0 ? SPR0[i] * sx * (1 - Math.min(1, fl)) : 0, 0); }));
@@ -4003,7 +4017,8 @@ function gardHand(p = {}) { const g = new THREE.Group(), inner = new THREE.Group
       P.lerp(A, w); Q.slerp(hq, w); if (gr.pose) { if (w > .5) { pa = gr.pose; pb = gr.pose; pu = 1; } } }
     const kn = kv(p.knifeK, t, 0) > .5, br = kv(p.brushK, t, 0) > .5, hm = kv(p.hammerK, t, 0) > .5, tw = kv(p.trowelK, t, 0) > .5;
     knife.visible = kn; brush.visible = br; hammer.visible = hm; trowel.visible = tw; pose(pa, pb, pu);
-    const an = kn ? loc(edgeO) : br ? loc(brushO) : hm ? loc(faceO) : tw ? loc(trowelO) : p.anchor === 'palm' ? loc(palmO) : p.anchor === 'grip' ? loc(gripO) : loc(fingers[0].tip), th = loc(thumb.tip);
+    const sn = kv(p.snipsK, t, 0) > .5; snips.visible = sn; if (sn) snipTop.rotation.y = -sx * .55 * clamp(kv(p.snipOpenK, t, 0));
+    const an = sn ? loc(jawO) : kn ? loc(edgeO) : br ? loc(brushO) : hm ? loc(faceO) : tw ? loc(trowelO) : p.anchor === 'palm' ? loc(palmO) : p.anchor === 'grip' ? loc(gripO) : loc(fingers[0].tip), th = loc(thumb.tip);
     pinchDust.visible = kv(p.dustK, t, 0) > .05; if (pinchDust.visible) { pinchDust.position.copy(loc(fingers[0].tip)).lerp(th, .5).add(V3(0, -.002, 0)); pinchDust.scale.setScalar(Math.max(.3, kv(p.dustK, t, 0))).multiply(V3(1.3, .8, 1.1)); }
     inner.position.copy(an).negate(); g.position.copy(P); g.quaternion.copy(Q);
     if (p.link) LINK[p.link] = { anchor: P.clone(), q: Q.clone(), pn: V3(0, -1, 0).applyQuaternion(Q), palm: loc(palmO).sub(an).applyQuaternion(Q).add(P), thumb: th.sub(an).applyQuaternion(Q).add(P), index: loc(fingers[0].tip).sub(an).applyQuaternion(Q).add(P),
@@ -7989,3 +8004,223 @@ function silkBasket(p = {}) { const g = new THREE.Group(), inner = new THREE.Gro
     if (p.link) { g.updateWorldMatrix(true, false); body.updateMatrixWorld(true); LINK['basket:' + p.link] = { mouth: body.localToWorld(V3(0, Hb, 0)), grip: inner.localToWorld(V3(0, 0, 0)), held: pl.held }; } };
   return g; }
 ASSETS.silk_basket = silkBasket;
+
+// ================= Strawberry pack (2026-11-28, plans/strawberry_flowers.mjs) =================
+// Real sizes (garden strawberry, Fragaria x ananassa): plant 0.15-0.25 m, trifoliate leaves 10-15 cm across (leaflets 5-6 cm, coarsely
+//   toothed, pleated veins) on 7-14 cm reddish-based petioles; flowers 2.6 cm (5 round white petals, a yellow receptacle ringed by ~20
+//   stamens, 5 green sepals behind); green fruit 1.5 cm; ripe fruit 3.6-4 cm (conical, glossy red, yellow achenes in dimples, star calyx);
+//   runners (stolons) 2-3 mm thick, 0.3-0.6 m long, a daughter rosette at the tip; fibrous roots 10-20 cm.
+// sb_plant: one plant (local y 0 = bed top). vigor 0..1 / vigorK: weak = 6 small pale leaves on thin petioles, strong = 14 big dark ones;
+//   droopK sags and pales the leaves. trusses [{az, out, y, kind:'flower'|'green'|'red', showK, setK (flower -> green fruit),
+//   growK (red fruit swells and ripens), pick {t0, t1, by, hand, cut}}]: a picked piece rides LINK[by] (the pinch point between a
+//   gard_hand's index and thumb, or the rig palm LINK[by][hand]) from t0 and is gone at t1; the stub stays on the crown.
+//   runner {pts:[[x,y,z]..] local, cutU, cutT}: a stolon tube, a node bract and a rooting daughter plant; snipped at cutT (gap opens).
+//   roots {z, k}: fibrous roots fanned on the bed's end face (z = local face offset), growing with rootK. hole: soil ring round the crown.
+// sb_field: many lite plants in one draw per part (leaves, petioles, fruit, flowers, soil holes) on bed rows; skip:[[x,z]] keeps clear.
+// sb_bed: raised beds (rows along z): straw-mulched top, sloped loam sides, a soil-section end face, a black drip tape, loose straws.
+// sb_basket: a wicker basket of ripe strawberries (fillK), carried on LINK[by][hand] like tomato_basket.
+function sbLeafOutline(c, w, h) { const pth = new Path2D(), N = 80, side = s => { const t = Math.pow(s, 1.25), wf = Math.pow(Math.sin(Math.PI * Math.min(.999, t * .92 + .04)), .75);
+    const tooth = s > .22 ? .1 * (1 - ((s * 14) % 1)) : 0; return (w / 2 - 3) * wf * (1 + tooth); };
+  pth.moveTo(w / 2, h - 2); for (let i = 1; i <= N; i++) { const s = i / N; pth.lineTo(w / 2 + side(s), h - 2 - s * (h - 5)); }
+  for (let i = N; i >= 0; i--) { const s = i / N; pth.lineTo(w / 2 - side(s), h - 2 - s * (h - 5)); } pth.closePath(); return pth; }
+function sbLeafTex() { return SPR.sbLeaf ||= (() => { const r = rng(311); return canvasT(128, 160, (c, w, h) => { c.clearRect(0, 0, w, h); const pth = sbLeafOutline(c, w, h);
+  const gr = c.createLinearGradient(0, 0, w, 0); gr.addColorStop(0, '#3e7a2a'); gr.addColorStop(.5, '#4f8f34'); gr.addColorStop(1, '#3e7a2a'); c.fillStyle = gr; c.fill(pth);
+  c.save(); c.clip(pth);
+  for (let k = 0; k < 11; k++) { const y = h - 14 - k * (h - 28) / 11; for (const sd of [-1, 1]) { c.fillStyle = 'rgba(18,44,10,.16)'; c.beginPath(); c.moveTo(w / 2, y - 6); c.lineTo(w / 2 + sd * w * .5, y - 26); c.lineTo(w / 2 + sd * w * .5, y - 18); c.lineTo(w / 2, y + 2); c.fill(); } } // pleats
+  for (let i = 0; i < 260; i++) { c.fillStyle = r() < .5 ? `rgba(16,40,8,${.04 + r() * .06})` : `rgba(150,195,100,${.03 + r() * .05})`; c.beginPath(); c.arc(r() * w, r() * h, 1 + r() * 2.5, 0, 6.3); c.fill(); }
+  c.strokeStyle = 'rgba(185,215,140,.55)'; c.lineWidth = 2; c.beginPath(); c.moveTo(w / 2, h - 2); c.lineTo(w / 2, 6); c.stroke();
+  c.lineWidth = 1.1; c.strokeStyle = 'rgba(170,205,125,.42)'; for (let k = 0; k < 11; k++) { const y = h - 14 - k * (h - 28) / 11; c.beginPath(); c.moveTo(w / 2, y); c.lineTo(w * .04, y - 22); c.moveTo(w / 2, y); c.lineTo(w * .96, y - 22); c.stroke(); }
+  c.lineWidth = 2.2; c.strokeStyle = 'rgba(120,160,80,.5)'; c.stroke(pth); c.restore(); }); })(); }
+function sbLeafBump() { return SPR.sbLeafB ||= canvasT(128, 160, (c, w, h) => { c.fillStyle = '#9a9a9a'; c.fillRect(0, 0, w, h); c.strokeStyle = '#3a3a3a'; c.lineWidth = 2.4;
+  c.beginPath(); c.moveTo(w / 2, h - 2); c.lineTo(w / 2, 6); c.stroke(); c.lineWidth = 1.5; for (let k = 0; k < 11; k++) { const y = h - 14 - k * (h - 28) / 11; c.beginPath(); c.moveTo(w / 2, y); c.lineTo(w * .04, y - 22); c.moveTo(w / 2, y); c.lineTo(w * .96, y - 22); c.stroke(); }
+  for (let k = 0; k < 11; k++) { const y = h - 24 - k * (h - 28) / 11; c.fillStyle = 'rgba(255,255,255,.35)'; c.fillRect(0, y - 4, w, 5); } }); }
+function sbLeafGeo() { if (SPR.sbLeafG) return SPR.sbLeafG; const parts = [];   // three leaflets in metres along +Z from the petiole tip, faces +Y, cupped along the midrib, tips droop
+  const leaflet = (a, len, wid, tilt) => { const q = new THREE.PlaneGeometry(wid, len, 4, 6); q.translate(0, len / 2, 0); const P = q.attributes.position;
+    for (let i = 0; i < P.count; i++) { const x = P.getX(i), y = P.getY(i) / len; P.setZ(i, -.42 * Math.abs(x) + .22 * len * y * y); }
+    q.rotateX(Math.PI / 2); q.rotateX(-tilt); q.translate(0, 0, .004); q.rotateY(a); return q.toNonIndexed(); };
+  parts.push(leaflet(0, .058, .046, .12), leaflet(1.0, .052, .042, .05), leaflet(-1.0, .052, .042, .05));
+  const m = mergeGeometries(parts); m.computeVertexNormals(); return SPR.sbLeafG = m; }
+function sbLeafMat() { return SPR.sbLeafM ||= new THREE.MeshStandardMaterial({ map: sbLeafTex(), bumpMap: sbLeafBump(), bumpScale: 1.6, alphaTest: .5, side: THREE.DoubleSide, roughness: .55 }); }
+function sbPetalTex() { return SPR.sbPetal ||= canvasT(64, 64, (c, w, h) => { const gr = c.createRadialGradient(w / 2, h, 2, w / 2, h * .5, w * .7); gr.addColorStop(0, '#f2f0c8'); gr.addColorStop(.35, '#fbfbf4'); gr.addColorStop(1, '#ffffff');
+  c.fillStyle = gr; c.fillRect(0, 0, w, h); c.strokeStyle = 'rgba(200,205,185,.45)'; c.lineWidth = .8; for (let k = -6; k <= 6; k++) { c.beginPath(); c.moveTo(w / 2, h); c.quadraticCurveTo(w / 2 + k * 2.5, h * .55, w / 2 + k * 5, 4); c.stroke(); } }); }
+function sbFlowerGeos() { if (SPR.sbFlG) return SPR.sbFlG; const petals = [];   // flower facing +Z: 5 petals 1.3 cm round, receptacle, stamens, sepals
+  for (let i = 0; i < 5; i++) { const q = new THREE.CircleGeometry(.0064, 16), P = q.attributes.position; for (let j = 0; j < P.count; j++) { const x = P.getX(j), y = P.getY(j); P.setZ(j, .25 * (x * x + y * y) / .0064 * .6); }
+    q.translate(0, .0068, 0); q.rotateZ(i / 5 * Math.PI * 2); petals.push(q.toNonIndexed()); }
+  const sep = []; for (let i = 0; i < 5; i++) { const s = new THREE.Shape(); s.moveTo(-.0028, 0); s.lineTo(0, .0105); s.lineTo(.0028, 0); s.lineTo(-.0028, 0); const q = new THREE.ShapeGeometry(s); q.translate(0, .002, -.0018); q.rotateZ((i + .5) / 5 * Math.PI * 2); sep.push(q.toNonIndexed()); }
+  const cen = new THREE.SphereGeometry(.0043, 16, 10); cen.scale(1, 1, .55); cen.translate(0, 0, .0012);
+  const st = []; for (let i = 0; i < 22; i++) { const a = i / 22 * Math.PI * 2, s = new THREE.SphereGeometry(.00085, 5, 4); s.translate(Math.cos(a) * .0055, Math.sin(a) * .0055, .0022); st.push(s.toNonIndexed()); }
+  const pm = mergeGeometries(petals); pm.computeVertexNormals();
+  return SPR.sbFlG = { petals: pm, sepals: mergeGeometries(sep), centre: cen, stamens: mergeGeometries(st) }; }
+function sbFruitTex() { return SPR.sbFruit ||= (() => { const r = rng(517); return canvasT(256, 256, (c, w, h) => { c.fillStyle = '#ffffff'; c.fillRect(0, 0, w, h);
+  for (let j = 0; j < 14; j++) for (let i = 0; i < 16; i++) { const x = (i + (j % 2) * .5) / 16 * w + (r() - .5) * 3, y = (j + .5) / 14 * h + (r() - .5) * 3;
+    c.fillStyle = 'rgba(70,20,20,.32)'; c.beginPath(); c.ellipse(x, y, 5.5, 7, 0, 0, 6.3); c.fill();
+    c.fillStyle = '#f4dd72'; c.beginPath(); c.ellipse(x, y, 2.2, 3.2, (r() - .5) * .6, 0, 6.3); c.fill(); c.fillStyle = 'rgba(255,255,230,.7)'; c.fillRect(x - .6, y - 2, 1.2, 1.6); }
+  for (let i = 0; i < 1500; i++) { c.fillStyle = `rgba(${r() < .5 ? '255,255,255' : '120,30,30'},${r() * .12})`; c.fillRect(r() * w, r() * h, 1.5, 1.5); } }, [1, 1]); })(); }
+function sbFruitGeo() { if (SPR.sbFruitG) return SPR.sbFruitG;   // unit fruit: top (calyx) at y 0, tip at y -1, max radius .45 near the shoulder
+  const prof = [[0, -1.005], [.03, -.99], [.12, -.93], [.25, -.79], [.36, -.6], [.43, -.4], [.45, -.22], [.42, -.09], [.33, -.01], [.18, .02], [0, .03]].map(([x, y]) => new THREE.Vector2(x, y));
+  const geo = new THREE.LatheGeometry(prof, 22), P = geo.attributes.position; for (let i = 0; i < P.count; i++) { const x = P.getX(i), z = P.getZ(i), a = Math.atan2(z, x), k = 1 + .035 * Math.sin(a * 3 + P.getY(i) * 4) + .02 * Math.sin(a * 5); P.setX(i, x * k); P.setZ(i, z * k); }
+  geo.computeVertexNormals(); return SPR.sbFruitG = geo; }
+function sbCalyxGeo() { if (SPR.sbCalG) return SPR.sbCalG; const s = new THREE.Shape(), n = 10;   // star calyx in fruit units, reflexed sepals
+  for (let i = 0; i <= n * 2; i++) { const a = i / (n * 2) * Math.PI * 2, rr = i % 2 ? .16 : .66; i ? s.lineTo(Math.cos(a) * rr, Math.sin(a) * rr) : s.moveTo(rr, 0); }
+  const geo = new THREE.ShapeGeometry(s, 3), P = geo.attributes.position; for (let i = 0; i < P.count; i++) { const rr = Math.hypot(P.getX(i), P.getY(i)); P.setZ(i, .12 * rr - .22 * rr * rr); }
+  geo.rotateX(-Math.PI / 2); geo.translate(0, .03, 0); const nub = new THREE.CylinderGeometry(.045, .06, .12, 8); nub.translate(0, .08, 0);
+  const m = mergeGeometries([geo.toNonIndexed(), nub.toNonIndexed()]); m.computeVertexNormals(); return SPR.sbCalG = m; }
+const SB_RIPE = [[0, '#86b947'], [.45, '#dfe8b8'], [.7, '#ee6a43'], [1, '#b8101f']];
+function sbRipe(k, C) { k = clamp(k); for (let i = 0; i < SB_RIPE.length - 1; i++) { const [a, ca] = SB_RIPE[i], [b, cb] = SB_RIPE[i + 1]; if (k <= b) return C.copy(col(ca)).lerp(col(cb), (k - a) / (b - a)); } return C.copy(col(SB_RIPE[SB_RIPE.length - 1][1])); }
+function sbFruitMat(k = 1) { return new THREE.MeshPhysicalMaterial({ color: sbRipe(k, new THREE.Color()), map: sbFruitTex(), bumpMap: sbFruitTex(), bumpScale: 2.2, roughness: .38, clearcoat: .75, clearcoatRoughness: .22 }); }
+function sbCalyxMat() { return SPR.sbCalM ||= new THREE.MeshStandardMaterial({ color: col('#4f8a2c'), roughness: .65, side: THREE.DoubleSide }); }
+function sbStrawTex() { return SPR.sbStraw ||= (() => { const r = rng(919); return canvasT(256, 256, (c, w, h) => { c.fillStyle = '#a8874a'; c.fillRect(0, 0, w, h);
+  for (let i = 0; i < 1400; i++) { const x = r() * w, y = r() * h, a = (r() - .5) * 1.4 + (r() < .5 ? 0 : Math.PI / 2) * .3, L = 10 + r() * 34, tone = r();
+    c.strokeStyle = tone < .2 ? 'rgba(92,70,36,.65)' : tone < .7 ? `rgba(${200 + r() * 40 | 0},${168 + r() * 40 | 0},${96 + r() * 40 | 0},.85)` : 'rgba(236,214,150,.9)'; c.lineWidth = 1 + r() * 1.6;
+    c.beginPath(); c.moveTo(x, y); c.lineTo(x + Math.cos(a) * L, y + Math.sin(a) * L); c.stroke(); } }, [1, 1]); })(); }
+function sbLoamTex() { return SPR.sbLoam ||= (() => { const r = rng(433); return canvasT(256, 256, (c, w, h) => { c.fillStyle = '#7a5c42'; c.fillRect(0, 0, w, h);
+  for (let i = 0; i < 9000; i++) { c.fillStyle = r() > .5 ? `rgba(160,128,96,${r() * .35})` : `rgba(48,32,20,${r() * .3})`; c.fillRect(r() * w, r() * h, 1 + r() * 2, 1 + r() * 2); }
+  for (let i = 0; i < 90; i++) { const x = r() * w, y = r() * h, s = 2 + r() * 5; c.fillStyle = `rgba(${120 + r() * 40 | 0},${92 + r() * 30 | 0},${66 + r() * 20 | 0},.85)`; c.beginPath(); c.ellipse(x, y, s, s * .7, r() * 3, 0, 6.3); c.fill();
+    c.fillStyle = 'rgba(30,20,12,.35)'; c.beginPath(); c.ellipse(x + s * .3, y + s * .45, s * .8, s * .3, 0, 0, 6.3); c.fill(); } }, [1, 1]); })(); }
+
+function sbPlant(p = {}) { const g = new THREE.Group(), body = new THREE.Group(); g.add(body); const R = rng(p.seed || 7), hor = a => V3(Math.sin(a), 0, Math.cos(a)), UP = V3(0, 1, 0);
+  const NL = 14, LV = Array.from({ length: NL }, (_, i) => ({ az: i * 2.4 + R() * .5, el: 1.0 + R() * .35, len: .82 + R() * .36, roll: (R() - .5) * .35, tilt: .12 + R() * .3, ph: R() * 6.3, s: .9 + R() * .22 }));
+  if (p.clearAz != null) LV.forEach(l => { const d = angTo(p.clearAz, l.az); if (Math.abs(d) < .45) l.az = p.clearAz + Math.sign(d || 1) * (.45 + R() * .2); });
+  const mk = (geo, mat, n, cast = true) => { const im = new THREE.InstancedMesh(geo, mat, Math.max(1, n)); im.frustumCulled = false; im.castShadow = cast; im.receiveShadow = true; body.add(im); return im; };
+  const TR = (p.trusses || []).map((q, i) => ({ ...q, i, out: q.out ?? (q.kind === 'red' ? .13 : q.kind === 'green' ? .1 : .075), y: q.y ?? (q.kind === 'red' ? .012 : q.kind === 'green' ? .05 : .1) }));
+  const nSeg = NL * 3 + TR.length * 5;
+  const segIM = mk(new THREE.CylinderGeometry(1, 1, 1, 6), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: .6 }), nSeg);
+  const leafIM = mk(sbLeafGeo(), sbLeafMat(), NL);
+  const crown = cyl(.008, .014, .022, std('#6b5a34', { r: .8 }), 10); crown.position.y = .008; body.add(crown);
+  for (let i = 0; i < 3; i++) { const st = new THREE.Mesh(new THREE.SphereGeometry(1, 6, 4), std('#8a6a3c', { r: .9 })); st.scale.set(.008, .002, .012); st.position.set(Math.sin(i * 2.1) * .012, .006, Math.cos(i * 2.1) * .012); st.rotation.y = i * 2.1; body.add(st); }
+  if (p.hole !== false) { const ho = new THREE.Mesh(new THREE.CircleGeometry(.075, 20), new THREE.MeshStandardMaterial({ map: sbLoamTex(), roughness: .95, polygonOffset: true, polygonOffsetFactor: -2 })); ho.rotation.x = -Math.PI / 2; ho.position.y = .003; ho.receiveShadow = true; g.add(ho); }
+  // trusses: peduncle (5 segments) + head
+  const FG = sbFlowerGeos(), petalM = new THREE.MeshPhysicalMaterial({ color: 0xffffff, map: sbPetalTex(), roughness: .5, sheen: .6, sheenColor: col('#ffffff'), side: THREE.DoubleSide, emissive: col('#ffffff'), emissiveIntensity: .04 }),
+    cenM = new THREE.MeshStandardMaterial({ color: col('#e0c12c'), roughness: .7, bumpMap: sbFruitTex(), bumpScale: 1.2 }), stamM = new THREE.MeshStandardMaterial({ color: col('#f0c21a'), roughness: .6 }),
+    sepM = new THREE.MeshStandardMaterial({ color: col('#5d9234'), roughness: .6, side: THREE.DoubleSide });
+  TR.forEach(q => { q.head = new THREE.Group(); body.add(q.head);
+    if (q.kind === 'flower') { q.fl = new THREE.Group(); q.head.add(q.fl); q.pm = petalM.clone(); q.pet = new THREE.Mesh(FG.petals, q.pm); q.fl.add(q.pet, new THREE.Mesh(FG.sepals, sepM)); q.stM = stamM.clone();
+      q.fl.add(new THREE.Mesh(FG.centre, cenM), new THREE.Mesh(FG.stamens, q.stM)); q.fl.traverse(m => { if (m.isMesh) m.castShadow = true; }); }
+    q.fm = sbFruitMat(q.kind === 'red' ? 1 : 0); q.fruit = new THREE.Mesh(sbFruitGeo(), q.fm); q.fruit.castShadow = true; q.cal = new THREE.Mesh(sbCalyxGeo(), sbCalyxMat()); q.fruit.add(q.cal); q.head.add(q.fruit); });
+  // runner + daughter plant
+  let RN = null; if (p.runner) { const pts = p.runner.pts.map(v => V3(...v)), cu = p.runner.cutU ?? .5, rM = new THREE.MeshStandardMaterial({ color: col('#9c5a3c'), roughness: .55 }),
+      cv = new THREE.CatmullRomCurve3(pts), ptsA = [], ptsB = []; for (let i = 0; i <= 24; i++) { const u = i / 24; if (u <= cu - .012) ptsA.push(cv.getPointAt(u)); if (u >= cu) ptsB.push(cv.getPointAt(u)); }
+    ptsA.push(cv.getPointAt(cu - .012)); ptsB.unshift(cv.getPointAt(cu));
+    const rf = u => .0017 * (1 - .25 * u), full = new THREE.Mesh(taperTube(pts, rf, 48, 6), rM), A = new THREE.Mesh(taperTube(ptsA, rf, 30, 6), rM), outer = new THREE.Group(), B = new THREE.Mesh(taperTube(ptsB, rf, 30, 6), rM);
+    outer.add(B); [full, A, B].forEach(m => { m.castShadow = true; }); body.add(full, A, outer);
+    const tip = pts[pts.length - 1], dir = tip.clone().sub(pts[pts.length - 2]).setY(0).normalize(), dl = new THREE.InstancedMesh(sbLeafGeo(), sbLeafMat(), 4); dl.castShadow = true; dl.frustumCulled = false; outer.add(dl);
+    const M = new THREE.Matrix4(), BX = V3(0, 0, 0), BY = V3(0, 0, 0), BZ = V3(0, 0, 0);
+    for (let i = 0; i < 4; i++) { const a = Math.atan2(dir.x, dir.z) + i * 1.7 + .4, el = .55; BZ.set(Math.sin(a) * Math.cos(el), Math.sin(el), Math.cos(a) * Math.cos(el)); BX.crossVectors(UP, BZ).normalize(); BY.crossVectors(BZ, BX);
+      M.makeBasis(BX, BY, BZ); M.scale(V3(.42, .42, .42)); M.setPosition(tip.x + BZ.x * .018, tip.y + .02, tip.z + BZ.z * .018); dl.setMatrixAt(i, M); dl.setColorAt(i, col('#e8f2d0')); }
+    const dst = cyl(.0012, .0016, .028, rM, 5); dst.position.set(tip.x, tip.y + .012, tip.z); outer.add(dst);
+    for (let i = 0; i < 5; i++) { const rp = [tip.clone(), tip.clone().add(V3(Math.sin(i * 1.3) * .006, -.012, Math.cos(i * 1.3) * .006)), tip.clone().add(V3(Math.sin(i * 1.3) * .012, -.022, Math.cos(i * 1.3) * .012))];
+      outer.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(rp), 6, .0006, 4), std('#e2d6b8', { r: .8 }))); }
+    const nd = cv.getPointAt(Math.min(.9, cu + .15)), br = new THREE.Mesh(new THREE.ConeGeometry(.003, .012, 5), sepM); br.position.copy(nd).add(V3(0, .004, 0)); br.rotation.z = .5; outer.add(br);
+    RN = { full, A, outer, dir: cv.getTangentAt(cu).setY(0).normalize(), cutT: p.runner.cutT ?? 1e9 }; }
+  // fibrous roots fanned on the end face of the bed
+  const RT = []; if (p.roots) { const rz = p.roots.z ?? .08, mainM = std('#a5845e', { r: .85 }), fineM = std('#e6d8b8', { r: .8 });
+    for (let i = 0; i < 16; i++) { const main = i < 8, a = (i / 15 - .5) * 2.4 + (R() - .5) * .2, L = (main ? .15 : .1) + R() * .05, pts = [V3(0, -.002, rz * .3)];
+      for (let j = 1; j <= 5; j++) { const f = j / 5; pts.push(V3(Math.sin(a) * L * f * .75 + (R() - .5) * .008, -Math.cos(a * .6) * L * f, rz + (R() - .5) * .002)); }
+      const geo = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 16, main ? .0013 : .0007, 4), m = new THREE.Mesh(geo, main ? mainM : fineM); body.add(m); RT.push(m); } }
+  const Z = new THREE.Matrix4().makeScale(0, 0, 0), M = new THREE.Matrix4(), Q = new THREE.Quaternion(), V = V3(0, 0, 0), S = V3(1, 1, 1), BX = V3(0, 0, 0), BY = V3(0, 0, 0), BZ = V3(0, 0, 0), C = new THREE.Color();
+  const seg = (i, A, B, r) => { V.copy(B).sub(A); const L = V.length(); if (L < 1e-5) { segIM.setMatrixAt(i, Z); return; } Q.setFromUnitVectors(Y_UP, V.divideScalar(L)); M.compose(BX.copy(A).add(B).multiplyScalar(.5), Q, S.set(r, L * 1.04, r)); segIM.setMatrixAt(i, M); };
+  const bez = (A, B, Cc, u) => A.clone().multiplyScalar((1 - u) * (1 - u)).addScaledVector(B, 2 * u * (1 - u)).addScaledVector(Cc, u * u);
+  const pale = col('#d9e08a'), dark = col('#8fb57e'), mid = col('#ffffff'), petBase = col('#8a5a3a'), petTop = col('#7f9c45'), ph0 = (p.seed || 1) * .77, CROWN = V3(0, .014, 0), tmpW = V3(0, 0, 0);
+  g.userData.tick = t => { const hid = kv(p.hideK, t, 0) > .5; g.visible = !hid; if (hid) return;
+    const v = clamp(kv(p.vigorK, t, p.vigor ?? 1)), dr = clamp(kv(p.droopK, t, 0)), sw = p.sway ?? 1;
+    body.rotation.set(.01 * sw * Math.sin(t * 1.3 + ph0), 0, .012 * sw * Math.sin(t * 1.05 + ph0 * 1.7)); body.updateMatrixWorld(true);
+    const nv = lerp(6, NL, v); let si = 0;
+    LV.forEach((l, i) => { const gk = clamp(nv - i); if (gk <= 0) { leafIM.setMatrixAt(i, Z); for (let k = 0; k < 3; k++) segIM.setMatrixAt(si++, Z); return; }
+      const plen = lerp(.07, .13, v) * l.len * (.55 + .45 * gk), el = l.el - dr * .55 + .03 * Math.sin(t * 2.1 + l.ph) * sw, o = hor(l.az);
+      const T = CROWN.clone().addScaledVector(o, Math.cos(el) * plen).add(V3(0, Math.sin(el) * plen, 0)), Mc = CROWN.clone().add(V3(0, plen * .6, 0)).addScaledVector(o, plen * .12);
+      let prev = CROWN; for (let k = 1; k <= 3; k++) { const P = bez(CROWN, Mc, T, k / 3); seg(si, prev, P, lerp(.0011, .0019, v) * (1.15 - k * .1)); segIM.setColorAt(si++, k === 1 ? petBase : petTop); prev = P; }
+      const tl = l.tilt - dr * .6 + .04 * Math.sin(t * 2.7 + l.ph) * sw; BZ.set(o.x * Math.cos(tl), Math.sin(tl), o.z * Math.cos(tl)); BX.crossVectors(Y_UP, BZ).normalize(); BY.crossVectors(BZ, BX); M.makeBasis(BX, BY, BZ);
+      M.multiply(new THREE.Matrix4().makeRotationZ(l.roll + .07 * Math.sin(t * 3.1 + l.ph) * sw)); M.scale(S.setScalar(lerp(.66, 1.12, v) * l.s * (.4 + .6 * gk))); M.setPosition(T.x, T.y, T.z); leafIM.setMatrixAt(i, M);
+      C.copy(pale).lerp(dark, v).lerp(mid, .25).multiplyScalar(.92 + .14 * Math.sin(l.ph * 3)); if (dr > 0) C.lerp(col('#d8cf7a'), dr * .6); leafIM.setColorAt(i, C); });
+    TR.forEach(q => { const show = kv(q.showK, t, 1) > .5, pk = q.pick, gone = pk && t >= pk.t1; if (!show || gone) { for (let k = 0; k < 5; k++) segIM.setMatrixAt(si + k, Z); si += 5; q.head.visible = false;
+        if (show && gone) { const cut = Math.max(1, Math.round((pk.cut ?? .45) * 5)), o = hor(q.az), E0 = CROWN.clone().addScaledVector(o, q.out).setY(q.y); const Mc0 = CROWN.clone().addScaledVector(o, q.out * .35).setY(Math.max(q.y, .03) + .035);
+          let prev = CROWN; for (let k = 1; k <= cut; k++) { const P = bez(CROWN, Mc0, E0, k / 5); seg(si - 5 + k - 1, prev, P, .0012); segIM.setColorAt(si - 5 + k - 1, petTop); prev = P; } } return; }
+      q.head.visible = true; const gk = q.kind === 'red' ? clamp(kv(q.growK, t, 1)) : 1, o = hor(q.az + .04 * Math.sin(t * 1.6 + q.i) * sw), out = q.out * lerp(.55, 1, gk);
+      const E = CROWN.clone().addScaledVector(o, out).setY(lerp(.06, q.y, q.kind === 'red' ? gk : 1) - dr * .03), Mc = CROWN.clone().addScaledVector(o, out * .35).setY(Math.max(E.y, .03) + .035);
+      const pts = []; for (let k = 0; k <= 5; k++) pts.push(bez(CROWN, Mc, E, k / 5));
+      let off = null, cut = 6; if (pk && t >= pk.t0) { const Lk = LINK[pk.by || 'hand']; let W = null; if (Lk) W = pk.hand ? Lk[pk.hand] : Lk.index && Lk.thumb ? tmpW.copy(Lk.index).add(Lk.thumb).multiplyScalar(.5) : null;
+        if (W) { cut = pk.hand ? 5 : Math.max(1, Math.round((pk.cut ?? .45) * 5)); const loc = body.worldToLocal(W.clone()); if (pk.hand) loc.add(V3(0, -.012, 0)); off = loc.sub(pts[cut]); } }
+      for (let k = 0; k < 5; k++) { let A = pts[k], B = pts[k + 1]; if (off && k >= cut) { A = A.clone().add(off); B = B.clone().add(off); } seg(si, A, B, .0012 * (q.kind === 'red' ? 1.25 : 1)); segIM.setColorAt(si++, petTop); }
+      const Eh = off ? E.clone().add(off) : E, tan = pts[5].clone().sub(pts[4]).normalize(); q.head.position.copy(Eh);
+      if (q.kind === 'flower') { const s = clamp(kv(q.setK, t, 0)); BZ.copy(o).multiplyScalar(.75).add(V3(0, .85, 0)).normalize(); BX.crossVectors(Y_UP, BZ).normalize(); BY.crossVectors(BZ, BX); M.makeBasis(BX, BY, BZ); q.fl.quaternion.setFromRotationMatrix(M);
+        q.pet.scale.setScalar(Math.max(.001, 1 - s)); q.pet.position.z = -.004 * s; q.pm.color.copy(col('#ffffff')).lerp(col('#c9b98a'), s); q.stM.color.copy(col('#f0c21a')).lerp(col('#7a5a2a'), s);
+        const fl = .004 + .012 * s; q.fruit.visible = s > .05; q.fruit.scale.setScalar(fl); q.fm.color.copy(sbRipe(0, C)); q.fruit.quaternion.setFromUnitVectors(Y_UP, tan.clone().negate()); q.fruit.position.set(0, 0, 0); }
+      else { const L = q.kind === 'green' ? .016 : lerp(.012, q.L || .038, gk); q.fruit.scale.setScalar(L); q.fruit.quaternion.setFromUnitVectors(Y_UP, tan.clone().negate().lerp(Y_UP, .25).normalize());
+        q.fm.color.copy(sbRipe(q.kind === 'green' ? 0 : clamp(gk * 1.15 - .1), C)); } });
+    for (; si < nSeg; si++) segIM.setMatrixAt(si, Z);
+    segIM.instanceMatrix.needsUpdate = leafIM.instanceMatrix.needsUpdate = true; if (segIM.instanceColor) segIM.instanceColor.needsUpdate = true; if (leafIM.instanceColor) leafIM.instanceColor.needsUpdate = true;
+    if (RN) { const cutd = t >= RN.cutT; RN.full.visible = !cutd; RN.A.visible = cutd; RN.outer.visible = true; RN.outer.position.copy(RN.dir).multiplyScalar(cutd ? .014 * sEase((t - RN.cutT) / .35) : 0); RN.outer.children[0].visible = cutd; }
+    if (RT.length) { const rk = clamp(kv(p.roots.k, t, 1)); RT.forEach((m, i) => { const n = m.geometry.index.count, f = lerp(.35, 1, rk) * (i < 8 ? 1 : clamp(rk * 1.6 - .2 + .3)); m.geometry.setDrawRange(0, Math.floor(16 * clamp(f)) * 4 * 6); }); } };
+  return g; }
+
+function sbField(p = {}) { const g = new THREE.Group(), R = rng(p.seed || 5), y0 = p.y ?? .2, P = [], skip = p.skip || [];
+  for (const bx of p.beds || [0]) for (const rx of p.rows || [-.16, .16]) { const off = rx > 0 ? 0 : (p.sp || .32) / 2; for (let z = p.z1 - off; z >= p.z0; z -= p.sp || .32) { const x = bx + rx + (R() - .5) * .02, zz = z + (R() - .5) * .02;
+      if (skip.some(([sx, sz]) => Math.hypot(sx - x, sz - zz) < .2)) continue; P.push({ x, z: zz, v: .65 + R() * .35, a0: R() * 6.3, red: R() < (p.fruit ?? .5), fl: R() < (p.flowers ?? .25) }); } }
+  const NLp = 10, mk = (geo, mat, n, cast = true) => { const im = new THREE.InstancedMesh(geo, mat, Math.max(1, n)); im.frustumCulled = false; im.castShadow = cast; im.receiveShadow = true; g.add(im); return im; };
+  const leafIM = mk(sbLeafGeo(), sbLeafMat(), P.length * NLp), petIM = mk(new THREE.CylinderGeometry(1, 1, 1, 5), std('#7f9c45', { r: .6 }), P.length * NLp, false);
+  const nR = P.filter(q => q.red).length * 2, frIM = mk(sbFruitGeo(), sbFruitMat(1), nR), caIM = mk(sbCalyxGeo(), sbCalyxMat(), nR, false);
+  frIM.material.color.set('#ffffff');
+  const FG = sbFlowerGeos(), nF = P.filter(q => q.fl).length * 2, flIM = mk(FG.petals, new THREE.MeshStandardMaterial({ color: 0xffffff, map: sbPetalTex(), roughness: .5, side: THREE.DoubleSide }), nF), ceIM = mk(FG.centre, std('#e0c12c', { r: .7 }), nF, false);
+  const hoIM = mk(new THREE.CircleGeometry(.07, 14), new THREE.MeshStandardMaterial({ map: sbLoamTex(), roughness: .95, polygonOffset: true, polygonOffsetFactor: -2 }), P.length, false);
+  const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), S = V3(1, 1, 1), BX = V3(0, 0, 0), BY = V3(0, 0, 0), BZ = V3(0, 0, 0), C = new THREE.Color(), UPq = new THREE.Quaternion();
+  let fi = 0, ci = 0; P.forEach((q, j) => { hoIM.setMatrixAt(j, M.compose(V3(q.x, y0 + .003, q.z), Q.setFromAxisAngle(V3(1, 0, 0), -Math.PI / 2), S.set(1, 1, 1)));
+    if (q.red) for (let k = 0; k < 2; k++) { const a = q.a0 + k * 2.6, o = V3(Math.sin(a), 0, Math.cos(a)), E = V3(q.x + o.x * .13, y0 + .014, q.z + o.z * .13), L = .03 + R() * .01;
+      M.compose(E, Q.setFromUnitVectors(Y_UP, V3(-o.x, .6, -o.z).normalize()), S.setScalar(L)); frIM.setMatrixAt(fi, M); caIM.setMatrixAt(fi, M); frIM.setColorAt(fi++, sbRipe(.85 + R() * .15, C)); }
+    if (q.fl) for (let k = 0; k < 2; k++) { const a = q.a0 + 1.3 + k * 2.2, o = V3(Math.sin(a), 0, Math.cos(a)), E = V3(q.x + o.x * .07, y0 + .1 + R() * .02, q.z + o.z * .07);
+      BZ.copy(o).multiplyScalar(.7).add(V3(0, .9, 0)).normalize(); BX.crossVectors(Y_UP, BZ).normalize(); BY.crossVectors(BZ, BX); M.makeBasis(BX, BY, BZ); M.setPosition(E.x, E.y, E.z); flIM.setMatrixAt(ci, M); ceIM.setMatrixAt(ci++, M); } });
+  for (; fi < nR; fi++) { frIM.setMatrixAt(fi, M.makeScale(0, 0, 0)); caIM.setMatrixAt(fi, M); } for (; ci < nF; ci++) { flIM.setMatrixAt(ci, M.makeScale(0, 0, 0)); ceIM.setMatrixAt(ci, M); }
+  const pale = col('#d9e08a'), dark = col('#8fb57e'), white = col('#ffffff');
+  const pose = t => { let li = 0; P.forEach((q, j) => { for (let k = 0; k < NLp; k++, li++) { const a = q.a0 + k * 2.4, h = hr(j, k), el = 1.0 + h * .35, plen = .1 * q.v * (.85 + hr(k, j) * .35), o = V3(Math.sin(a), 0, Math.cos(a));
+      const T = V3(q.x + o.x * Math.cos(el) * plen, y0 + .014 + Math.sin(el) * plen, q.z + o.z * Math.cos(el) * plen), base = V3(q.x, y0 + .014, q.z);
+      const D = T.clone().sub(base), L = D.length(); petIM.setMatrixAt(li, M.compose(base.clone().add(T).multiplyScalar(.5), Q.setFromUnitVectors(Y_UP, D.divideScalar(L)), S.set(.0016, L, .0016)));
+      const tl = .15 + h * .3 + .04 * Math.sin(t * 2.3 + j + k); BZ.set(o.x * Math.cos(tl), Math.sin(tl), o.z * Math.cos(tl)); BX.crossVectors(Y_UP, BZ).normalize(); BY.crossVectors(BZ, BX); M.makeBasis(BX, BY, BZ);
+      M.multiply(new THREE.Matrix4().makeRotationZ((h - .5) * .35 + .06 * Math.sin(t * 3 + k + j * .7))); M.scale(S.setScalar(q.v * (.95 + h * .2))); M.setPosition(T.x, T.y, T.z); leafIM.setMatrixAt(li, M);
+      if (t === 0) leafIM.setColorAt(li, C.copy(pale).lerp(dark, q.v).lerp(white, .25).multiplyScalar(.9 + .16 * h)); } }); leafIM.instanceMatrix.needsUpdate = petIM.instanceMatrix.needsUpdate = true; };
+  pose(0); if (leafIM.instanceColor) leafIM.instanceColor.needsUpdate = true;
+  g.userData.tick = t => pose(t + .0001);
+  return g; }
+
+function sbBed(p = {}) { const g = new THREE.Group(), w = p.w ?? .6, wb = p.wb ?? .8, h = p.h ?? .2, len = p.len ?? 5, z0 = p.z0 ?? 0, zc = z0 - len / 2, R = rng(p.seed || 9);
+  const strawT = sbStrawTex().clone(); strawT.needsUpdate = true; strawT.repeat.set(w / .45, len / .45); strawT.wrapS = strawT.wrapT = THREE.RepeatWrapping;
+  const strawM = new THREE.MeshStandardMaterial({ map: strawT, bumpMap: strawT, bumpScale: 1.2, roughness: .9 }), loamT = sbLoamTex().clone(); loamT.needsUpdate = true; loamT.wrapS = loamT.wrapT = THREE.RepeatWrapping; loamT.repeat.set(len / .5, 1);
+  const sideM = new THREE.MeshStandardMaterial({ map: loamT, roughness: .95, color: col('#d8cdbf') }), capM = new THREE.MeshStandardMaterial({ map: sbLoamTex(), roughness: .95, color: col('#c9baa6') });
+  const tapeM = new THREE.MeshStandardMaterial({ color: col('#1f2221'), roughness: .45 });
+  for (const x of p.xs || [0]) {
+    const top = new THREE.Mesh(new THREE.PlaneGeometry(w, len), strawM); top.rotation.x = -Math.PI / 2; top.position.set(x, h, zc); top.receiveShadow = true; g.add(top);
+    for (const sd of [-1, 1]) { const geo = new THREE.BufferGeometry(), a = [x + sd * w / 2, h], b = [x + sd * wb / 2, 0];
+      geo.setAttribute('position', new THREE.Float32BufferAttribute([a[0], a[1], z0, b[0], b[1], z0, a[0], a[1], z0 - len, b[0], b[1], z0 - len], 3)); geo.setAttribute('uv', new THREE.Float32BufferAttribute([1, 1, 1, 0, 0, 1, 0, 0], 2));
+      geo.setIndex(sd > 0 ? [0, 1, 2, 2, 1, 3] : [0, 2, 1, 2, 3, 1]); geo.computeVertexNormals(); const m = new THREE.Mesh(geo, sideM); m.receiveShadow = true; g.add(m); }
+    const sh = new THREE.Shape(); sh.moveTo(-wb / 2, 0); sh.lineTo(wb / 2, 0); sh.lineTo(w / 2, h); sh.lineTo(-w / 2, h); sh.closePath();
+    const cg = new THREE.ShapeGeometry(sh), uv = cg.attributes.uv, pos = cg.attributes.position; for (let i = 0; i < uv.count; i++) uv.setXY(i, pos.getX(i) / .5 + .5, pos.getY(i) / .5);
+    const cap = new THREE.Mesh(cg, capM); cap.position.set(x, 0, z0); cap.receiveShadow = true; g.add(cap); const cap2 = cap.clone(); cap2.rotation.y = Math.PI; cap2.position.z = z0 - len; g.add(cap2);
+    const tape = box(.016, .003, len - .04, tapeM); tape.position.set(x, h + .004, zc - .02); g.add(tape);
+    const n = p.straws ?? 500, im = new THREE.InstancedMesh(new THREE.CylinderGeometry(1, 1, 1, 4), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: .85 }), n), M = new THREE.Matrix4(), C = new THREE.Color();
+    for (let i = 0; i < n; i++) { const L = .03 + R() * .06, zz = z0 - .02 - Math.pow(R(), 1.6) * Math.min(len, p.strawLen ?? 2.4);
+      M.compose(V3(x + (R() - .5) * (w - .04), h + .003 + R() * .006, zz), new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2 + (R() - .5) * .3, R() * 6.3, (R() - .5) * .3, 'YXZ')), V3(.0012, L, .0012));
+      im.setMatrixAt(i, M); im.setColorAt(i, C.set(['#d9bd7a', '#c9a75e', '#e6d199', '#a8874a'][i % 4])); }
+    im.castShadow = true; im.receiveShadow = true; g.add(im); }
+  return g; }
+
+function sbBasket(p = {}) { const g = new THREE.Group(), inner = new THREE.Group(); g.add(inner); const Rb = .17, Hb = .13, HH = .17;
+  const prof = [[0, 0], [.12, 0], [.135, .03], [.155, .08], [Rb, Hb]].map(([x, y]) => new THREE.Vector2(x, y));
+  const body = new THREE.Mesh(new THREE.LatheGeometry(prof, 28), new THREE.MeshStandardMaterial({ map: wickerTex(), roughness: .85, side: THREE.DoubleSide })); inner.add(body);
+  const rim = new THREE.Mesh(new THREE.TorusGeometry(Rb, .011, 6, 28), std('#9a7646', { r: .8 })); rim.rotation.x = Math.PI / 2; rim.position.y = Hb; inner.add(rim);
+  const hd = new THREE.Mesh(new THREE.TorusGeometry(Rb - .01, .009, 6, 20, Math.PI), std('#8a6a3e', { r: .8 })); hd.position.y = Hb; hd.scale.y = HH / (Rb - .01); inner.add(hd);
+  const NI = 30, fr = new THREE.InstancedMesh(sbFruitGeo(), sbFruitMat(1), NI), fc = new THREE.InstancedMesh(sbCalyxGeo(), sbCalyxMat(), NI); fr.material.color.set('#ffffff');
+  const spots = Array.from({ length: NI }, (_, i) => { const lay = i < 14 ? 0 : i < 24 ? 1 : 2, a = i * 2.4, d = lay === 2 ? .02 + (i % 3) * .03 : .03 + (i % 4) * .033; return { P: V3(Math.cos(a) * d, .03 + lay * .03, Math.sin(a) * d), q: new THREE.Quaternion().setFromEuler(new THREE.Euler(1.2 + hr(i, 1) * 1.2, i * 1.7, hr(i, 2) - .5)), s: .034 + hr(i, 3) * .008 }; });
+  const M = new THREE.Matrix4(), S = V3(1, 1, 1), C = new THREE.Color(); for (let i = 0; i < NI; i++) fr.setColorAt(i, sbRipe(.88 + hr(i, 5) * .12, C));
+  for (const im of [fr, fc]) { im.castShadow = true; im.frustumCulled = false; inner.add(im); } shadowed(body); const cs = contactShadow(.2, .2, .4); cs.position.y = .006; g.add(cs);
+  g.userData.tick = t => { const n = Math.min(NI, Math.round(stepKey(p.fillK, t, p.n0 ?? 20))); let tLast = -9; for (const [tk] of p.fillK || []) if (t >= tk) tLast = tk;
+    for (let i = 0; i < NI; i++) { if (i >= n) { fr.setMatrixAt(i, M.makeScale(0, 0, 0)); fc.setMatrixAt(i, M); continue; } const drop = i === n - 1 ? clamp(1 - (t - tLast) / .25) : 0;
+      M.compose(spots[i].P.clone().setY(spots[i].P.y + drop * .15), spots[i].q, S.setScalar(spots[i].s)); fr.setMatrixAt(i, M); fc.setMatrixAt(i, M); }
+    fr.instanceMatrix.needsUpdate = fc.instanceMatrix.needsUpdate = true;
+    inner.position.set(0, 0, 0); inner.rotation.set(0, 0, 0); cs.visible = true; const C2 = p.carry; if (!C2 || t < C2[0] || (C2[1] && t >= C2[1])) return;
+    const Lk = LINK[p.by || 'farmer'], palm = Lk?.[p.hand || 'L']; if (!palm) return; g.updateWorldMatrix(true, false); const loc = g.worldToLocal(palm.clone()).add(V3(0, -(Hb + HH - .012), 0)), k = sEase((t - C2[0]) / .35);
+    inner.position.copy(V3(0, 0, 0).lerp(loc, k)); inner.rotation.set(.04 * Math.sin(t * 2.1), lerp(0, (Lk.yaw || 0) + Math.PI / 2 - (g.parent?.rotation.y || 0), k), .05 * Math.sin(t * 1.7 + 1)); cs.visible = k < .5; };
+  return g; }
+Object.assign(ASSETS, { sb_plant: sbPlant, sb_field: sbField, sb_bed: sbBed, sb_basket: sbBasket });
+Object.assign(RIG_POSES, { // strawberry picking (Farmer 1.75 m, track y -.55; tuned with the palm probe for plans/strawberry_flowers.mjs, local x = his left, z = forward)
+  sbPick: { adL: 1.37, adR: 1.43, fL: -.67, fR: -.01, eL: 1.15, eR: .22, sp: 1.38, hd: -.45, kL: 2.3, kR: 2.3, hL: 1.0, hR: 1.0 },           // R (-.14, .73, .27), L on the knee
+  sbDrop: { adL: 1.4, adR: 1.05, fL: -.41, fR: -.38, eL: .75, eR: 0, sp: .96, hd: -.45, kL: 2.3, kR: 2.3, hL: 1.0, hR: 1.0 },               // R (-.33, .86, 0) over the basket handle
+  sbCarryR: { adR: 1.42, fR: .18, eR: .22, fL: .08, eL: .2 },                                                                                // standing: R (-.22, .95, .18) holds the basket
+  sbCtaL: { adR: 1.42, fR: .18, eR: .22, adL: .95, fL: .85, eL: .35, ht: -.3, sp: -.02 } });                                                // R holds the basket, L thumb up
