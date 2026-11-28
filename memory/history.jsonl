@@ -99,3 +99,4 @@
 {"run": "dairy_cow", "time": "2026-11-27 18:47", "score": 72, "issues": 11, "codes": ["beat_too_short", "dead_beat"]}
 {"run": "silk_worm", "time": "2026-11-27 23:59", "score": 18, "issues": 23, "codes": ["beat_too_short", "dead_beat"]}
 {"run": "olive_seedling", "time": "2026-11-27 23:49", "score": 89, "issues": 4, "codes": ["beat_too_short", "dead_beat"]}
+{"run": "strawberry_flowers", "time": "2026-11-28 03:28", "score": 66, "issues": 8, "codes": ["beat_too_short", "dead_beat"]}
