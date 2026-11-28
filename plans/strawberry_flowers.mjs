@@ -98,7 +98,7 @@ const up = (pf, d) => add(pf.anchor, [0, d, 0]);
 const CUTP = [PC[0] + .105, BH + .021, PC[1] + .023], SU = nrm([.92, -.36, .18]), SF = (f => nrm(add(f, sc(SU, -dot(f, SU)))))(nrm([0, -.75, -.66]));   // runner point at cutU .2
 const H = [
   // 1 hook: reaching in for the flower, stops just short of it
-  hk(0, back(pA1, .14), pA1.f, pA1.u, 'open'), hk(T.l1 - .3, back(pA1, .035), pA1.f, pA1.u, 'open'), hk(T.l1 + .05, back(pA1, .03), pA1.f, pA1.u, 'cup'),
+  hk(0, back(pA1, .07), pA1.f, pA1.u, 'open'), hk(T.l1 - .3, back(pA1, .035), pA1.f, pA1.u, 'open'), hk(T.l1 + .05, back(pA1, .03), pA1.f, pA1.u, 'cup'),
   hk(T.l1 + .7, back(pA1, .3), pA1.f, pA1.u, 'open'), hk(T.l1 + .71, HIDE, pA1.f, pA1.u),
   // 3 pinch off the two first flowers of the hero plant
   hk(T.l2 + .1, HIDE, pA1.f, pA1.u), hk(T.l2 + .11, back(pA1, .22), pA1.f, pA1.u, 'open'), hk(T.pick3 - .25, back(pA1, .012), pA1.f, pA1.u, 'open'),
@@ -167,17 +167,17 @@ const beats = [
     camera: { target: [PB[0], BH + .04, PB[1]], dist: .42, elev: .32, az: .5, zoom: 'out' } },
   // 6 the long runner and its daughter plant in the path (cross on the runner) ...
   { t: T.l5, kind: 'info', remove: ['ok5'], add: [stk('x6', 'cross', RUNM.map((v, i) => v + [0, .07, 0][i]), .06, { delay: T.run6 - T.l5, pulse: true })],
-    camera: { target: [PC[0] + .23, .1, PC[1] + .05], dist: 1.05, elev: .42, az: .7, zoom: 'out' } },
+    camera: { target: [PC[0] + .22, .12, PC[1] + .05], dist: .72, elev: .45, az: .7, zoom: 'out' } },
   //   ... the snips cut it ...
   { t: T.run6 + .45, kind: 'info', remove: ['x6'], camera: { target: [CUTP[0] + .01, CUTP[1] + .01, CUTP[2]], dist: .36, elev: .4, az: .9, zoom: 'in' } },
   //   ... so the plant does not spread its strength far away (arrow-down at the daughter plant)
   { t: T.so6 + .35, kind: 'info', add: [stk('dn6', 'arrow_down', [DAU[0], DAU[1] + .09, DAU[2]], .06, { delay: T.lose6 - T.so6 - .35 })],
-    camera: { target: [PC[0] + .25, .09, PC[1] + .05], dist: .95, elev: .38, az: .85, zoom: 'out' } },
+    camera: { target: [PC[0] + .25, .1, PC[1] + .05], dist: .75, elev: .4, az: .85, zoom: 'out' } },
   // 7 tidy rows with clear paths (thumbs-up on the row); the farmer walks in along the path ...
   { t: T.l6, kind: 'info', remove: ['dn6'], add: [stk('tu7', 'thumbs_up', [0, .75, 6.3], .26, { delay: T.tidy7 - T.l6 })],
     camera: { target: [.2, .25, 5.8], dist: 4.4, elev: .42, az: .28, zoom: 'out' } },
   //   ... squats, picks a ripe berry easily and drops it in the basket ...
-  { t: T.easy7 - .5, kind: 'info', remove: ['tu7'], camera: { target: [FX - .25, .3, FZ + .05], dist: 1.7, elev: .2, az: .35, zoom: 'in' } },
+  { t: T.easy7 - .5, kind: 'info', remove: ['tu7'], camera: { target: [FX - .2, .3, FZ - .1], dist: 2.4, elev: .32, az: .65, zoom: 'in' } },
   //   ... a microbe over the leaves (disease) ...
   { t: T.cure7, kind: 'info', add: [stk('mic7', 'microbe', [PG[0], BH + .22, PG[1]], .07, { delay: T.dis7 - T.cure7 - .1 })],
     camera: { target: [PG[0] - .05, BH + .1, PG[1] - .05], dist: 1.0, elev: .35, az: .4, zoom: 'out' } },
@@ -197,7 +197,7 @@ const plan = {
     haze: .4, sunElev: 44, sunAz: 25, turbidity: 2.4, water: '#7f9a8f', waves: 0, foam: false, birds: 3, birdModel: 'Stork', motes: .3, clouds: 12,
     // sound library (this plan only, at or under the global bed .03 / calls .05)
     sfxBed: 'wind', sfxBeds: [{ cat: 'forest', idx: 5, gain: .02 }] },
-  style: { camEase: .6, captionY: .78, exposure: 1.0, foreground: false, handheld: 1 },
+  style: { camEase: .6, captionY: .78, exposure: .95, foreground: false, handheld: 1 },
   beats: beats.map((b, i) => ({ start: b.t, end: i + 1 < beats.length ? beats[i + 1].t : D, text: '', remove: [], modes: {}, effects: [], add: [], ...b, camera: { punch: false, ...b.camera } })),
 };
 plan.beats.forEach(b => { delete b.t; b.text = S.flatMap(s => s.words).filter(x => x.start >= b.start - .01 && x.start < b.end - .01).map(x => x.w).join(' '); });

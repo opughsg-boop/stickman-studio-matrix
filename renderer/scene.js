@@ -8079,7 +8079,7 @@ function sbLoamTex() { return SPR.sbLoam ||= (() => { const r = rng(433); return
     c.fillStyle = 'rgba(30,20,12,.35)'; c.beginPath(); c.ellipse(x + s * .3, y + s * .45, s * .8, s * .3, 0, 0, 6.3); c.fill(); } }, [1, 1]); })(); }
 
 function sbPlant(p = {}) { const g = new THREE.Group(), body = new THREE.Group(); g.add(body); const R = rng(p.seed || 7), hor = a => V3(Math.sin(a), 0, Math.cos(a)), UP = V3(0, 1, 0);
-  const NL = 14, LV = Array.from({ length: NL }, (_, i) => ({ az: i * 2.4 + R() * .5, el: 1.0 + R() * .35, len: .82 + R() * .36, roll: (R() - .5) * .35, tilt: .12 + R() * .3, ph: R() * 6.3, s: .9 + R() * .22 }));
+  const NL = 14, LV = Array.from({ length: NL }, (_, i) => ({ az: i * 2.4 + R() * .5, el: .78 + R() * .35, len: .82 + R() * .36, roll: (R() - .5) * .35, tilt: .12 + R() * .3, ph: R() * 6.3, s: .9 + R() * .22 }));
   if (p.clearAz != null) LV.forEach(l => { const d = angTo(p.clearAz, l.az); if (Math.abs(d) < .45) l.az = p.clearAz + Math.sign(d || 1) * (.45 + R() * .2); });
   const mk = (geo, mat, n, cast = true) => { const im = new THREE.InstancedMesh(geo, mat, Math.max(1, n)); im.frustumCulled = false; im.castShadow = cast; im.receiveShadow = true; body.add(im); return im; };
   const TR = (p.trusses || []).map((q, i) => ({ ...q, i, out: q.out ?? (q.kind === 'red' ? .13 : q.kind === 'green' ? .1 : .075), y: q.y ?? (q.kind === 'red' ? .012 : q.kind === 'green' ? .05 : .1) }));
@@ -8088,7 +8088,7 @@ function sbPlant(p = {}) { const g = new THREE.Group(), body = new THREE.Group()
   const leafIM = mk(sbLeafGeo(), sbLeafMat(), NL);
   const crown = cyl(.008, .014, .022, std('#6b5a34', { r: .8 }), 10); crown.position.y = .008; body.add(crown);
   for (let i = 0; i < 3; i++) { const st = new THREE.Mesh(new THREE.SphereGeometry(1, 6, 4), std('#8a6a3c', { r: .9 })); st.scale.set(.008, .002, .012); st.position.set(Math.sin(i * 2.1) * .012, .006, Math.cos(i * 2.1) * .012); st.rotation.y = i * 2.1; body.add(st); }
-  if (p.hole !== false) { const ho = new THREE.Mesh(new THREE.CircleGeometry(.075, 20), new THREE.MeshStandardMaterial({ map: sbLoamTex(), roughness: .95, polygonOffset: true, polygonOffsetFactor: -2 })); ho.rotation.x = -Math.PI / 2; ho.position.y = .003; ho.receiveShadow = true; g.add(ho); }
+  if (p.hole !== false) { const ho = new THREE.Mesh(new THREE.CircleGeometry(.05, 20), new THREE.MeshStandardMaterial({ map: sbLoamTex(), color: col('#d8c8b2'), roughness: .95, polygonOffset: true, polygonOffsetFactor: -2 })); ho.rotation.x = -Math.PI / 2; ho.position.y = .003; ho.receiveShadow = true; g.add(ho); }
   // trusses: peduncle (5 segments) + head
   const FG = sbFlowerGeos(), petalM = new THREE.MeshPhysicalMaterial({ color: 0xffffff, map: sbPetalTex(), roughness: .5, sheen: .6, sheenColor: col('#ffffff'), side: THREE.DoubleSide, emissive: col('#ffffff'), emissiveIntensity: .04 }),
     cenM = new THREE.MeshStandardMaterial({ color: col('#e0c12c'), roughness: .7, bumpMap: sbFruitTex(), bumpScale: 1.2 }), stamM = new THREE.MeshStandardMaterial({ color: col('#f0c21a'), roughness: .6 }),
@@ -8101,7 +8101,7 @@ function sbPlant(p = {}) { const g = new THREE.Group(), body = new THREE.Group()
   let RN = null; if (p.runner) { const pts = p.runner.pts.map(v => V3(...v)), cu = p.runner.cutU ?? .5, rM = new THREE.MeshStandardMaterial({ color: col('#9c5a3c'), roughness: .55 }),
       cv = new THREE.CatmullRomCurve3(pts), ptsA = [], ptsB = []; for (let i = 0; i <= 24; i++) { const u = i / 24; if (u <= cu - .012) ptsA.push(cv.getPointAt(u)); if (u >= cu) ptsB.push(cv.getPointAt(u)); }
     ptsA.push(cv.getPointAt(cu - .012)); ptsB.unshift(cv.getPointAt(cu));
-    const rf = u => .0017 * (1 - .25 * u), full = new THREE.Mesh(taperTube(pts, rf, 48, 6), rM), A = new THREE.Mesh(taperTube(ptsA, rf, 30, 6), rM), outer = new THREE.Group(), B = new THREE.Mesh(taperTube(ptsB, rf, 30, 6), rM);
+    const rf = u => .0021 * (1 - .25 * u), full = new THREE.Mesh(taperTube(pts, rf, 48, 6), rM), A = new THREE.Mesh(taperTube(ptsA, rf, 30, 6), rM), outer = new THREE.Group(), B = new THREE.Mesh(taperTube(ptsB, rf, 30, 6), rM);
     outer.add(B); [full, A, B].forEach(m => { m.castShadow = true; }); body.add(full, A, outer);
     const tip = pts[pts.length - 1], dir = tip.clone().sub(pts[pts.length - 2]).setY(0).normalize(), dl = new THREE.InstancedMesh(sbLeafGeo(), sbLeafMat(), 4); dl.castShadow = true; dl.frustumCulled = false; outer.add(dl);
     const M = new THREE.Matrix4(), BX = V3(0, 0, 0), BY = V3(0, 0, 0), BZ = V3(0, 0, 0);
@@ -8161,7 +8161,7 @@ function sbField(p = {}) { const g = new THREE.Group(), R = rng(p.seed || 5), y0
   const nR = P.filter(q => q.red).length * 2, frIM = mk(sbFruitGeo(), sbFruitMat(1), nR), caIM = mk(sbCalyxGeo(), sbCalyxMat(), nR, false);
   frIM.material.color.set('#ffffff');
   const FG = sbFlowerGeos(), nF = P.filter(q => q.fl).length * 2, flIM = mk(FG.petals, new THREE.MeshStandardMaterial({ color: 0xffffff, map: sbPetalTex(), roughness: .5, side: THREE.DoubleSide }), nF), ceIM = mk(FG.centre, std('#e0c12c', { r: .7 }), nF, false);
-  const hoIM = mk(new THREE.CircleGeometry(.07, 14), new THREE.MeshStandardMaterial({ map: sbLoamTex(), roughness: .95, polygonOffset: true, polygonOffsetFactor: -2 }), P.length, false);
+  const hoIM = mk(new THREE.CircleGeometry(.05, 14), new THREE.MeshStandardMaterial({ map: sbLoamTex(), color: col('#d8c8b2'), roughness: .95, polygonOffset: true, polygonOffsetFactor: -2 }), P.length, false);
   const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), S = V3(1, 1, 1), BX = V3(0, 0, 0), BY = V3(0, 0, 0), BZ = V3(0, 0, 0), C = new THREE.Color(), UPq = new THREE.Quaternion();
   let fi = 0, ci = 0; P.forEach((q, j) => { hoIM.setMatrixAt(j, M.compose(V3(q.x, y0 + .003, q.z), Q.setFromAxisAngle(V3(1, 0, 0), -Math.PI / 2), S.set(1, 1, 1)));
     if (q.red) for (let k = 0; k < 2; k++) { const a = q.a0 + k * 2.6, o = V3(Math.sin(a), 0, Math.cos(a)), E = V3(q.x + o.x * .13, y0 + .014, q.z + o.z * .13), L = .03 + R() * .01;
@@ -8170,7 +8170,7 @@ function sbField(p = {}) { const g = new THREE.Group(), R = rng(p.seed || 5), y0
       BZ.copy(o).multiplyScalar(.7).add(V3(0, .9, 0)).normalize(); BX.crossVectors(Y_UP, BZ).normalize(); BY.crossVectors(BZ, BX); M.makeBasis(BX, BY, BZ); M.setPosition(E.x, E.y, E.z); flIM.setMatrixAt(ci, M); ceIM.setMatrixAt(ci++, M); } });
   for (; fi < nR; fi++) { frIM.setMatrixAt(fi, M.makeScale(0, 0, 0)); caIM.setMatrixAt(fi, M); } for (; ci < nF; ci++) { flIM.setMatrixAt(ci, M.makeScale(0, 0, 0)); ceIM.setMatrixAt(ci, M); }
   const pale = col('#d9e08a'), dark = col('#8fb57e'), white = col('#ffffff');
-  const pose = t => { let li = 0; P.forEach((q, j) => { for (let k = 0; k < NLp; k++, li++) { const a = q.a0 + k * 2.4, h = hr(j, k), el = 1.0 + h * .35, plen = .1 * q.v * (.85 + hr(k, j) * .35), o = V3(Math.sin(a), 0, Math.cos(a));
+  const pose = t => { let li = 0; P.forEach((q, j) => { for (let k = 0; k < NLp; k++, li++) { const a = q.a0 + k * 2.4, h = hr(j, k), el = .78 + h * .35, plen = .1 * q.v * (.85 + hr(k, j) * .35), o = V3(Math.sin(a), 0, Math.cos(a));
       const T = V3(q.x + o.x * Math.cos(el) * plen, y0 + .014 + Math.sin(el) * plen, q.z + o.z * Math.cos(el) * plen), base = V3(q.x, y0 + .014, q.z);
       const D = T.clone().sub(base), L = D.length(); petIM.setMatrixAt(li, M.compose(base.clone().add(T).multiplyScalar(.5), Q.setFromUnitVectors(Y_UP, D.divideScalar(L)), S.set(.0016, L, .0016)));
       const tl = .15 + h * .3 + .04 * Math.sin(t * 2.3 + j + k); BZ.set(o.x * Math.cos(tl), Math.sin(tl), o.z * Math.cos(tl)); BX.crossVectors(Y_UP, BZ).normalize(); BY.crossVectors(BZ, BX); M.makeBasis(BX, BY, BZ);
